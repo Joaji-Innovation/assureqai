@@ -1,0 +1,70 @@
+/**
+ * SOP Controller
+ */
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { SopService } from './sop.service';
+import { RequirePermissions, CurrentUser } from '@assureqai/auth';
+import { PERMISSIONS, JwtPayload } from '@assureqai/common';
+
+@ApiTags('SOPs')
+@ApiBearerAuth()
+@Controller('sops')
+export class SopController {
+  constructor(private readonly sopService: SopService) {}
+
+  @Post()
+  @UseInterceptors(FileInterceptor('file'))
+  @RequirePermissions(PERMISSIONS.MANAGE_SOPS)
+  @ApiOperation({ summary: 'Upload SOP document' })
+  async create(
+    @UploadedFile() file: any,
+    @Body() dto: any,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.sopService.create({
+      ...dto,
+      file,
+      projectId: user.projectId,
+      uploadedBy: user.sub,
+    });
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all SOPs' })
+  async findAll(@CurrentUser() user: JwtPayload) {
+    return this.sopService.findByProject(user.projectId);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get SOP by ID' })
+  async findOne(@Param('id') id: string) {
+    return this.sopService.findById(id);
+  }
+
+  @Put(':id')
+  @RequirePermissions(PERMISSIONS.MANAGE_SOPS)
+  @ApiOperation({ summary: 'Update SOP' })
+  async update(@Param('id') id: string, @Body() dto: any) {
+    return this.sopService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions(PERMISSIONS.MANAGE_SOPS)
+  @ApiOperation({ summary: 'Delete SOP' })
+  async delete(@Param('id') id: string) {
+    await this.sopService.delete(id);
+    return { success: true, message: 'SOP deleted' };
+  }
+}

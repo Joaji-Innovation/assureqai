@@ -1,0 +1,26 @@
+// Shared authentication types
+
+export interface User {
+  id: string;
+  username: string;
+  email?: string;
+  fullName?: string;
+  role:
+    | "Administrator"
+    | "Project Admin"
+    | "Manager"
+    | "QA Analyst"
+    | "Auditor"
+    | "Agent";
+  projectId?: string; // Project ID for project-based access control
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+  user?: User;
+}

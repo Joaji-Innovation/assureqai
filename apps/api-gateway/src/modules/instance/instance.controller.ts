@@ -1,0 +1,103 @@
+/**
+ * Instance Controller - For Admin Portal
+ * API endpoints for managing client instances and domains
+ */
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { InstanceService } from './instance.service';
+import { RequirePermissions } from '@assureqai/auth';
+import { PERMISSIONS } from '@assureqai/common';
+
+@ApiTags('Admin - Instances')
+@ApiBearerAuth()
+@Controller('admin/instances')
+export class InstanceController {
+  constructor(private readonly instanceService: InstanceService) { }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Create new client instance' })
+  async create(@Body() dto: any) {
+    return this.instanceService.create(dto);
+  }
+
+  @Get()
+  @RequirePermissions(PERMISSIONS.VIEW_INSTANCES)
+  @ApiOperation({ summary: 'Get all client instances' })
+  async findAll() {
+    return this.instanceService.findAll();
+  }
+
+  @Get(':id')
+  @RequirePermissions(PERMISSIONS.VIEW_INSTANCES)
+  @ApiOperation({ summary: 'Get instance by ID' })
+  async findOne(@Param('id') id: string) {
+    return this.instanceService.findById(id);
+  }
+
+  @Put(':id')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Update instance' })
+  async update(@Param('id') id: string, @Body() dto: any) {
+    return this.instanceService.update(id, dto);
+  }
+
+  @Get(':id/logs')
+  @RequirePermissions(PERMISSIONS.VIEW_INSTANCES)
+  @ApiOperation({ summary: 'Get deployment logs' })
+  async getLogs(@Param('id') id: string) {
+    return this.instanceService.getLogs(id);
+  }
+
+  // ===== Domain Management =====
+
+  @Get(':id/domains')
+  @RequirePermissions(PERMISSIONS.VIEW_INSTANCES)
+  @ApiOperation({ summary: 'Get domain configuration' })
+  async getDomains(@Param('id') id: string) {
+    return this.instanceService.getDomainConfig(id);
+  }
+
+  @Put(':id/domains/subdomain')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Update subdomain' })
+  async updateSubdomain(
+    @Param('id') id: string,
+    @Body() dto: { subdomain: string },
+  ) {
+    return this.instanceService.updateSubdomain(id, dto.subdomain);
+  }
+
+  @Post(':id/domains/custom')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Add custom domain' })
+  async addCustomDomain(
+    @Param('id') id: string,
+    @Body() dto: { domain: string },
+  ) {
+    return this.instanceService.addCustomDomain(id, dto.domain);
+  }
+
+  @Post(':id/domains/verify')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Verify custom domain DNS' })
+  async verifyDomain(@Param('id') id: string) {
+    return this.instanceService.verifyCustomDomain(id);
+  }
+
+  @Delete(':id/domains/custom')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Remove custom domain' })
+  async removeCustomDomain(@Param('id') id: string) {
+    return this.instanceService.removeCustomDomain(id);
+  }
+}

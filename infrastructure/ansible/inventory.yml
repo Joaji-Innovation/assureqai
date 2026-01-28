@@ -1,0 +1,25 @@
+---
+all:
+  children:
+    app_servers:
+      hosts:
+        app1.assureqai.com:
+          ansible_host: 10.0.1.10
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/assureqai.pem
+        app2.assureqai.com:
+          ansible_host: 10.0.2.10
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/assureqai.pem
+
+    db_servers:
+      hosts:
+        db1.assureqai.com:
+          ansible_host: 10.0.10.10
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/assureqai.pem
+
+  vars:
+    environment: production
+    domain_name: assureqai.com
+    admin_email: admin@assureqai.com

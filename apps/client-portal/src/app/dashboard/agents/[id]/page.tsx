@@ -25,7 +25,7 @@ const mockAgent = {
   avgScore: 94.2,
   passRate: 96,
   rank: 1,
-  status: 'excellent' as const,
+  status: 'excellent' as 'excellent' | 'good' | 'needs_improvement' | 'at_risk',
 };
 
 const scoreTrend = [
@@ -143,11 +143,10 @@ export default function AgentProfilePage() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab as typeof activeTab)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-              activeTab === tab
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab
                 ? 'bg-primary/10 text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'
-            }`}
+              }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
@@ -268,11 +267,10 @@ export default function AgentProfilePage() {
                       <p className="text-sm text-muted-foreground">{audit.date}</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    audit.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
-                    audit.sentiment === 'negative' ? 'bg-red-500/10 text-red-500' :
-                    'bg-amber-500/10 text-amber-500'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs rounded-full ${audit.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
+                      audit.sentiment === 'negative' ? 'bg-red-500/10 text-red-500' :
+                        'bg-amber-500/10 text-amber-500'
+                    }`}>
                     {audit.sentiment}
                   </span>
                 </div>

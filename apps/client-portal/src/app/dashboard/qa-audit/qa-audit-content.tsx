@@ -131,8 +131,8 @@ const DEFAULT_CALL_LANGUAGE = "Hindi";
 function convertQAParameterDocumentToQAParameter(
   doc: QAParameter
 ): QAParameterType {
-  const lastModified = doc.updatedAt 
-    ? new Date(doc.updatedAt).toISOString() 
+  const lastModified = doc.updatedAt
+    ? new Date(doc.updatedAt).toISOString()
     : new Date().toISOString();
 
   return {
@@ -144,14 +144,14 @@ function convertQAParameterDocumentToQAParameter(
 
 // Helper function to convert SOPDocument to SOP
 function convertSOPDocumentToSOP(doc: SOP): SOPType {
-  const lastModified = doc.updatedAt 
-    ? new Date(doc.updatedAt).toISOString() 
+  const lastModified = doc.updatedAt
+    ? new Date(doc.updatedAt).toISOString()
     : new Date().toISOString();
 
   return {
     id: doc._id,
-    title: doc.title,
-    content: doc.content,
+    title: doc.title || doc.name,
+    content: doc.content || "",
     category: "General", // Default value
     version: doc.version || "1.0",
     lastModified,
@@ -163,8 +163,8 @@ function convertSOPDocumentToSOP(doc: SOP): SOPType {
 function convertAuditDocumentToSavedAuditItem(
   doc: Audit
 ): SavedAuditItem {
-  const auditDate = doc.createdAt 
-    ? new Date(doc.createdAt).toISOString() 
+  const auditDate = doc.createdAt
+    ? new Date(doc.createdAt).toISOString()
     : new Date().toISOString();
 
   return {
@@ -252,27 +252,27 @@ function convertSavedAuditItemToCreateAuditFormat(
     parameters:
       auditResults && Array.isArray(auditResults)
         ? [
-            {
-              id: "audit-results",
-              name: "Audit Results",
-              subParameters: auditResults.map((result: any, index: number) => ({
-                id: result.parameterId || result.id || `param-${index}`,
-                name:
-                  result.parameter ||
-                  result.parameterName ||
-                  result.name ||
-                  "Unknown",
-                weight:
-                  result.weightedScore ||
-                  result.maxScore ||
-                  result.weight ||
-                  100,
-                type: result.type || "Non-Fatal",
-                score: result.score || 0,
-                comments: result.comments || "",
-              })),
-            },
-          ]
+          {
+            id: "audit-results",
+            name: "Audit Results",
+            subParameters: auditResults.map((result: any, index: number) => ({
+              id: result.parameterId || result.id || `param-${index}`,
+              name:
+                result.parameter ||
+                result.parameterName ||
+                result.name ||
+                "Unknown",
+              weight:
+                result.weightedScore ||
+                result.maxScore ||
+                result.weight ||
+                100,
+              type: result.type || "Non-Fatal",
+              score: result.score || 0,
+              comments: result.comments || "",
+            })),
+          },
+        ]
         : [],
   };
 }
@@ -715,9 +715,8 @@ export default function QaAuditContent() {
       await handleSaveAuditInternal(auditData);
       toast({
         title: "Audit Saved",
-        description: `The AI audit for ${
-          auditData.identifiedAgentName || "Unknown Agent"
-        } has been saved.`,
+        description: `The AI audit for ${auditData.identifiedAgentName || "Unknown Agent"
+          } has been saved.`,
       });
     } catch (error) {
       console.error("Error saving audit:", error);
@@ -1038,14 +1037,13 @@ export default function QaAuditContent() {
                 {auditResult.timing && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>Processing Time:</span>
-                    <span className={`font-medium ${
-                      auditResult.timing.processingDurationMs < 5000 
-                        ? 'text-emerald-600' 
-                        : auditResult.timing.processingDurationMs < 15000 
-                        ? 'text-blue-600' 
+                    <span className={`font-medium ${auditResult.timing.processingDurationMs < 5000
+                      ? 'text-emerald-600'
+                      : auditResult.timing.processingDurationMs < 15000
+                        ? 'text-blue-600'
                         : 'text-amber-600'
-                    }`}>
-                      {auditResult.timing.processingDurationMs < 1000 
+                      }`}>
+                      {auditResult.timing.processingDurationMs < 1000
                         ? `${auditResult.timing.processingDurationMs}ms`
                         : `${(auditResult.timing.processingDurationMs / 1000).toFixed(1)}s`
                       }
@@ -1054,13 +1052,12 @@ export default function QaAuditContent() {
                       <>
                         <span className="text-muted-foreground">•</span>
                         <span>Overall Confidence:</span>
-                        <span className={`font-medium ${
-                          auditResult.overallConfidence >= 85 
-                            ? 'text-emerald-600' 
-                            : auditResult.overallConfidence >= 60 
-                            ? 'text-amber-600' 
+                        <span className={`font-medium ${auditResult.overallConfidence >= 85
+                          ? 'text-emerald-600'
+                          : auditResult.overallConfidence >= 60
+                            ? 'text-amber-600'
                             : 'text-red-600'
-                        }`}>
+                          }`}>
                           {auditResult.overallConfidence}%
                         </span>
                       </>
@@ -1084,22 +1081,20 @@ export default function QaAuditContent() {
                         {item.parameter || item.parameterName}
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className={`font-semibold ${
-                          item.score >= 80 ? 'text-emerald-600' :
+                        <span className={`font-semibold ${item.score >= 80 ? 'text-emerald-600' :
                           item.score >= 60 ? 'text-amber-600' : 'text-red-600'
-                        }`}>
+                          }`}>
                           {item.score}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
                         {item.confidence !== undefined ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                            item.confidence >= 85 
-                              ? 'bg-emerald-500/10 text-emerald-600' 
-                              : item.confidence >= 60 
-                              ? 'bg-amber-500/10 text-amber-600' 
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${item.confidence >= 85
+                            ? 'bg-emerald-500/10 text-emerald-600'
+                            : item.confidence >= 60
+                              ? 'bg-amber-500/10 text-amber-600'
                               : 'bg-red-500/10 text-red-600'
-                          }`}>
+                            }`}>
                             {item.confidence}%
                           </span>
                         ) : (
@@ -1112,7 +1107,7 @@ export default function QaAuditContent() {
                           {item.evidence && item.evidence.length > 0 && (
                             <div className="space-y-1">
                               {item.evidence.slice(0, 2).map((ev: any, evIdx: number) => (
-                                <div 
+                                <div
                                   key={evIdx}
                                   className="text-xs p-2 rounded bg-muted/50 border border-border/50 italic text-muted-foreground"
                                 >

@@ -345,7 +345,8 @@ export const aiApi = {
 export interface SOP {
   _id: string;
   id?: string;
-  name: string;  // Changed from title to match schema
+  name: string;  // Schema field
+  title?: string;  // Alias for name - used by frontend
   description?: string;
   content?: string;  // Base64 encoded file content
   fileName?: string;

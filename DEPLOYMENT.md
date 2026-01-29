@@ -165,3 +165,97 @@ api.assureqai.app {
 2. [ ] Create your own instance via Admin Portal
 3. [ ] Test: Create audit → Verify credit deduction
 4. [ ] Configure DNS for `*.assureqai.app`
+
+---
+
+## Troubleshooting: 500 Error / Coolify Down
+
+If Coolify crashes or shows a 500 error during a build, it is usually because the server ran out of **RAM (OOM Error)**. Building Next.js/NestJS apps is memory-intensive.
+
+### 1. Immediate Fix (Restart Coolify)
+
+SSH into your server and run:
+
+```bash
+# Check if containers are running
+docker ps
+
+# Restart Coolify
+docker restart coolify
+
+# If that fails, restart the proxy
+docker restart coolify-proxy
+```
+
+### 2. Prevention: Enable Swap Space (Critical)
+
+If your server has less than 4GB RAM, you **must** add swap space to prevent crashes during builds.
+
+Run these commands on your VPS:
+
+```bash
+# Create 4GB swap file
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Make it permanent
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+### 3. Alternative: Build Locally
+
+If the server is too small to build, use Coolify's "Build Locally" feature or push pre-built Docker images, but adding Swap is usually sufficient.
+
+### 4. Advanced Recovery (If UI still won't load)
+
+If restarting the container didn't work, the storage might be full or the proxy (Traefik) might be down.
+
+**Run these commands in order:**
+
+1. **Check Disk Space**:
+
+   ```bash
+   df -h
+   # If Use% is 100%, run: docker system prune -a -f
+   ```
+
+2. **Force Restart All Services**:
+   Coolify has a built-in upgrade script that also fixes broken containers:
+
+   ```bash
+   curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
+   ```
+
+   _Don't worry, this won't delete your data. It just pulls the latest images and recreates the containers._
+
+3. **Check Logs**:
+   ```bash
+   docker logs coolify -n 50
+   docker logs coolify-proxy -n 50
+   ```
+
+### 5. Disk Full (100% Usage)
+
+If `df -h` shows your disk is 100% full, Coolify cannot write logs or create containers.
+
+**Immediate Fix (Free up space):**
+This deletes all stopped containers and unused images.
+
+```bash
+docker system prune -a -f
+```
+
+**Permanent Solution (Resize Disk):**
+10GB is often too small. Increase your disk size to 30GB+ in your VPS provider's dashboard (Google Cloud/AWS/DigitalOcean).
+
+**After increasing size in dashboard, run these commands to expand it in the OS:**
+
+```bash
+# 1. Expand the partition (usually partition 1)
+sudo growpart /dev/sda 1
+
+# 2. Resize the filesystem
+sudo resize2fs /dev/sda1
+```

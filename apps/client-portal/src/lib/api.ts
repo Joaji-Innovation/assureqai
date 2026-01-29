@@ -218,13 +218,14 @@ export const auditApi = {
 // QA Parameter APIs
 export interface QAParameter {
   _id: string;
-  id?: string; // Mongoose alias
+  id: string; // Mongoose alias - Making required for UI compatibility
   name: string;
   description: string;
   isActive: boolean;
   parameters: any[];
   createdAt?: string;
   updatedAt?: string;
+  lastModified: string;
 }
 
 export const qaParameterApi = {

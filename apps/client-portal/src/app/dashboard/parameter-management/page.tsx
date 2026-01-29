@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-  ListChecks, Plus, Settings, Trash2, AlertCircle, Loader2, X, 
+import {
+  ListChecks, Plus, Settings, Trash2, AlertCircle, Loader2, X,
   GripVertical, ChevronDown, ChevronRight, FolderPlus, FileEdit,
   Copy, Check
 } from 'lucide-react';
@@ -43,13 +43,13 @@ export default function ParameterManagementPage() {
   const [parameterSets, setParameterSets] = useState<QAParameter[]>([]);
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  
+
   // Dialog states
   const [showNewSetDialog, setShowNewSetDialog] = useState(false);
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
   const [showNewSubParamDialog, setShowNewSubParamDialog] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  
+
   // Form states
   const [newSetName, setNewSetName] = useState('');
   const [newSetDescription, setNewSetDescription] = useState('');
@@ -69,8 +69,7 @@ export default function ParameterManagementPage() {
   const loadParameterSets = async () => {
     setIsLoading(true);
     try {
-      const response = await qaParameterApi.getAll();
-      const sets = response.data || [];
+      const sets = await qaParameterApi.list();
       setParameterSets(sets);
       if (sets.length > 0 && !selectedSetId) {
         setSelectedSetId(sets[0].id || sets[0]._id);
@@ -95,7 +94,7 @@ export default function ParameterManagementPage() {
               ]
             },
             {
-              id: 'grp-2', 
+              id: 'grp-2',
               name: 'Problem Resolution',
               subParameters: [
                 { id: 'sp-3', name: 'Identified customer issue', weight: 15, type: 'Non-Fatal' },
@@ -125,7 +124,7 @@ export default function ParameterManagementPage() {
   // Calculate total weight for a parameter set
   const calculateTotalWeight = (params: Parameter[]) => {
     return params.reduce((total, group) => {
-      return total + group.subParameters.reduce((sum, sp) => 
+      return total + group.subParameters.reduce((sum, sp) =>
         sp.type !== 'Fatal' ? sum + sp.weight : sum, 0);
     }, 0);
   };
@@ -234,7 +233,7 @@ export default function ParameterManagementPage() {
   const handleDeleteSubParam = async (groupId: string, subParamId: string) => {
     if (!selectedSet) return;
     if (!confirm('Delete this sub-parameter?')) return;
-    
+
     try {
       const updatedParams = selectedSet.parameters.map(group => {
         if (group.id === groupId) {
@@ -257,7 +256,7 @@ export default function ParameterManagementPage() {
   const handleDeleteGroup = async (groupId: string) => {
     if (!selectedSet) return;
     if (!confirm('Delete this entire parameter group and all its sub-parameters?')) return;
-    
+
     try {
       const updatedParams = selectedSet.parameters.filter(g => g.id !== groupId);
       await qaParameterApi.update(selectedSetId!, { parameters: updatedParams } as any);
@@ -363,13 +362,12 @@ export default function ParameterManagementPage() {
 
       {/* Weight Status */}
       {selectedSet && (
-        <div className={`p-4 rounded-lg text-sm flex items-center justify-between ${
-          totalWeight === 100 
-            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600' 
-            : totalWeight > 100 
-            ? 'bg-red-500/10 border border-red-500/20 text-red-500' 
-            : 'bg-amber-500/10 border border-amber-500/20 text-amber-600'
-        }`}>
+        <div className={`p-4 rounded-lg text-sm flex items-center justify-between ${totalWeight === 100
+            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600'
+            : totalWeight > 100
+              ? 'bg-red-500/10 border border-red-500/20 text-red-500'
+              : 'bg-amber-500/10 border border-amber-500/20 text-amber-600'
+          }`}>
           <div className="flex items-center gap-2">
             {totalWeight === 100 ? (
               <Check className="h-4 w-4" />
@@ -570,8 +568,8 @@ export default function ParameterManagementPage() {
                 <Label>Type</Label>
                 <Select
                   value={newSubParam.type}
-                  onValueChange={(v) => setNewSubParam({ 
-                    ...newSubParam, 
+                  onValueChange={(v) => setNewSubParam({
+                    ...newSubParam,
                     type: v as any,
                     weight: v === 'Fatal' ? 0 : newSubParam.weight
                   })}

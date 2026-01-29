@@ -823,7 +823,7 @@ function DashboardPageContent() {
             activeCampaigns.map(convertQAParameterDocumentToQAParameter)
           );
           const campaignOptions = activeCampaigns.map((p: QAParameter) => ({
-            id: p.id,
+            id: p._id,
             name: p.name,
           }));
           setAvailableCampaignsForFilter([
@@ -3257,8 +3257,8 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             </TableCell>
                             <TableCell className="text-right">
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${c.score >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                  c.score >= 70 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                c.score >= 70 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                 }`}>
                                 {c.score}%
                               </span>
@@ -3386,8 +3386,8 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                         {!isAgentView && <TableCell>{audit.agentName}</TableCell>}
                         <TableCell>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${audit.overallScore > 90 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              audit.overallScore >= 85 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            audit.overallScore >= 85 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                              'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                             }`}>
                             {audit.overallScore.toFixed(2)}%
                           </span>

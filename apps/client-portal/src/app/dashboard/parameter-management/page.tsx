@@ -157,7 +157,7 @@ export default function ParameterManagementPage() {
       };
       const response = await qaParameterApi.create(newSet as any);
       await loadParameterSets();
-      setSelectedSetId(response.data?.id || response.data?._id);
+      setSelectedSetId(response.id || response._id);
       setShowNewSetDialog(false);
       setNewSetName('');
       setNewSetDescription('');
@@ -363,10 +363,10 @@ export default function ParameterManagementPage() {
       {/* Weight Status */}
       {selectedSet && (
         <div className={`p-4 rounded-lg text-sm flex items-center justify-between ${totalWeight === 100
-            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600'
-            : totalWeight > 100
-              ? 'bg-red-500/10 border border-red-500/20 text-red-500'
-              : 'bg-amber-500/10 border border-amber-500/20 text-amber-600'
+          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600'
+          : totalWeight > 100
+            ? 'bg-red-500/10 border border-red-500/20 text-red-500'
+            : 'bg-amber-500/10 border border-amber-500/20 text-amber-600'
           }`}>
           <div className="flex items-center gap-2">
             {totalWeight === 100 ? (

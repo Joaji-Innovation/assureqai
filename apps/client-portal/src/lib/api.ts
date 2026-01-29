@@ -11,7 +11,7 @@ interface ApiOptions extends RequestInit {
 
 async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { params, ...fetchOptions } = options;
-  
+
   // Build URL with query params
   let url = `${API_BASE}${endpoint}`;
   if (params) {
@@ -79,7 +79,7 @@ export const authApi = {
   logout: () =>
     request('/api/users/logout', { method: 'POST' }),
   me: () =>
-    request<{ username: string; fullName?: string; email?: string; role: string }>('/api/users/me'),
+    request<User>('/api/users/me'),
 };
 
 // Audit APIs
@@ -150,23 +150,23 @@ export interface Audit {
   createdAt: string;
   updatedAt?: string;
   auditedBy?: string;
-  
+
   // Data fields
   transcript?: string;
   englishTranslation?: string;
   callSummary?: string;
   auditDurationMs?: number;
-  
+
   auditResults: AuditResult[];
-  
+
   tokenUsage?: {
     inputTokens: number;
     outputTokens: number;
     totalTokens: number;
   };
-  
+
   timing?: AuditTiming;  // Processing timing metrics
-  
+
   disputeStatus?: string;
   sentiment?: {
     overall: 'positive' | 'neutral' | 'negative';
@@ -185,10 +185,10 @@ export interface LeaderboardEntry {
 export const auditApi = {
   getStats: (filters?: Record<string, string | number | undefined>) =>
     request<AuditStats>('/api/audits/stats', { params: filters }),
-  
+
   getLeaderboard: (projectId?: string, limit = 10) =>
     request<LeaderboardEntry[]>('/api/audits/leaderboard', { params: { projectId, limit } }),
-  
+
   list: (filters: {
     page?: number;
     limit?: number;
@@ -201,16 +201,16 @@ export const auditApi = {
     request<{ data: Audit[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/audits', {
       params: filters as Record<string, string | number | undefined>,
     }),
-  
+
   getById: (id: string) =>
     request<Audit>(`/api/audits/${id}`),
-  
+
   create: (data: Partial<Audit>) =>
     request<Audit>('/api/audits', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: string) =>
     request<void>(`/api/audits/${id}`, { method: 'DELETE' }),
 };
@@ -230,22 +230,22 @@ export interface QAParameter {
 export const qaParameterApi = {
   list: () =>
     request<QAParameter[]>('/api/qa-parameters'),
-  
+
   getById: (id: string) =>
     request<QAParameter>(`/api/qa-parameters/${id}`),
-  
+
   create: (data: Partial<QAParameter>) =>
     request<QAParameter>('/api/qa-parameters', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: string, data: Partial<QAParameter>) =>
     request<QAParameter>(`/api/qa-parameters/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: string) =>
     request<void>(`/api/qa-parameters/${id}`, { method: 'DELETE' }),
 };
@@ -267,16 +267,16 @@ export const campaignApi = {
     request<{ data: Campaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/campaigns', {
       params: { page, limit },
     }),
-  
+
   getById: (id: string) =>
     request<Campaign>(`/api/campaigns/${id}`),
-  
+
   create: (data: { name: string; description?: string; jobs: Array<{ audioUrl: string; agentName?: string; callId?: string }> }) =>
     request<Campaign>('/api/campaigns', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   getStatus: (id: string) =>
     request<{ status: string; progress: number; completedJobs: number; totalJobs: number }>(`/api/campaigns/${id}/status`),
 };
@@ -288,25 +288,25 @@ export const userApi = {
     request<{ data: User[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/users', {
       params: { page, limit },
     }),
-  
+
   getById: (id: string) =>
     request<User>(`/api/users/${id}`),
-  
+
   create: (data: { username: string; password: string; fullName?: string; email?: string; role: string }) =>
     request<User>('/api/users', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: string, data: Partial<User>) =>
     request<User>(`/api/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: string) =>
     request<void>(`/api/users/${id}`, { method: 'DELETE' }),
-  
+
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>('/api/users/change-password', {
       method: 'POST',
@@ -326,7 +326,7 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify({ message, context }),
     }),
-  
+
   explain: (concept: string) =>
     request<{ explanation: string }>('/api/ai/explain-concept', {
       method: 'POST',
@@ -363,23 +363,23 @@ export interface SOP {
 export const sopApi = {
   list: () =>
     request<SOP[]>('/api/sops'),
-  
+
   getById: (id: string) =>
     request<SOP>(`/api/sops/${id}`),
-  
+
   create: (data: FormData) =>
     request<SOP>('/api/sops', {
       method: 'POST',
       body: data, // Send FormData directly for file upload
       headers: {}, // Let browser set Content-Type for FormData
     }),
-  
+
   update: (id: string, data: Partial<SOP>) =>
     request<SOP>(`/api/sops/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: string) =>
     request<void>(`/api/sops/${id}`, { method: 'DELETE' }),
 };
@@ -404,23 +404,23 @@ export interface Alert {
 
 export const alertApi = {
   list: (params?: { page?: number; limit?: number; unreadOnly?: boolean }) =>
-    request<{ data: Alert[]; total: number; page: number; totalPages: number }>('/api/alerts', { 
-      params: params ? { 
-        page: params.page, 
-        limit: params.limit, 
-        unreadOnly: params.unreadOnly ? 'true' : undefined 
-      } : undefined 
+    request<{ data: Alert[]; total: number; page: number; totalPages: number }>('/api/alerts', {
+      params: params ? {
+        page: params.page,
+        limit: params.limit,
+        unreadOnly: params.unreadOnly ? 'true' : undefined
+      } : undefined
     }),
-  
+
   getUnreadCount: () =>
     request<{ count: number }>('/api/alerts/unread-count'),
-  
+
   markAsRead: (id: string) =>
     request<void>(`/api/alerts/${id}/read`, { method: 'POST' }),
-  
+
   markAllAsRead: () =>
     request<void>('/api/alerts/mark-all-read', { method: 'POST' }),
-  
+
   acknowledge: (id: string) =>
     request<void>(`/api/alerts/${id}/acknowledge`, { method: 'POST' }),
 };

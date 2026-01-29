@@ -24,7 +24,7 @@ export const queryKeys = {
 export function useAuditStats(projectId?: string, startDate?: string, endDate?: string) {
   return useQuery({
     queryKey: queryKeys.stats(projectId, startDate, endDate),
-    queryFn: () => auditApi.getStats(projectId, startDate, endDate),
+    queryFn: () => auditApi.getStats({ projectId, startDate, endDate }),
     placeholderData: {
       total: 0,
       aiAudits: 0,

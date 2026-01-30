@@ -1,0 +1,130 @@
+/**
+ * Notifications Controller
+ * REST API for notification settings and webhooks
+ */
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { NotificationsService, UpdateSettingsDto, CreateWebhookDto, UpdateWebhookDto } from './notifications.service';
+import { CurrentUser, RequirePermissions } from '@assureqai/auth';
+import { JwtPayload, PERMISSIONS, ROLES } from '@assureqai/common';
+
+@ApiTags('Notifications')
+@ApiBearerAuth()
+@Controller('notifications')
+export class NotificationsController {
+  constructor(private readonly notificationsService: NotificationsService) { }
+
+  /**
+   * Get notification settings for current project
+   */
+  @Get('settings')
+  @RequirePermissions(PERMISSIONS.VIEW_ANALYTICS)
+  @ApiOperation({ summary: 'Get notification settings' })
+  @ApiResponse({ status: 200, description: 'Settings retrieved' })
+  async getSettings(@CurrentUser() user: JwtPayload) {
+    if (!user.projectId) {
+      return {
+        alertRules: [],
+        smtp: { enabled: false },
+        pushNotificationsEnabled: true,
+        emailNotificationsEnabled: false,
+      };
+    }
+    return this.notificationsService.getSettings(user.projectId);
+  }
+
+  /**
+   * Update notification settings
+   */
+  @Put('settings')
+  @RequirePermissions(PERMISSIONS.MANAGE_USERS) // Only managers can change settings
+  @ApiOperation({ summary: 'Update notification settings' })
+  @ApiResponse({ status: 200, description: 'Settings updated' })
+  async updateSettings(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateSettingsDto,
+  ) {
+    if (!user.projectId) {
+      return { error: 'No project associated with user' };
+    }
+    return this.notificationsService.updateSettings(user.projectId, dto);
+  }
+
+  /**
+   * Get all webhooks for current project
+   */
+  @Get('webhooks')
+  @RequirePermissions(PERMISSIONS.VIEW_ANALYTICS)
+  @ApiOperation({ summary: 'Get webhooks' })
+  @ApiResponse({ status: 200, description: 'Webhooks retrieved' })
+  async getWebhooks(@CurrentUser() user: JwtPayload) {
+    if (!user.projectId) {
+      return [];
+    }
+    return this.notificationsService.getWebhooks(user.projectId);
+  }
+
+  /**
+   * Create a new webhook
+   */
+  @Post('webhooks')
+  @RequirePermissions(PERMISSIONS.MANAGE_USERS)
+  @ApiOperation({ summary: 'Create webhook' })
+  @ApiResponse({ status: 201, description: 'Webhook created' })
+  async createWebhook(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateWebhookDto,
+  ) {
+    if (!user.projectId) {
+      return { error: 'No project associated with user' };
+    }
+    return this.notificationsService.createWebhook(user.projectId, dto);
+  }
+
+  /**
+   * Update a webhook
+   */
+  @Put('webhooks/:id')
+  @RequirePermissions(PERMISSIONS.MANAGE_USERS)
+  @ApiOperation({ summary: 'Update webhook' })
+  @ApiResponse({ status: 200, description: 'Webhook updated' })
+  async updateWebhook(
+    @Param('id') id: string,
+    @Body() dto: UpdateWebhookDto,
+  ) {
+    return this.notificationsService.updateWebhook(id, dto);
+  }
+
+  /**
+   * Delete a webhook
+   */
+  @Delete('webhooks/:id')
+  @RequirePermissions(PERMISSIONS.MANAGE_USERS)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete webhook' })
+  @ApiResponse({ status: 204, description: 'Webhook deleted' })
+  async deleteWebhook(@Param('id') id: string) {
+    await this.notificationsService.deleteWebhook(id);
+  }
+
+  /**
+   * Test a webhook
+   */
+  @Post('webhooks/:id/test')
+  @RequirePermissions(PERMISSIONS.MANAGE_USERS)
+  @ApiOperation({ summary: 'Test webhook' })
+  @ApiResponse({ status: 200, description: 'Test result' })
+  async testWebhook(@Param('id') id: string) {
+    return this.notificationsService.testWebhook(id);
+  }
+}

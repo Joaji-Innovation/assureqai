@@ -37,6 +37,7 @@ import { AnnouncementModule } from '../modules/announcement/announcement.module'
 import { ProvisioningModule } from '../modules/provisioning/provisioning.module';
 import { BackupModule } from '../modules/backup/backup.module';
 import { CreditsModule } from '../modules/credits/credits.module';
+import { NotificationsModule } from '../modules/notifications/notifications.module';
 
 // Config
 import { WinstonLoggerConfig } from '../config/logger.config';
@@ -107,6 +108,7 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     ProvisioningModule,
     BackupModule,
     CreditsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -127,4 +129,4 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

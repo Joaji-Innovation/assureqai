@@ -187,3 +187,83 @@ export function useQueueStatus() {
     placeholderData: { queueLength: 0, isAvailable: false },
   });
 }
+
+// ============ Notification Hooks ============
+
+import { notificationApi, type NotificationSettings, type Webhook, type AlertRuleConfig } from './api';
+
+export const notificationKeys = {
+  settings: () => ['notificationSettings'] as const,
+  webhooks: () => ['webhooks'] as const,
+};
+
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: notificationKeys.settings(),
+    queryFn: () => notificationApi.getSettings(),
+    placeholderData: {
+      _id: '',
+      projectId: '',
+      alertRules: [],
+      smtp: { host: '', port: 587, user: '', fromName: '', fromEmail: '', enabled: false },
+      pushNotificationsEnabled: true,
+      emailNotificationsEnabled: false,
+    } as NotificationSettings,
+  });
+}
+
+export function useUpdateNotificationSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<NotificationSettings>) => notificationApi.updateSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.settings() });
+    },
+  });
+}
+
+export function useWebhooks() {
+  return useQuery({
+    queryKey: notificationKeys.webhooks(),
+    queryFn: () => notificationApi.getWebhooks(),
+    placeholderData: [],
+  });
+}
+
+export function useCreateWebhook() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; url: string; events: string[]; secret?: string }) =>
+      notificationApi.createWebhook(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.webhooks() });
+    },
+  });
+}
+
+export function useUpdateWebhook() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Webhook> }) =>
+      notificationApi.updateWebhook(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.webhooks() });
+    },
+  });
+}
+
+export function useDeleteWebhook() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationApi.deleteWebhook(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.webhooks() });
+    },
+  });
+}
+
+export function useTestWebhook() {
+  return useMutation({
+    mutationFn: (id: string) => notificationApi.testWebhook(id),
+  });
+}

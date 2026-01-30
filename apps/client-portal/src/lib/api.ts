@@ -427,6 +427,81 @@ export const alertApi = {
     request<void>(`/api/alerts/${id}/acknowledge`, { method: 'POST' }),
 };
 
+// Notification Settings Interfaces
+export interface AlertRuleConfig {
+  type: 'fatal_failure' | 'threshold_breach' | 'at_risk' | 'compliance' | 'low_score';
+  enabled: boolean;
+  channels: ('push' | 'email' | 'webhook')[];
+  config: Record<string, any>;
+}
+
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  password?: string;
+  fromName: string;
+  fromEmail: string;
+  enabled: boolean;
+}
+
+export interface NotificationSettings {
+  _id: string;
+  projectId: string;
+  alertRules: AlertRuleConfig[];
+  smtp: SmtpConfig;
+  pushNotificationsEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+}
+
+export interface Webhook {
+  _id: string;
+  projectId: string;
+  name: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  secret?: string;
+  lastTriggered?: string;
+  lastError?: string;
+  successCount: number;
+  failureCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const notificationApi = {
+  getSettings: () =>
+    request<NotificationSettings>('/api/notifications/settings'),
+
+  updateSettings: (data: Partial<NotificationSettings>) =>
+    request<NotificationSettings>('/api/notifications/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  getWebhooks: () =>
+    request<Webhook[]>('/api/notifications/webhooks'),
+
+  createWebhook: (data: { name: string; url: string; events: string[]; secret?: string }) =>
+    request<Webhook>('/api/notifications/webhooks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateWebhook: (id: string, data: Partial<Webhook>) =>
+    request<Webhook>(`/api/notifications/webhooks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteWebhook: (id: string) =>
+    request<void>(`/api/notifications/webhooks/${id}`, { method: 'DELETE' }),
+
+  testWebhook: (id: string) =>
+    request<{ success: boolean; message: string }>(`/api/notifications/webhooks/${id}/test`, { method: 'POST' }),
+};
+
 export default {
   auth: authApi,
   audit: auditApi,
@@ -437,4 +512,5 @@ export default {
   ai: aiApi,
   sop: sopApi,
   alert: alertApi,
+  notification: notificationApi,
 };

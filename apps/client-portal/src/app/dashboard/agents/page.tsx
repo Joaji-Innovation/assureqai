@@ -221,7 +221,7 @@ export default function AgentsPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                            {agent.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                            {agent.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
                           </div>
                           <div>
                             <p className="font-medium">{agent.name}</p>

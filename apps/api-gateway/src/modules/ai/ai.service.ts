@@ -295,7 +295,7 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
       // Call Gemini with multimodal content (audio + text)
       const response = await this.callGeminiWithAudio(textPrompt, audioBase64, mimeType);
 
-      // Parse the JSON response
+      // Parse the JSON response with robust error handling
       let jsonText = response.trim();
       if (jsonText.startsWith('```json')) {
         jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -303,7 +303,24 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
         jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
 
-      const output = JSON.parse(jsonText);
+      // Try to parse JSON, with repair attempts for truncated responses
+      let output: any;
+      try {
+        output = JSON.parse(jsonText);
+      } catch (parseError: any) {
+        this.logger.warn(`Initial JSON parse failed: ${parseError.message}. Attempting repair...`);
+
+        // Try to repair truncated JSON
+        const repairedJson = this.repairTruncatedJson(jsonText);
+        try {
+          output = JSON.parse(repairedJson);
+          this.logger.log('JSON repair successful');
+        } catch (repairError: any) {
+          // Extract what we can from the partial response
+          this.logger.warn(`JSON repair failed: ${repairError.message}. Extracting partial data...`);
+          output = this.extractPartialData(jsonText, request.parameters);
+        }
+      }
 
       // Calculate processing time
       const processingDurationMs = Date.now() - startTime;
@@ -602,6 +619,138 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
       // Non-critical - just log
       this.logger.warn(`File cleanup failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Attempt to repair truncated JSON responses
+   * Common issues: unclosed strings, missing brackets, partial arrays
+   */
+  private repairTruncatedJson(jsonText: string): string {
+    let repaired = jsonText;
+
+    // Count brackets to find imbalance
+    let openBraces = 0, closeBraces = 0;
+    let openBrackets = 0, closeBrackets = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < repaired.length; i++) {
+      const char = repaired[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"' && !escapeNext) {
+        inString = !inString;
+      }
+
+      if (!inString) {
+        if (char === '{') openBraces++;
+        if (char === '}') closeBraces++;
+        if (char === '[') openBrackets++;
+        if (char === ']') closeBrackets++;
+      }
+    }
+
+    // If we ended inside a string, close it
+    if (inString) {
+      // Find the last quote and add a closing one
+      repaired = repaired + '"';
+    }
+
+    // Close any unclosed brackets/braces
+    while (openBrackets > closeBrackets) {
+      repaired += ']';
+      closeBrackets++;
+    }
+
+    while (openBraces > closeBraces) {
+      repaired += '}';
+      closeBraces++;
+    }
+
+    // Try to fix common truncation patterns
+    // Remove trailing comma before closing bracket
+    repaired = repaired.replace(/,(\s*[}\]])/g, '$1');
+
+    return repaired;
+  }
+
+  /**
+   * Extract partial data from malformed JSON when repair fails
+   * Creates a minimal valid result with whatever data can be recovered
+   */
+  private extractPartialData(jsonText: string, parameters: any[]): any {
+    const result: any = {
+      identifiedAgentName: 'Unknown',
+      transcriptionInOriginalLanguage: 'Transcription unavailable - response was truncated',
+      englishTranslation: 'Translation unavailable',
+      callSummary: 'Audit partially completed - response was truncated',
+      auditResults: [],
+      overallScore: 0,
+      sentiment: { overall: 'neutral', customerScore: 0, agentScore: 0, escalationRisk: 'unknown' }
+    };
+
+    // Try to extract agent name
+    const agentMatch = jsonText.match(/"identifiedAgentName"\s*:\s*"([^"]+)"/);
+    if (agentMatch) result.identifiedAgentName = agentMatch[1];
+
+    // Try to extract transcript
+    const transcriptMatch = jsonText.match(/"transcriptionInOriginalLanguage"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (transcriptMatch) result.transcriptionInOriginalLanguage = transcriptMatch[1];
+
+    // Try to extract English translation
+    const translationMatch = jsonText.match(/"englishTranslation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (translationMatch) result.englishTranslation = translationMatch[1];
+
+    // Try to extract call summary
+    const summaryMatch = jsonText.match(/"callSummary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (summaryMatch) result.callSummary = summaryMatch[1];
+
+    // Try to extract overall score
+    const scoreMatch = jsonText.match(/"overallScore"\s*:\s*(\d+(?:\.\d+)?)/);
+    if (scoreMatch) result.overallScore = parseFloat(scoreMatch[1]);
+
+    // Try to extract individual audit results using regex
+    const auditResultsSection = jsonText.match(/"auditResults"\s*:\s*\[([\s\S]*?)(?:\]|$)/);
+    if (auditResultsSection) {
+      const resultPattern = /"parameterName"\s*:\s*"([^"]+)".*?"score"\s*:\s*(\d+)/g;
+      let match;
+      while ((match = resultPattern.exec(auditResultsSection[1])) !== null) {
+        result.auditResults.push({
+          parameterId: match[1],
+          parameterName: match[1],
+          score: parseInt(match[2], 10),
+          weight: 10,
+          type: 'Non-Fatal',
+          comments: 'Extracted from partial response',
+          confidence: 50,
+        });
+      }
+    }
+
+    // If no audit results extracted, create placeholder results from input parameters
+    if (result.auditResults.length === 0 && parameters) {
+      result.auditResults = parameters.map((p: any) => ({
+        parameterId: p.id || p.name,
+        parameterName: p.name,
+        score: 0,
+        weight: p.weight || 10,
+        type: p.type || 'Non-Fatal',
+        comments: 'Could not score - response was truncated',
+        confidence: 0,
+      }));
+    }
+
+    this.logger.log(`Extracted partial data: ${result.auditResults.length} results, score: ${result.overallScore}`);
+    return result;
   }
 
   /**

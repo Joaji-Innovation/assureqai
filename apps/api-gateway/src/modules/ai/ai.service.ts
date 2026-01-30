@@ -157,6 +157,59 @@ export class AiService {
   }
 
   /**
+   * Complete audio audit flow: transcribe audio then perform AI audit
+   * This is the main entry point for QAI Audit Form
+   */
+  async auditAudio(request: {
+    audioUrl?: string;
+    transcript?: string;
+    parameters: AuditRequest['parameters'];
+    sopContent?: string;
+    language?: string;
+    agentName?: string;
+    callId?: string;
+    campaignName?: string;
+  }): Promise<AuditResult & { transcript: string }> {
+    if (!this.apiKey) {
+      throw new BadRequestException('AI service not configured. Please set GEMINI_API_KEY.');
+    }
+
+    // Get transcript - either provided directly or transcribed from audio
+    let transcript = request.transcript;
+    let language = request.language || 'en-US';
+
+    if (!transcript) {
+      if (!request.audioUrl) {
+        throw new BadRequestException('Either transcript or audioUrl must be provided');
+      }
+
+      this.logger.log(`Transcribing audio from: ${request.audioUrl}`);
+      const transcriptionResult = await this.transcribeAudio(request.audioUrl);
+      transcript = transcriptionResult.transcript;
+      language = transcriptionResult.language;
+    }
+
+    // Validate we have parameters
+    if (!request.parameters || request.parameters.length === 0) {
+      throw new BadRequestException('QA parameters are required for audit. Please configure parameters first.');
+    }
+
+    // Perform the AI audit
+    const auditResult = await this.auditCall({
+      transcript,
+      parameters: request.parameters,
+      sopContent: request.sopContent,
+      language,
+    });
+
+    // Return audit result with transcript
+    return {
+      ...auditResult,
+      transcript,
+    };
+  }
+
+  /**
    * Chat with AI about an audit
    */
   async chat(message: string, context?: any): Promise<string> {

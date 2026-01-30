@@ -10,15 +10,35 @@ import { PERMISSIONS, JwtPayload } from '@assureqai/common';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AiController {
-  constructor(private readonly aiService: AiService) {}
+  constructor(private readonly aiService: AiService) { }
 
   @Post('audit-call')
   @RequirePermissions(PERMISSIONS.PERFORM_AUDIT)
-  @ApiOperation({ summary: 'Perform AI audit on call data' })
+  @ApiOperation({ summary: 'Perform AI audit on call data (requires transcript)' })
   @ApiResponse({ status: 200, description: 'Audit completed' })
   async auditCall(@Body() request: any, @CurrentUser() user: JwtPayload) {
     // Ideally use DTO, here relying on service validation
     return this.aiService.auditCall(request);
+  }
+
+  @Post('audit-audio')
+  @RequirePermissions(PERMISSIONS.PERFORM_AUDIT)
+  @ApiOperation({ summary: 'Perform AI audit with auto-transcription (accepts audioUrl or transcript)' })
+  @ApiResponse({ status: 200, description: 'Audit completed with transcript' })
+  async auditAudio(
+    @Body() request: {
+      audioUrl?: string;
+      transcript?: string;
+      parameters: any[];
+      sopContent?: string;
+      language?: string;
+      agentName?: string;
+      callId?: string;
+      campaignName?: string;
+    },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.aiService.auditAudio(request);
   }
 
   @Post('audit-chat')
@@ -37,3 +57,4 @@ export class AiController {
     return { explanation };
   }
 }
+

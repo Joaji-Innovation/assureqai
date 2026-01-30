@@ -104,12 +104,17 @@ export interface AuditResult {
 export class AiService {
   private readonly logger = new Logger(AiService.name);
   private readonly apiKey: string | undefined;
-  private readonly model = 'gemini-1.5-pro';
+  private readonly model: string;
 
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get<string>('GEMINI_API_KEY');
+    // Default to gemini-2.0-flash for best speed/cost balance, configurable via env
+    this.model = this.configService.get<string>('GEMINI_MODEL') || 'gemini-2.0-flash';
+
     if (!this.apiKey) {
       this.logger.warn('GEMINI_API_KEY not configured - AI features disabled');
+    } else {
+      this.logger.log(`AI service initialized with model: ${this.model}`);
     }
   }
 
@@ -193,8 +198,8 @@ Explanation:`;
     // For now, return a mock transcript if in dev mode
     if (process.env.NODE_ENV !== 'production') {
       return {
-         transcript: "This is a simulated transcript for development purposes. The actual transcription service is not yet connected.",
-         language: "en-US"
+        transcript: "This is a simulated transcript for development purposes. The actual transcription service is not yet connected.",
+        language: "en-US"
       };
     }
     throw new BadRequestException('Audio transcription not yet implemented');
@@ -335,17 +340,17 @@ Respond ONLY with valid JSON in this exact format:
    * Parse AI response into structured result
    */
   private parseAuditResponse(
-    response: string, 
+    response: string,
     parameters: AuditRequest['parameters'],
     startTime: Date
   ): AuditResult {
     const endTime = new Date();
     const processingDurationMs = endTime.getTime() - startTime.getTime();
-    
+
     // Extract JSON from response (may be wrapped in markdown code blocks)
-    const jsonMatch = response.match(/```json\n?([\s\S]*?)\n?```/) || 
-                      response.match(/\{[\s\S]*\}/);
-    
+    const jsonMatch = response.match(/```json\n?([\s\S]*?)\n?```/) ||
+      response.match(/\{[\s\S]*\}/);
+
     if (!jsonMatch) {
       throw new Error('Failed to parse AI response');
     }
@@ -376,7 +381,7 @@ Respond ONLY with valid JSON in this exact format:
 
     // Calculate overall confidence as average of parameter confidences
     const confidences = auditResults.map((r: any) => r.confidence);
-    const overallConfidence = confidences.length > 0 
+    const overallConfidence = confidences.length > 0
       ? Math.round(confidences.reduce((a: number, b: number) => a + b, 0) / confidences.length)
       : 80;
 

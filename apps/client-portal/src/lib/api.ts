@@ -352,8 +352,9 @@ export const aiApi = {
       body: JSON.stringify({ concept }),
     }),
 
+  // Audio audit - sends audio directly to Gemini for transcription + audit
   auditCall: (data: any) =>
-    request<any>('/api/ai/audit-call', {
+    request<any>('/api/ai/audit-audio', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

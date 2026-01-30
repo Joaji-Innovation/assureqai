@@ -476,13 +476,25 @@ export default function QaAuditContent() {
     setAuditResult(null);
 
     try {
-      const input: QaAuditInput = {
-        agentUserId: qaAgentUserId,
-        campaignName: qaCampaignName,
+      // Transform parameters to flat format expected by the backend
+      const flatParameters = qaAuditParameters.flatMap(group =>
+        (group.subParameters || []).map(sub => ({
+          id: sub.id,
+          name: sub.name,
+          weight: sub.weight,
+          type: sub.type || 'Non-Fatal',
+        }))
+      );
+
+      const input = {
+        // Audio data (base64 data URI)
         audioDataUri: originalAudioDataUri || "",
-        callLanguage: qaCallLanguage,
-        transcriptionLanguage: qaTranscriptionLanguage,
-        auditParameters: qaAuditParameters,
+        // QA parameters for scoring
+        parameters: flatParameters,
+        // Metadata
+        language: qaCallLanguage,
+        agentName: qaAgentUserId, // Backend expects agentName
+        campaignName: qaCampaignName,
       };
 
       const result = await aiApi.auditCall(input);

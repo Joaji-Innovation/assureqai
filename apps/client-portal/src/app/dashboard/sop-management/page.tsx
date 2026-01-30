@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { 
-  BookText, Plus, FileText, Upload, Loader2, X, Eye, Trash2, 
-  Download, CheckCircle, AlertCircle, Clock, FileUp, Link2, Pencil 
+import {
+  BookText, Plus, FileText, Upload, Loader2, X, Eye, Trash2,
+  Download, CheckCircle, AlertCircle, Clock, FileUp, Link2, Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,13 +54,13 @@ export default function SOPManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [sops, setSops] = useState<SOP[]>([]);
   const [parameterSets, setParameterSets] = useState<QAParameter[]>([]);
-  
+
   // Dialog states
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
-  
+
   // Form states
   const [uploading, setUploading] = useState(false);
   const [newSop, setNewSop] = useState({
@@ -92,50 +92,20 @@ export default function SOPManagementPage() {
         sopApi.list(),
         qaParameterApi.list()
       ]);
-      
+
       // Normalize SOP data - ensure name exists (fallback to title, fileName, or 'Untitled')
       const normalizedSops = ((sopResponse as any) || []).map((sop: any) => ({
         ...sop,
         name: sop.name || sop.title || sop.fileName?.replace(/\.[^/.]+$/, '') || 'Untitled SOP'
       }));
-      
+
       setSops(normalizedSops);
       setParameterSets((paramResponse as any) || []);
     } catch (error) {
       console.error('Failed to load data:', error);
-      // Demo data
-      setSops([
-        {
-          id: 'demo-1',
-          name: 'Customer Service Guidelines',
-          description: 'Standard procedures for handling customer service calls',
-          fileName: 'cs_guidelines_v2.pdf',
-          fileType: 'application/pdf',
-          fileSize: 245000,
-          isActive: true,
-          createdAt: '2026-01-10T10:00:00Z',
-          updatedAt: '2026-01-10T10:00:00Z'
-        },
-        {
-          id: 'demo-2',
-          name: 'Escalation Procedures',
-          description: 'How to handle escalated calls and complaints',
-          fileName: 'escalation_v1.docx',
-          fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          fileSize: 89000,
-          isActive: true,
-          createdAt: '2026-01-08T14:30:00Z',
-          updatedAt: '2026-01-08T14:30:00Z'
-        },
-        {
-          id: 'demo-3',
-          name: 'Sales Best Practices',
-          description: 'Techniques for outbound and inbound sales',
-          isActive: true,
-          createdAt: '2026-01-05T09:00:00Z',
-          updatedAt: '2026-01-05T09:00:00Z'
-        }
-      ]);
+      // Show error state instead of demo data
+      setSops([]);
+      setParameterSets([]);
     } finally {
       setIsLoading(false);
     }
@@ -162,8 +132,8 @@ export default function SOPManagementPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setNewSop({ 
-        ...newSop, 
+      setNewSop({
+        ...newSop,
         file,
         name: newSop.name || file.name.replace(/\.[^/.]+$/, '') // Use filename as name if empty
       });
@@ -179,7 +149,7 @@ export default function SOPManagementPage() {
     try {
       let fileContent = '';
       let fileData = {};
-      
+
       // Read file as base64 if provided
       if (newSop.file) {
         fileContent = await new Promise<string>((resolve) => {
@@ -190,7 +160,7 @@ export default function SOPManagementPage() {
           };
           reader.readAsDataURL(newSop.file!);
         });
-        
+
         fileData = {
           fileName: newSop.file.name,
           fileType: newSop.file.type,
@@ -266,7 +236,7 @@ export default function SOPManagementPage() {
   // Delete SOP
   const handleDelete = async (sop: SOP) => {
     if (!confirm(`Delete "${sop.name}"? This cannot be undone.`)) return;
-    
+
     try {
       const sopId = sop.id || sop._id;
       if (sopId) {
@@ -361,8 +331,8 @@ export default function SOPManagementPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {sops.map((sop) => (
-            <Card 
-              key={sop.id || sop._id} 
+            <Card
+              key={sop.id || sop._id}
               className="bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-colors group"
             >
               <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -376,9 +346,9 @@ export default function SOPManagementPage() {
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(sop)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() => handleDelete(sop)}
                   >
@@ -393,7 +363,7 @@ export default function SOPManagementPage() {
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{sop.description}</p>
                   )}
                 </div>
-                
+
                 {sop.fileName && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <FileUp className="h-3 w-3" />
@@ -438,7 +408,7 @@ export default function SOPManagementPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="sopDesc">Description</Label>
               <Textarea
@@ -553,7 +523,7 @@ export default function SOPManagementPage() {
                   </div>
                 )}
               </div>
-              
+
               {selectedSop.content && (
                 <div>
                   <Label className="text-muted-foreground">Document</Label>

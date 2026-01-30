@@ -23,25 +23,17 @@ interface WebhookConfig {
   lastTriggered?: string;
 }
 
-const mockAlertRules: AlertRule[] = [
-  { id: '1', name: 'Fatal Parameter Failure', type: 'fatal_failure', enabled: true, channels: ['push', 'email', 'webhook'], config: {} },
-  { id: '2', name: 'Agent Score Below 70%', type: 'threshold_breach', enabled: true, channels: ['push', 'email'], config: { threshold: 70 } },
-  { id: '3', name: 'At-Risk Agent (3+ low scores)', type: 'at_risk', enabled: true, channels: ['email'], config: { consecutiveLow: 3 } },
-  { id: '4', name: 'Compliance Phrase Detected', type: 'compliance', enabled: false, channels: ['push'], config: {} },
-];
-
-const mockWebhooks: WebhookConfig[] = [
-  { id: '1', name: 'Slack Alerts', url: 'https://hooks.slack.com/services/xxx', events: ['fatal_failure', 'at_risk'], active: true, lastTriggered: '2026-01-10T14:30:00Z' },
-  { id: '2', name: 'MS Teams', url: 'https://outlook.office.com/webhook/xxx', events: ['threshold_breach'], active: true },
-];
+// TODO: Connect to API when notification endpoints are available
+const initialAlertRules: AlertRule[] = [];
+const initialWebhooks: WebhookConfig[] = [];
 
 export default function NotificationsPage() {
-  const [alertRules, setAlertRules] = useState(mockAlertRules);
-  const [webhooks, setWebhooks] = useState(mockWebhooks);
+  const [alertRules, setAlertRules] = useState(initialAlertRules);
+  const [webhooks, setWebhooks] = useState(initialWebhooks);
   const [showAddWebhook, setShowAddWebhook] = useState(false);
   const [newWebhook, setNewWebhook] = useState({ name: '', url: '', events: [] as string[] });
   const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
-  
+
   // SMTP Config
   const [smtpConfig, setSmtpConfig] = useState({
     host: 'smtp.gmail.com',
@@ -52,13 +44,13 @@ export default function NotificationsPage() {
   });
 
   const toggleRule = (id: string) => {
-    setAlertRules(prev => prev.map(rule => 
+    setAlertRules(prev => prev.map(rule =>
       rule.id === id ? { ...rule, enabled: !rule.enabled } : rule
     ));
   };
 
   const toggleWebhook = (id: string) => {
-    setWebhooks(prev => prev.map(wh => 
+    setWebhooks(prev => prev.map(wh =>
       wh.id === id ? { ...wh, active: !wh.active } : wh
     ));
   };
@@ -259,11 +251,10 @@ export default function NotificationsPage() {
                             : [...newWebhook.events, event.value];
                           setNewWebhook({ ...newWebhook, events });
                         }}
-                        className={`px-3 py-1 text-sm rounded-full border transition-colors ${
-                          newWebhook.events.includes(event.value)
+                        className={`px-3 py-1 text-sm rounded-full border transition-colors ${newWebhook.events.includes(event.value)
                             ? 'bg-primary/10 border-primary text-primary'
                             : 'border-border hover:border-primary/50'
-                        }`}
+                          }`}
                       >
                         {event.label}
                       </button>

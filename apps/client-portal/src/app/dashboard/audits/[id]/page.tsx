@@ -3,15 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward, ArrowLeft, Clock, User, ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward, ArrowLeft, Clock, User, ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle, Loader2, FileText, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAudit } from '@/lib/hooks';
 
 interface TranscriptSegment {
   id: string;
   speaker: 'agent' | 'customer';
   text: string;
-  startTime: number; // seconds
+  startTime: number;
   endTime: number;
   sentiment: 'positive' | 'neutral' | 'negative';
   annotations: {
@@ -26,53 +27,38 @@ interface AuditResult {
   parameterName: string;
   score: number;
   maxScore: number;
-  linkedSegments: string[]; // segment IDs that affected this score
+  linkedSegments: string[];
   feedback: string;
 }
 
-// Mock data
-const mockTranscript: TranscriptSegment[] = [
-  { id: '1', speaker: 'agent', text: 'Thank you for calling AssureQai support, this is Sarah speaking. How may I assist you today?', startTime: 0, endTime: 5, sentiment: 'positive', annotations: [{ type: 'positive', text: 'Excellent greeting', parameterId: 'greeting' }] },
-  { id: '2', speaker: 'customer', text: 'Hi Sarah, I\'m having trouble with my dashboard. It keeps showing an error when I try to load the reports.', startTime: 5, endTime: 12, sentiment: 'neutral', annotations: [] },
-  { id: '3', speaker: 'agent', text: 'I\'m sorry to hear you\'re experiencing this issue. Let me look into that for you right away. Can you tell me what error message you\'re seeing?', startTime: 12, endTime: 19, sentiment: 'positive', annotations: [{ type: 'positive', text: 'Good empathy and probing', parameterId: 'problem_id' }] },
-  { id: '4', speaker: 'customer', text: 'It says "Error 500: Internal Server Error" and I\'ve tried refreshing multiple times.', startTime: 19, endTime: 25, sentiment: 'negative', annotations: [] },
-  { id: '5', speaker: 'agent', text: 'I understand how frustrating that must be. Let me check our system status. One moment please.', startTime: 25, endTime: 31, sentiment: 'positive', annotations: [{ type: 'positive', text: 'Acknowledged frustration', parameterId: 'tone' }] },
-  { id: '6', speaker: 'agent', text: 'I can see there was a temporary service disruption that has now been resolved. Could you please try refreshing your browser now?', startTime: 35, endTime: 43, sentiment: 'positive', annotations: [{ type: 'positive', text: 'Clear solution provided', parameterId: 'solution' }] },
-  { id: '7', speaker: 'customer', text: 'Oh yes, it\'s working now! Thank you so much!', startTime: 43, endTime: 47, sentiment: 'positive', annotations: [] },
-  { id: '8', speaker: 'agent', text: 'Wonderful! Is there anything else I can help you with today?', startTime: 47, endTime: 51, sentiment: 'positive', annotations: [{ type: 'positive', text: 'Good closing', parameterId: 'closing' }] },
-  { id: '9', speaker: 'customer', text: 'No, that\'s all. Thanks again!', startTime: 51, endTime: 54, sentiment: 'positive', annotations: [] },
-  { id: '10', speaker: 'agent', text: 'You\'re welcome! Thank you for choosing AssureQai. Have a great day!', startTime: 54, endTime: 59, sentiment: 'positive', annotations: [{ type: 'positive', text: 'Warm closing', parameterId: 'closing' }] },
-];
-
-const mockAuditResults: AuditResult[] = [
-  { parameterId: 'greeting', parameterName: 'Greeting & Opening', score: 100, maxScore: 100, linkedSegments: ['1'], feedback: 'Excellent opening with name introduction and offer to help.' },
-  { parameterId: 'problem_id', parameterName: 'Problem Identification', score: 95, maxScore: 100, linkedSegments: ['3'], feedback: 'Good probing questions to understand the issue.' },
-  { parameterId: 'tone', parameterName: 'Tone & Professionalism', score: 100, maxScore: 100, linkedSegments: ['5'], feedback: 'Maintained professional and empathetic tone throughout.' },
-  { parameterId: 'solution', parameterName: 'Solution Provided', score: 90, maxScore: 100, linkedSegments: ['6'], feedback: 'Clear resolution provided, but could explain the cause better.' },
-  { parameterId: 'closing', parameterName: 'Closing & Wrap-up', score: 100, maxScore: 100, linkedSegments: ['8', '10'], feedback: 'Proper closing with follow-up offer.' },
-];
-
-const mockSentiment = {
-  overall: 'positive' as const,
-  customerSentiment: 0.72,
-  agentSentiment: 0.85,
-  escalationRisk: 'low' as const,
-  predictedCSAT: 4.5,
-};
-
 export default function TranscriptPlaybackPage() {
   const params = useParams();
-  const auditId = params.id;
+  const auditId = params.id as string;
+
+  const { data: audit, isLoading, error } = useAudit(auditId);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration] = useState(59);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
   const [selectedParameter, setSelectedParameter] = useState<string | null>(null);
 
   const transcriptRef = useRef<HTMLDivElement>(null);
+
+  // Extract transcript segments from audit data
+  const transcript: TranscriptSegment[] = audit?.transcript?.segments || [];
+  const auditResults: AuditResult[] = audit?.auditResults?.map((r: any) => ({
+    parameterId: r.parameterId || r._id,
+    parameterName: r.parameterName || r.name,
+    score: r.score || 0,
+    maxScore: r.maxScore || 100,
+    linkedSegments: r.linkedSegments || [],
+    feedback: r.feedback || r.comment || '',
+  })) || [];
+
+  const sentiment = audit?.sentiment || { overall: 'neutral', customerSentiment: 0, agentSentiment: 0, escalationRisk: 'unknown', predictedCSAT: 0 };
+  const duration = audit?.transcript?.duration || (transcript.length > 0 ? transcript[transcript.length - 1]?.endTime || 60 : 60);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -83,7 +69,7 @@ export default function TranscriptPlaybackPage() {
 
   // Simulate playback
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || transcript.length === 0) return;
 
     const interval = setInterval(() => {
       setCurrentTime(prev => {
@@ -96,20 +82,21 @@ export default function TranscriptPlaybackPage() {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isPlaying, duration]);
+  }, [isPlaying, duration, transcript.length]);
 
   // Update active segment based on current time
   useEffect(() => {
-    const segment = mockTranscript.find(s => currentTime >= s.startTime && currentTime < s.endTime);
+    if (transcript.length === 0) return;
+
+    const segment = transcript.find(s => currentTime >= s.startTime && currentTime < s.endTime);
     if (segment && segment.id !== activeSegment) {
       setActiveSegment(segment.id);
-      // Scroll to segment
       const el = document.getElementById(`segment-${segment.id}`);
       if (el && transcriptRef.current) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [currentTime, activeSegment]);
+  }, [currentTime, activeSegment, transcript]);
 
   const jumpToSegment = (segment: TranscriptSegment) => {
     setCurrentTime(segment.startTime);
@@ -126,8 +113,113 @@ export default function TranscriptPlaybackPage() {
   };
 
   const linkedSegmentIds = selectedParameter
-    ? mockAuditResults.find(r => r.parameterId === selectedParameter)?.linkedSegments || []
+    ? auditResults.find(r => r.parameterId === selectedParameter)?.linkedSegments || []
     : [];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !audit) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/audit-details">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Audits
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Call Transcript</h2>
+            <p className="text-muted-foreground">Audit ID: {auditId}</p>
+          </div>
+        </div>
+
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <AlertCircle className="h-16 w-16 text-red-500/50 mb-4" />
+            <h3 className="text-lg font-semibold text-muted-foreground">Audit Not Found</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              The requested audit could not be loaded. It may have been deleted or the ID is invalid.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // No transcript available
+  if (transcript.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard/audit-details">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Audits
+              </Button>
+            </Link>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Call Transcript</h2>
+              <p className="text-muted-foreground">Audit ID: {auditId} • {audit.callId || 'No Call ID'}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className={`px-3 py-1 text-sm rounded-full ${audit.overallScore >= 90 ? 'bg-emerald-500/10 text-emerald-500' :
+                audit.overallScore >= 80 ? 'bg-amber-500/10 text-amber-500' :
+                  'bg-red-500/10 text-red-500'
+              }`}>
+              Score: {audit.overallScore}%
+            </span>
+          </div>
+        </div>
+
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold text-muted-foreground">No Transcript Available</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              This audit does not have transcript data to display.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Still show audit results if available */}
+        {auditResults.length > 0 && (
+          <Card className="bg-card/50 backdrop-blur border-border/50">
+            <CardHeader>
+              <CardTitle className="text-sm">Parameter Scores</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {auditResults.map((result) => (
+                  <div key={result.parameterId} className="p-3 rounded-lg hover:bg-muted/50">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{result.parameterName}</span>
+                      <span className={`font-bold ${result.score >= 90 ? 'text-emerald-500' : result.score >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
+                        {result.score}%
+                      </span>
+                    </div>
+                    {result.feedback && (
+                      <p className="text-xs text-muted-foreground">{result.feedback}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -142,20 +234,21 @@ export default function TranscriptPlaybackPage() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Call Transcript</h2>
-            <p className="text-muted-foreground">Audit ID: {auditId} • CALL-1234</p>
+            <p className="text-muted-foreground">Audit ID: {auditId} • {audit.callId || 'No Call ID'}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className={`px-3 py-1 text-sm rounded-full ${
-            mockSentiment.overall === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
-            mockSentiment.overall === 'negative' ? 'bg-red-500/10 text-red-500' :
-            'bg-amber-500/10 text-amber-500'
-          }`}>
-            {mockSentiment.overall.toUpperCase()} CALL
+          <span className={`px-3 py-1 text-sm rounded-full ${sentiment.overall === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
+              sentiment.overall === 'negative' ? 'bg-red-500/10 text-red-500' :
+                'bg-amber-500/10 text-amber-500'
+            }`}>
+            {String(sentiment.overall).toUpperCase()} CALL
           </span>
-          <span className="text-sm text-muted-foreground">
-            CSAT Prediction: <strong className="text-primary">{mockSentiment.predictedCSAT}/5</strong>
-          </span>
+          {sentiment.predictedCSAT > 0 && (
+            <span className="text-sm text-muted-foreground">
+              CSAT Prediction: <strong className="text-primary">{sentiment.predictedCSAT}/5</strong>
+            </span>
+          )}
         </div>
       </div>
 
@@ -218,21 +311,20 @@ export default function TranscriptPlaybackPage() {
             </CardHeader>
             <CardContent>
               <div ref={transcriptRef} className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                {mockTranscript.map((segment) => {
+                {transcript.map((segment) => {
                   const isActive = segment.id === activeSegment;
                   const isLinked = linkedSegmentIds.includes(segment.id);
-                  const hasAnnotation = segment.annotations.length > 0;
+                  const hasAnnotation = segment.annotations && segment.annotations.length > 0;
 
                   return (
                     <div
                       key={segment.id}
                       id={`segment-${segment.id}`}
                       onClick={() => jumpToSegment(segment)}
-                      className={`p-3 rounded-lg cursor-pointer transition-all ${
-                        isActive ? 'ring-2 ring-primary bg-primary/5' :
-                        isLinked ? 'ring-2 ring-amber-500 bg-amber-500/5' :
-                        'hover:bg-muted/50'
-                      } ${hasAnnotation ? getAnnotationStyle(segment.annotations[0]?.type) : ''}`}
+                      className={`p-3 rounded-lg cursor-pointer transition-all ${isActive ? 'ring-2 ring-primary bg-primary/5' :
+                          isLinked ? 'ring-2 ring-amber-500 bg-amber-500/5' :
+                            'hover:bg-muted/50'
+                        } ${hasAnnotation ? getAnnotationStyle(segment.annotations[0]?.type) : ''}`}
                     >
                       <div className="flex items-start gap-3">
                         <div className={`p-1.5 rounded-full ${segment.speaker === 'agent' ? 'bg-primary/10' : 'bg-muted'}`}>
@@ -247,24 +339,22 @@ export default function TranscriptPlaybackPage() {
                             </span>
                           </div>
                           <p className="text-sm">{segment.text}</p>
-                          {segment.annotations.map((ann, i) => (
-                            <div key={i} className={`mt-2 text-xs px-2 py-1 rounded inline-flex items-center gap-1 ${
-                              ann.type === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
-                              ann.type === 'concern' ? 'bg-amber-500/10 text-amber-500' :
-                              'bg-red-500/10 text-red-500'
-                            }`}>
+                          {segment.annotations?.map((ann, i) => (
+                            <div key={i} className={`mt-2 text-xs px-2 py-1 rounded inline-flex items-center gap-1 ${ann.type === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
+                                ann.type === 'concern' ? 'bg-amber-500/10 text-amber-500' :
+                                  'bg-red-500/10 text-red-500'
+                              }`}>
                               {ann.type === 'positive' ? <CheckCircle className="h-3 w-3" /> :
-                               ann.type === 'concern' ? <AlertTriangle className="h-3 w-3" /> :
-                               <AlertTriangle className="h-3 w-3" />}
+                                ann.type === 'concern' ? <AlertTriangle className="h-3 w-3" /> :
+                                  <AlertTriangle className="h-3 w-3" />}
                               {ann.text}
                             </div>
                           ))}
                         </div>
-                        <div className={`w-2 h-2 rounded-full ${
-                          segment.sentiment === 'positive' ? 'bg-emerald-500' :
-                          segment.sentiment === 'negative' ? 'bg-red-500' :
-                          'bg-amber-500'
-                        }`} title={segment.sentiment} />
+                        <div className={`w-2 h-2 rounded-full ${segment.sentiment === 'positive' ? 'bg-emerald-500' :
+                            segment.sentiment === 'negative' ? 'bg-red-500' :
+                              'bg-amber-500'
+                          }`} title={segment.sentiment} />
                       </div>
                     </div>
                   );
@@ -287,11 +377,11 @@ export default function TranscriptPlaybackPage() {
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={`h-full ${mockSentiment.customerSentiment > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
-                      style={{ width: `${Math.abs(mockSentiment.customerSentiment) * 100}%` }}
+                      className={`h-full ${(sentiment.customerSentiment || 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                      style={{ width: `${Math.abs(sentiment.customerSentiment || 0) * 100}%` }}
                     />
                   </div>
-                  {mockSentiment.customerSentiment > 0 ? <ThumbsUp className="h-4 w-4 text-emerald-500" /> : <ThumbsDown className="h-4 w-4 text-red-500" />}
+                  {(sentiment.customerSentiment || 0) > 0 ? <ThumbsUp className="h-4 w-4 text-emerald-500" /> : <ThumbsDown className="h-4 w-4 text-red-500" />}
                 </div>
               </div>
               <div className="flex items-center justify-between">
@@ -299,58 +389,58 @@ export default function TranscriptPlaybackPage() {
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={`h-full ${mockSentiment.agentSentiment > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
-                      style={{ width: `${Math.abs(mockSentiment.agentSentiment) * 100}%` }}
+                      className={`h-full ${(sentiment.agentSentiment || 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                      style={{ width: `${Math.abs(sentiment.agentSentiment || 0) * 100}%` }}
                     />
                   </div>
-                  {mockSentiment.agentSentiment > 0 ? <ThumbsUp className="h-4 w-4 text-emerald-500" /> : <ThumbsDown className="h-4 w-4 text-red-500" />}
+                  {(sentiment.agentSentiment || 0) > 0 ? <ThumbsUp className="h-4 w-4 text-emerald-500" /> : <ThumbsDown className="h-4 w-4 text-red-500" />}
                 </div>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <span className="text-sm text-muted-foreground">Escalation Risk</span>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  mockSentiment.escalationRisk === 'low' ? 'bg-emerald-500/10 text-emerald-500' :
-                  mockSentiment.escalationRisk === 'high' ? 'bg-red-500/10 text-red-500' :
-                  'bg-amber-500/10 text-amber-500'
-                }`}>
-                  {mockSentiment.escalationRisk.toUpperCase()}
+                <span className={`px-2 py-1 text-xs rounded-full ${sentiment.escalationRisk === 'low' ? 'bg-emerald-500/10 text-emerald-500' :
+                    sentiment.escalationRisk === 'high' ? 'bg-red-500/10 text-red-500' :
+                      'bg-amber-500/10 text-amber-500'
+                  }`}>
+                  {String(sentiment.escalationRisk || 'unknown').toUpperCase()}
                 </span>
               </div>
             </CardContent>
           </Card>
 
           {/* Parameter Scores */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
-            <CardHeader>
-              <CardTitle className="text-sm">Parameter Scores</CardTitle>
-              <p className="text-xs text-muted-foreground">Click to highlight phrases</p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {mockAuditResults.map((result) => (
-                  <div
-                    key={result.parameterId}
-                    onClick={() => setSelectedParameter(selectedParameter === result.parameterId ? null : result.parameterId)}
-                    className={`p-3 rounded-lg cursor-pointer transition-all ${
-                      selectedParameter === result.parameterId
-                        ? 'ring-2 ring-primary bg-primary/5'
-                        : 'hover:bg-muted/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{result.parameterName}</span>
-                      <span className={`font-bold ${result.score >= 90 ? 'text-emerald-500' : result.score >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
-                        {result.score}%
-                      </span>
+          {auditResults.length > 0 && (
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardHeader>
+                <CardTitle className="text-sm">Parameter Scores</CardTitle>
+                <p className="text-xs text-muted-foreground">Click to highlight phrases</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {auditResults.map((result) => (
+                    <div
+                      key={result.parameterId}
+                      onClick={() => setSelectedParameter(selectedParameter === result.parameterId ? null : result.parameterId)}
+                      className={`p-3 rounded-lg cursor-pointer transition-all ${selectedParameter === result.parameterId
+                          ? 'ring-2 ring-primary bg-primary/5'
+                          : 'hover:bg-muted/50'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">{result.parameterName}</span>
+                        <span className={`font-bold ${result.score >= 90 ? 'text-emerald-500' : result.score >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
+                          {result.score}%
+                        </span>
+                      </div>
+                      {selectedParameter === result.parameterId && result.feedback && (
+                        <p className="text-xs text-muted-foreground mt-2">{result.feedback}</p>
+                      )}
                     </div>
-                    {selectedParameter === result.parameterId && (
-                      <p className="text-xs text-muted-foreground mt-2">{result.feedback}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

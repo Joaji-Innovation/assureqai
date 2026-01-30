@@ -15,13 +15,8 @@ export default function AddUserPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password: '', fullName: '', email: '', role: 'Agent' });
 
-  // Use mock data when API is not available
-  const users: User[] = userData?.data?.length ? userData.data : [
-    { _id: '1', username: 'john.doe', fullName: 'John Doe', email: 'john@example.com', role: 'Manager', isActive: true, createdAt: '2026-01-01T00:00:00Z' },
-    { _id: '2', username: 'jane.smith', fullName: 'Jane Smith', email: 'jane@example.com', role: 'QA Analyst', isActive: true, createdAt: '2026-01-02T00:00:00Z' },
-    { _id: '3', username: 'bob.wilson', fullName: 'Bob Wilson', email: 'bob@example.com', role: 'Agent', isActive: false, createdAt: '2026-01-03T00:00:00Z' },
-    { _id: '4', username: 'alice.brown', fullName: 'Alice Brown', email: 'alice@example.com', role: 'Auditor', isActive: true, createdAt: '2026-01-04T00:00:00Z' },
-  ];
+  // Get users from API
+  const users: User[] = userData?.data || [];
 
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
@@ -50,6 +45,41 @@ export default function AddUserPage() {
     );
   }
 
+  // Empty state when no users exist
+  if (users.length === 0 && !showAddForm) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
+            <p className="text-muted-foreground">Manage team members and permissions</p>
+          </div>
+          <Button className="flex items-center gap-2" onClick={() => setShowAddForm(true)}>
+            <Plus className="h-4 w-4" />
+            Add User
+          </Button>
+        </div>
+
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Failed to load users. Please check your API connection.
+          </div>
+        )}
+
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Users className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold text-muted-foreground">No Users Found</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Click "Add User" to create your first team member.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -66,7 +96,7 @@ export default function AddUserPage() {
       {error && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500 text-sm flex items-center gap-2">
           <AlertCircle className="h-4 w-4" />
-          Using demo data. Connect API at NEXT_PUBLIC_API_URL
+          Some data may be outdated. Connection issue detected.
         </div>
       )}
 
@@ -176,9 +206,9 @@ export default function AddUserPage() {
                     <Button variant="ghost" size="sm">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="text-destructive hover:text-destructive"
                       onClick={() => handleDeleteUser(user._id)}
                       disabled={deleteUserMutation.isPending}

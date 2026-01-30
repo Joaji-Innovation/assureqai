@@ -32,10 +32,9 @@ export default function ProfilePage() {
         setProfile(data);
         setFormData({ fullName: data.fullName || '', email: data.email || '' });
       } catch (err) {
-        // Mock data
-        const mockProfile = { username: 'current_user', fullName: 'Current User', email: 'user@example.com', role: 'Manager' };
-        setProfile(mockProfile);
-        setFormData({ fullName: mockProfile.fullName, email: mockProfile.email });
+        // Profile load failed - show error state
+        setErrorMessage('Failed to load profile. Please try logging in again.');
+        setProfile(null);
       } finally {
         setLoading(false);
       }

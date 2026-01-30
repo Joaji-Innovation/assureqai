@@ -76,44 +76,8 @@ export default function ParameterManagementPage() {
       }
     } catch (error) {
       console.error('Failed to load parameter sets:', error);
-      // Use demo data if API fails
-      setParameterSets([
-        {
-          id: 'demo-1',
-          name: 'Default Customer Service',
-          description: 'Standard customer service evaluation parameters',
-          isActive: true,
-          lastModified: new Date().toISOString(),
-          parameters: [
-            {
-              id: 'grp-1',
-              name: 'Greeting & Opening',
-              subParameters: [
-                { id: 'sp-1', name: 'Used correct greeting', weight: 5, type: 'Non-Fatal' },
-                { id: 'sp-2', name: 'Introduced self and company', weight: 5, type: 'Non-Fatal' },
-              ]
-            },
-            {
-              id: 'grp-2',
-              name: 'Problem Resolution',
-              subParameters: [
-                { id: 'sp-3', name: 'Identified customer issue', weight: 15, type: 'Non-Fatal' },
-                { id: 'sp-4', name: 'Provided correct solution', weight: 20, type: 'Non-Fatal' },
-                { id: 'sp-5', name: 'Data protection followed', weight: 0, type: 'Fatal' },
-              ]
-            },
-            {
-              id: 'grp-3',
-              name: 'Closing',
-              subParameters: [
-                { id: 'sp-6', name: 'Summarized actions taken', weight: 10, type: 'Non-Fatal' },
-                { id: 'sp-7', name: 'Asked if anything else needed', weight: 5, type: 'Non-Fatal' },
-              ]
-            }
-          ]
-        }
-      ]);
-      setSelectedSetId('demo-1');
+      // Show error state instead of demo data
+      setParameterSets([]);
     } finally {
       setIsLoading(false);
     }

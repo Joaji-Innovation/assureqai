@@ -17,15 +17,11 @@ interface Dispute {
   resolvedAt?: string;
 }
 
-const mockDisputes: Dispute[] = [
-  { id: '1', auditId: 'AUD-2024-001', agentName: 'John Smith', reason: 'Incorrect Parameter Scoring', details: 'The compliance check was marked as failed but I followed the script exactly as required.', status: 'pending', originalScore: 72, createdAt: '2026-01-17' },
-  { id: '2', auditId: 'AUD-2024-002', agentName: 'Sarah Johnson', reason: 'Audio Quality Issues', details: 'The customer side audio was unclear which affected the transcription accuracy.', status: 'under_review', originalScore: 68, createdAt: '2026-01-16' },
-  { id: '3', auditId: 'AUD-2024-003', agentName: 'Mike Davis', reason: 'Wrong Agent Attribution', details: 'This call was handled by another agent, not me.', status: 'resolved', resolution: 'Verified with call records - reassigned to correct agent.', originalScore: 45, adjustedScore: 0, createdAt: '2026-01-15', resolvedAt: '2026-01-16' },
-  { id: '4', auditId: 'AUD-2024-004', agentName: 'Emily Brown', reason: 'Unfair Scoring', details: 'The hold time penalty was too harsh given the system was slow.', status: 'rejected', resolution: 'System logs show normal response times. Original score stands.', originalScore: 65, createdAt: '2026-01-14', resolvedAt: '2026-01-15' },
-];
+// TODO: Connect to API when dispute endpoints are available
+const initialDisputes: Dispute[] = [];
 
 export default function DisputesPage() {
-  const [disputes, setDisputes] = useState(mockDisputes);
+  const [disputes, setDisputes] = useState(initialDisputes);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
@@ -35,8 +31,8 @@ export default function DisputesPage() {
 
   const filteredDisputes = disputes.filter(d => {
     const matchesSearch = d.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         d.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         d.auditId.toLowerCase().includes(searchQuery.toLowerCase());
+      d.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.auditId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -45,13 +41,13 @@ export default function DisputesPage() {
     if (!selectedDispute || !resolution.trim()) return;
     setProcessing(true);
     await new Promise(r => setTimeout(r, 1000));
-    setDisputes(prev => prev.map(d => 
-      d.id === selectedDispute.id ? { 
-        ...d, 
-        status: 'resolved' as const, 
-        resolution, 
+    setDisputes(prev => prev.map(d =>
+      d.id === selectedDispute.id ? {
+        ...d,
+        status: 'resolved' as const,
+        resolution,
         adjustedScore,
-        resolvedAt: new Date().toISOString().split('T')[0] 
+        resolvedAt: new Date().toISOString().split('T')[0]
       } : d
     ));
     setSelectedDispute(null);
@@ -64,12 +60,12 @@ export default function DisputesPage() {
     if (!selectedDispute || !resolution.trim()) return;
     setProcessing(true);
     await new Promise(r => setTimeout(r, 1000));
-    setDisputes(prev => prev.map(d => 
-      d.id === selectedDispute.id ? { 
-        ...d, 
-        status: 'rejected' as const, 
+    setDisputes(prev => prev.map(d =>
+      d.id === selectedDispute.id ? {
+        ...d,
+        status: 'rejected' as const,
         resolution,
-        resolvedAt: new Date().toISOString().split('T')[0] 
+        resolvedAt: new Date().toISOString().split('T')[0]
       } : d
     ));
     setSelectedDispute(null);
@@ -216,7 +212,7 @@ export default function DisputesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-xl border border-border max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">Review Dispute</h3>
-            
+
             <div className="space-y-4 mb-6">
               <div>
                 <p className="text-sm text-muted-foreground">Audit ID</p>

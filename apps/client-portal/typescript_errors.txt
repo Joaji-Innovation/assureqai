@@ -1,0 +1,6 @@
+src/app/dashboard/audits/[id]/page.tsx(198,38): error TS2339: Property '_id' does not exist on type 'AuditResult'.
+src/app/dashboard/audits/[id]/page.tsx(207,31): error TS2551: Property 'comment' does not exist on type 'AuditResult'. Did you mean 'comments'?
+src/app/dashboard/audits/[id]/page.tsx(208,83): error TS2551: Property 'comment' does not exist on type 'AuditResult'. Did you mean 'comments'?
+src/app/dashboard/audits/[id]/page.tsx(210,31): error TS2339: Property 'isFatal' does not exist on type 'AuditResult'.
+src/components/ui/form.tsx(13,8): error TS2307: Cannot find module 'react-hook-form' or its corresponding type declarations.
+src/components/ui/menubar.tsx(4,35): error TS2307: Cannot find module '@radix-ui/react-menubar' or its corresponding type declarations.

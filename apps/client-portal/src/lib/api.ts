@@ -402,6 +402,24 @@ export const sopApi = {
 
   delete: (id: string) =>
     request<void>(`/api/sops/${id}`, { method: 'DELETE' }),
+
+  // Template methods
+  getTemplates: () =>
+    request<{ id: string; name: string; description: string }[]>('/api/sops/templates'),
+
+  getTemplate: (templateId: string) =>
+    request<{ name: string; description: string; content: string }>(`/api/sops/templates/${templateId}`),
+
+  createFromTemplate: (templateId: string, name?: string) =>
+    request<SOP>(`/api/sops/from-template/${templateId}`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  seedDefaults: () =>
+    request<{ success: boolean; message: string; data: SOP[] }>('/api/sops/seed-defaults', {
+      method: 'POST',
+    }),
 };
 
 // Alert APIs

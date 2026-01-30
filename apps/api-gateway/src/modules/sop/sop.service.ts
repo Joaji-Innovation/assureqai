@@ -5,12 +5,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Sop, SopDocument } from '../../database/schemas/sop.schema';
+import { DEFAULT_SOP_TEMPLATES, getSOPTemplateOptions, DefaultSOPTemplate } from './default-sop-templates';
 
 @Injectable()
 export class SopService {
   constructor(
     @InjectModel(Sop.name) private sopModel: Model<SopDocument>,
-  ) {}
+  ) { }
 
   async create(data: any): Promise<Sop> {
     const sop = new this.sopModel({
@@ -55,4 +56,79 @@ export class SopService {
       throw new NotFoundException(`SOP ${id} not found`);
     }
   }
+
+  /**
+   * Get available default SOP templates
+   */
+  getTemplates(): { id: string; name: string; description: string }[] {
+    return getSOPTemplateOptions();
+  }
+
+  /**
+   * Get a specific SOP template by ID
+   */
+  getTemplate(templateId: string): DefaultSOPTemplate | null {
+    return DEFAULT_SOP_TEMPLATES[templateId] || null;
+  }
+
+  /**
+   * Create SOP from a template
+   */
+  async createFromTemplate(
+    templateId: string,
+    projectId: string,
+    uploadedBy?: string,
+    customName?: string,
+  ): Promise<Sop> {
+    const template = DEFAULT_SOP_TEMPLATES[templateId];
+    if (!template) {
+      throw new NotFoundException(`Template ${templateId} not found`);
+    }
+
+    // Store the markdown content as base64 for consistency
+    const contentBase64 = Buffer.from(template.content, 'utf-8').toString('base64');
+
+    const sop = new this.sopModel({
+      name: customName || template.name,
+      description: template.description,
+      fileName: `${templateId}_sop.md`,
+      fileType: 'text/markdown',
+      fileSize: template.content.length,
+      content: contentBase64,
+      projectId: new Types.ObjectId(projectId),
+      uploadedBy: uploadedBy ? new Types.ObjectId(uploadedBy) : undefined,
+      isActive: true,
+    });
+
+    return sop.save();
+  }
+
+  /**
+   * Seed default SOPs for a new project
+   */
+  async seedDefaultSOPs(projectId: string, uploadedBy?: string): Promise<Sop[]> {
+    const createdSOPs: Sop[] = [];
+
+    for (const [templateId, template] of Object.entries(DEFAULT_SOP_TEMPLATES)) {
+      const contentBase64 = Buffer.from(template.content, 'utf-8').toString('base64');
+
+      const sop = new this.sopModel({
+        name: template.name,
+        description: template.description,
+        fileName: `${templateId}_sop.md`,
+        fileType: 'text/markdown',
+        fileSize: template.content.length,
+        content: contentBase64,
+        projectId: new Types.ObjectId(projectId),
+        uploadedBy: uploadedBy ? new Types.ObjectId(uploadedBy) : undefined,
+        isActive: true,
+      });
+
+      const saved = await sop.save();
+      createdSOPs.push(saved);
+    }
+
+    return createdSOPs;
+  }
 }
+

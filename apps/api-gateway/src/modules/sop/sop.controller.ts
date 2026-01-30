@@ -22,7 +22,50 @@ import { PERMISSIONS, JwtPayload } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('sops')
 export class SopController {
-  constructor(private readonly sopService: SopService) {}
+  constructor(private readonly sopService: SopService) { }
+
+  @Get('templates')
+  @ApiOperation({ summary: 'Get available SOP templates' })
+  getTemplates() {
+    return this.sopService.getTemplates();
+  }
+
+  @Get('templates/:templateId')
+  @ApiOperation({ summary: 'Get a specific SOP template by ID' })
+  getTemplate(@Param('templateId') templateId: string) {
+    return this.sopService.getTemplate(templateId);
+  }
+
+  @Post('from-template/:templateId')
+  @RequirePermissions(PERMISSIONS.MANAGE_SOPS)
+  @ApiOperation({ summary: 'Create SOP from a template' })
+  async createFromTemplate(
+    @Param('templateId') templateId: string,
+    @Body() dto: { name?: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.sopService.createFromTemplate(
+      templateId,
+      user.projectId,
+      user.sub,
+      dto?.name,
+    );
+  }
+
+  @Post('seed-defaults')
+  @RequirePermissions(PERMISSIONS.MANAGE_SOPS)
+  @ApiOperation({ summary: 'Seed all default SOP templates for the project' })
+  async seedDefaults(@CurrentUser() user: JwtPayload) {
+    const sops = await this.sopService.seedDefaultSOPs(
+      user.projectId,
+      user.sub,
+    );
+    return {
+      success: true,
+      message: `Created ${sops.length} default SOPs`,
+      data: sops,
+    };
+  }
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -68,3 +111,4 @@ export class SopController {
     return { success: true, message: 'SOP deleted' };
   }
 }
+

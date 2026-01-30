@@ -205,7 +205,7 @@ export function useNotificationSettings() {
       _id: '',
       projectId: '',
       alertRules: [],
-      smtp: { host: '', port: 587, user: '', fromName: '', fromEmail: '', enabled: false },
+      alertRecipientEmails: [],
       pushNotificationsEnabled: true,
       emailNotificationsEnabled: false,
     } as NotificationSettings,

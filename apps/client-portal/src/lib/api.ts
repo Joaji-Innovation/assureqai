@@ -435,21 +435,11 @@ export interface AlertRuleConfig {
   config: Record<string, any>;
 }
 
-export interface SmtpConfig {
-  host: string;
-  port: number;
-  user: string;
-  password?: string;
-  fromName: string;
-  fromEmail: string;
-  enabled: boolean;
-}
-
 export interface NotificationSettings {
   _id: string;
   projectId: string;
   alertRules: AlertRuleConfig[];
-  smtp: SmtpConfig;
+  alertRecipientEmails: string[]; // Email addresses to receive alerts
   pushNotificationsEnabled: boolean;
   emailNotificationsEnabled: boolean;
 }

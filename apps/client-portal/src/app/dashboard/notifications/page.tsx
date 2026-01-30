@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, Mail, Webhook, AlertTriangle, Settings, Plus, Trash2, Loader2, Send, ToggleLeft, ToggleRight, X, CheckCircle, XCircle } from 'lucide-react';
+import { Bell, Mail, Webhook, Settings, Plus, Trash2, Loader2, Send, ToggleLeft, ToggleRight, X, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   useNotificationSettings,
@@ -13,7 +13,6 @@ import {
   useDeleteWebhook,
   useTestWebhook,
 } from '@/lib/hooks';
-import type { AlertRuleConfig } from '@/lib/api';
 
 export default function NotificationsPage() {
   const { data: settings, isLoading: settingsLoading } = useNotificationSettings();
@@ -27,6 +26,7 @@ export default function NotificationsPage() {
   const [showAddWebhook, setShowAddWebhook] = useState(false);
   const [newWebhook, setNewWebhook] = useState({ name: '', url: '', events: [] as string[] });
   const [testResult, setTestResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
+  const [newEmail, setNewEmail] = useState('');
 
   const toggleRule = (type: string) => {
     if (!settings?.alertRules) return;
@@ -63,11 +63,17 @@ export default function NotificationsPage() {
     });
   };
 
-  const updateSmtp = (field: string, value: string | number | boolean) => {
-    if (!settings) return;
-    updateSettings.mutate({
-      smtp: { ...settings.smtp, [field]: value },
-    });
+  const addEmail = () => {
+    if (!newEmail || !newEmail.includes('@')) return;
+    const emails = settings?.alertRecipientEmails || [];
+    if (emails.includes(newEmail)) return;
+    updateSettings.mutate({ alertRecipientEmails: [...emails, newEmail] });
+    setNewEmail('');
+  };
+
+  const removeEmail = (email: string) => {
+    const emails = settings?.alertRecipientEmails || [];
+    updateSettings.mutate({ alertRecipientEmails: emails.filter(e => e !== email) });
   };
 
   const eventTypes = [
@@ -154,71 +160,79 @@ export default function NotificationsPage() {
         </CardContent>
       </Card>
 
-      {/* SMTP Configuration */}
+      {/* Email Recipients */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Email Configuration (SMTP)
+            Email Recipients
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium">SMTP Host</label>
-              <input
-                type="text"
-                value={settings?.smtp?.host || ''}
-                onChange={(e) => updateSmtp('host', e.target.value)}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="smtp.gmail.com"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Port</label>
-              <input
-                type="number"
-                value={settings?.smtp?.port || 587}
-                onChange={(e) => updateSmtp('port', parseInt(e.target.value))}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">SMTP User</label>
-              <input
-                type="text"
-                value={settings?.smtp?.user || ''}
-                onChange={(e) => updateSmtp('user', e.target.value)}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="alerts@example.com"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">From Name</label>
-              <input
-                type="text"
-                value={settings?.smtp?.fromName || ''}
-                onChange={(e) => updateSmtp('fromName', e.target.value)}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="AssureQai Alerts"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-            <div className="flex items-center gap-2">
-              <button onClick={() => updateSmtp('enabled', !settings?.smtp?.enabled)}>
-                {settings?.smtp?.enabled ? (
-                  <ToggleRight className="h-6 w-6 text-primary" />
-                ) : (
-                  <ToggleLeft className="h-6 w-6 text-muted-foreground" />
-                )}
-              </button>
-              <span className="text-sm">Email notifications {settings?.smtp?.enabled ? 'enabled' : 'disabled'}</span>
-            </div>
-            <Button variant="outline" size="sm" disabled>
-              <Send className="h-4 w-4 mr-2" />
-              Send Test Email
+          <p className="text-sm text-muted-foreground mb-4">
+            Add email addresses that should receive alert notifications. These recipients will be notified when alerts are triggered.
+          </p>
+
+          {/* Add Email */}
+          <div className="flex gap-2 mb-4">
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addEmail()}
+              className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Enter email address..."
+            />
+            <Button onClick={addEmail} disabled={!newEmail || updateSettings.isPending}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add
             </Button>
+          </div>
+
+          {/* Email List */}
+          <div className="space-y-2">
+            {settings?.alertRecipientEmails && settings.alertRecipientEmails.length > 0 ? (
+              settings.alertRecipientEmails.map((email) => (
+                <div key={email} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{email}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                    onClick={() => removeEmail(email)}
+                    disabled={updateSettings.isPending}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No email recipients added yet.</p>
+                <p className="text-xs">Add an email address above to receive alert notifications.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Email Notifications Toggle */}
+          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border">
+            <button
+              onClick={() => updateSettings.mutate({ emailNotificationsEnabled: !settings?.emailNotificationsEnabled })}
+              disabled={updateSettings.isPending}
+            >
+              {settings?.emailNotificationsEnabled ? (
+                <ToggleRight className="h-6 w-6 text-primary" />
+              ) : (
+                <ToggleLeft className="h-6 w-6 text-muted-foreground" />
+              )}
+            </button>
+            <span className="text-sm">
+              Email notifications {settings?.emailNotificationsEnabled ? 'enabled' : 'disabled'}
+            </span>
           </div>
         </CardContent>
       </Card>

@@ -22,30 +22,6 @@ export class AlertRuleConfig {
   config: Record<string, any>;
 }
 
-@Schema({ _id: false })
-export class SmtpConfig {
-  @Prop({ default: '' })
-  host: string;
-
-  @Prop({ default: 587 })
-  port: number;
-
-  @Prop({ default: '' })
-  user: string;
-
-  @Prop({ default: '' })
-  password: string; // Should be encrypted in production
-
-  @Prop({ default: '' })
-  fromName: string;
-
-  @Prop({ default: '' })
-  fromEmail: string;
-
-  @Prop({ default: false })
-  enabled: boolean;
-}
-
 @Schema({ timestamps: true })
 export class NotificationSettings {
   @Prop({ type: Types.ObjectId, required: true, unique: true, index: true })
@@ -62,8 +38,8 @@ export class NotificationSettings {
   })
   alertRules: AlertRuleConfig[];
 
-  @Prop({ type: SmtpConfig, default: () => ({}) })
-  smtp: SmtpConfig;
+  @Prop({ type: [String], default: [] })
+  alertRecipientEmails: string[]; // Email addresses to receive alerts
 
   @Prop({ default: true })
   pushNotificationsEnabled: boolean;

@@ -5,13 +5,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { NotificationSettings, NotificationSettingsDocument, AlertRuleConfig, SmtpConfig } from '../../database/schemas/notification-settings.schema';
+import { NotificationSettings, NotificationSettingsDocument, AlertRuleConfig } from '../../database/schemas/notification-settings.schema';
 import { Webhook, WebhookDocument } from '../../database/schemas/webhook.schema';
 import axios from 'axios';
 
 export interface UpdateSettingsDto {
   alertRules?: AlertRuleConfig[];
-  smtp?: Partial<SmtpConfig>;
+  alertRecipientEmails?: string[];
   pushNotificationsEnabled?: boolean;
   emailNotificationsEnabled?: boolean;
 }
@@ -66,8 +66,8 @@ export class NotificationsService {
     if (dto.alertRules) {
       settings.alertRules = dto.alertRules;
     }
-    if (dto.smtp) {
-      settings.smtp = { ...settings.smtp, ...dto.smtp } as SmtpConfig;
+    if (dto.alertRecipientEmails !== undefined) {
+      settings.alertRecipientEmails = dto.alertRecipientEmails;
     }
     if (dto.pushNotificationsEnabled !== undefined) {
       settings.pushNotificationsEnabled = dto.pushNotificationsEnabled;

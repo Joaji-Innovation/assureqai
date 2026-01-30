@@ -157,56 +157,274 @@ export class AiService {
   }
 
   /**
-   * Complete audio audit flow: transcribe audio then perform AI audit
-   * This is the main entry point for QAI Audit Form
+   * Complete audio audit flow - sends audio directly to Gemini for transcription + audit
+   * This matches the agent-ai implementation where audio is processed in a single call.
    */
   async auditAudio(request: {
-    audioUrl?: string;
-    transcript?: string;
+    audioDataUri?: string; // Base64 data URI: data:audio/mp3;base64,...
+    audioUrl?: string;     // URL to audio file (will be fetched)
+    transcript?: string;   // Optional: skip audio processing if provided
     parameters: AuditRequest['parameters'];
     sopContent?: string;
     language?: string;
     agentName?: string;
     callId?: string;
     campaignName?: string;
-  }): Promise<AuditResult & { transcript: string }> {
+  }): Promise<AuditResult & { transcript: string; englishTranslation?: string; callSummary?: string; rootCauseAnalysis?: string }> {
     if (!this.apiKey) {
       throw new BadRequestException('AI service not configured. Please set GEMINI_API_KEY.');
     }
 
-    // Get transcript - either provided directly or transcribed from audio
-    let transcript = request.transcript;
-    let language = request.language || 'en-US';
+    const startTime = Date.now();
 
-    if (!transcript) {
-      if (!request.audioUrl) {
-        throw new BadRequestException('Either transcript or audioUrl must be provided');
-      }
-
-      this.logger.log(`Transcribing audio from: ${request.audioUrl}`);
-      const transcriptionResult = await this.transcribeAudio(request.audioUrl);
-      transcript = transcriptionResult.transcript;
-      language = transcriptionResult.language;
-    }
-
-    // Validate we have parameters
+    // Validate parameters
     if (!request.parameters || request.parameters.length === 0) {
       throw new BadRequestException('QA parameters are required for audit. Please configure parameters first.');
     }
 
-    // Perform the AI audit
-    const auditResult = await this.auditCall({
-      transcript,
-      parameters: request.parameters,
-      sopContent: request.sopContent,
-      language,
-    });
+    // If transcript is provided, use the existing auditCall method
+    if (request.transcript) {
+      this.logger.log('Using provided transcript for audit');
+      const result = await this.auditCall({
+        transcript: request.transcript,
+        parameters: request.parameters,
+        sopContent: request.sopContent,
+        language: request.language || 'en',
+      });
+      return {
+        ...result,
+        transcript: request.transcript,
+      };
+    }
 
-    // Return audit result with transcript
-    return {
-      ...auditResult,
-      transcript,
+    // Process audio data URI or URL
+    let audioBase64 = '';
+    let mimeType = 'audio/wav';
+
+    if (request.audioDataUri && request.audioDataUri.startsWith('data:')) {
+      // Parse data URI
+      const commaIdx = request.audioDataUri.indexOf(',');
+      const semicolonIdx = request.audioDataUri.indexOf(';');
+      if (commaIdx > -1 && semicolonIdx > -1 && semicolonIdx < commaIdx) {
+        mimeType = request.audioDataUri.substring(5, semicolonIdx);
+        audioBase64 = request.audioDataUri.substring(commaIdx + 1);
+      }
+    } else if (request.audioUrl) {
+      // Fetch audio from URL
+      this.logger.log(`Fetching audio from URL: ${request.audioUrl}`);
+      try {
+        const response = await fetch(request.audioUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch audio: ${response.statusText}`);
+        }
+        const contentType = response.headers.get('content-type') || 'audio/wav';
+        mimeType = contentType.split(';')[0];
+        const buffer = await response.arrayBuffer();
+        audioBase64 = Buffer.from(buffer).toString('base64');
+      } catch (error: any) {
+        throw new BadRequestException(`Failed to fetch audio from URL: ${error.message}`);
+      }
+    } else {
+      throw new BadRequestException('Either audioDataUri, audioUrl, or transcript must be provided');
+    }
+
+    // Build parameters description for the prompt
+    const parametersDesc = request.parameters.map((param, idx) =>
+      `  ${idx + 1}. "${param.name}" - Weight: ${param.weight}%, Type: ${param.type || 'Non-Fatal'}`
+    ).join('\n');
+
+    // Check if large audio (>10MB)
+    const isLargeAudio = audioBase64.length * 0.75 > 10 * 1024 * 1024;
+
+    // Build the comprehensive prompt (matching agent-ai style)
+    const textPrompt = `You are an expert QA auditor for call centers. Analyze the attached audio call recording.
+
+**Context:**
+- Agent Name: ${request.agentName || 'Unknown'}
+- Campaign: ${request.campaignName || 'N/A'}
+- Call Language: ${request.language || 'Auto-detect'}
+${request.sopContent ? `- SOP Reference: ${request.sopContent.substring(0, 500)}...` : ''}
+
+**Audit Parameters (Name - Weight% - Type):**
+${parametersDesc}
+
+**Instructions:**
+1. **Transcription**: ${isLargeAudio
+        ? 'For this long call, provide a condensed transcription capturing key moments.'
+        : 'Provide accurate transcription with speaker labels (Agent: / Customer:)'}.
+2. **Privacy Protection**: Mask customer PII: phone → [PHONE MASKED], address → [ADDRESS MASKED], etc.
+3. **Scoring** (0-100 scale):
+   - 100: Perfect compliance
+   - 80-99: Good with minor issues
+   - 50-79: Needs improvement
+   - 1-49: Poor performance
+   - 0: Complete failure
+4. **Fatal Parameters**: Score <50 on Fatal type = overall score becomes 0 (ZTP)
+5. **Provide scoring for EVERY parameter listed above**
+
+**Respond ONLY with valid JSON:**
+{
+  "identifiedAgentName": "string",
+  "transcriptionInOriginalLanguage": "string with speaker labels",
+  "englishTranslation": "string (required, same as original if already English)",
+  "callSummary": "string (max 500 chars)",
+  "rootCauseAnalysis": "string (if issues found)",
+  "auditResults": [
+    {
+      "parameterId": "string",
+      "parameterName": "exact name from input",
+      "score": number (0-100),
+      "weight": number,
+      "type": "Fatal" | "Non-Fatal" | "ZTP",
+      "comments": "string (max 100 chars)",
+      "confidence": number (0-100)
+    }
+  ],
+  "overallScore": number (0-100, sum of weighted scores),
+  "sentiment": {
+    "overall": "positive" | "neutral" | "negative",
+    "customerScore": number (-1 to 1),
+    "agentScore": number (-1 to 1),
+    "escalationRisk": "low" | "medium" | "high"
+  }
+}
+
+CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter names.`;
+
+    try {
+      // Call Gemini with multimodal content (audio + text)
+      const response = await this.callGeminiWithAudio(textPrompt, audioBase64, mimeType);
+
+      // Parse the JSON response
+      let jsonText = response.trim();
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      const output = JSON.parse(jsonText);
+
+      // Calculate processing time
+      const processingDurationMs = Date.now() - startTime;
+
+      // Apply ZTP (Zero Tolerance Policy) if Fatal parameter failed
+      let finalOverallScore = output.overallScore || 0;
+      if (output.auditResults && Array.isArray(output.auditResults)) {
+        const hasFatalFailure = output.auditResults.some(
+          (r: any) => r.type === 'Fatal' && r.score < 50
+        );
+        if (hasFatalFailure) {
+          this.logger.warn('ZTP Applied: Fatal parameter scored below 50%');
+          finalOverallScore = 0;
+        }
+      }
+
+      // Transform to AuditResult format
+      const auditResults = (output.auditResults || []).map((r: any) => ({
+        parameterId: r.parameterId || r.parameterName,
+        parameterName: r.parameterName || r.parameter || 'Unknown',
+        score: r.score || 0,
+        weight: r.weight || 0,
+        type: r.type || 'Non-Fatal',
+        comments: r.comments || '',
+        confidence: r.confidence || 80,
+        evidence: r.evidence || [],
+      }));
+
+      this.logger.log(
+        `Audio audit completed in ${processingDurationMs}ms, score: ${finalOverallScore}`
+      );
+
+      return {
+        callSummary: output.callSummary || 'Audit completed',
+        auditResults,
+        overallScore: finalOverallScore,
+        overallConfidence: 85,
+        sentiment: output.sentiment || { overall: 'neutral', customerScore: 0, agentScore: 0, escalationRisk: 'low' },
+        metrics: output.metrics || {},
+        compliance: output.compliance || { keywordsDetected: [], violations: [], complianceScore: 100 },
+        timing: {
+          startTime: new Date(startTime).toISOString(),
+          endTime: new Date().toISOString(),
+          processingDurationMs,
+        },
+        tokenUsage: output.tokenUsage || { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        coaching: output.coaching || {
+          strengths: [],
+          improvements: [],
+          suggestedActions: [],
+        },
+        transcript: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
+        englishTranslation: output.englishTranslation,
+        rootCauseAnalysis: output.rootCauseAnalysis,
+      };
+
+    } catch (error: any) {
+      this.logger.error(`Audio audit failed: ${error.message}`);
+      throw new BadRequestException(`AI audit failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Call Gemini API with audio content (multimodal)
+   */
+  private async callGeminiWithAudio(prompt: string, audioBase64: string, mimeType: string): Promise<string> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+    const requestBody = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inline_data: {
+              mime_type: mimeType,
+              data: audioBase64,
+            }
+          }
+        ]
+      }],
+      generationConfig: {
+        maxOutputTokens: 64000,
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+      }
     };
+
+    // Retry with exponential backoff
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!text) {
+          throw new Error('No response content from Gemini');
+        }
+
+        return text;
+      } catch (error: any) {
+        this.logger.warn(`Gemini multimodal call attempt ${attempt} failed: ${error.message}`);
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    throw new Error('Failed to call Gemini API after retries');
   }
 
   /**

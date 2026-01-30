@@ -10,6 +10,8 @@ import { AppModule } from './app/app.module';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const cookieParser = require('cookie-parser');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const bodyParser = require('body-parser');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -18,6 +20,12 @@ async function bootstrap() {
 
   // Use Winston logger
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+
+  // Body parser with increased limits for large transcripts/audio
+  // No limit restrictions as per user requirement
+  app.use(bodyParser.json({ limit: '500mb' }));
+  app.use(bodyParser.urlencoded({ limit: '500mb', extended: true }));
+  app.use(bodyParser.raw({ limit: '500mb', type: '*/*' }));
 
   // Security middleware
   app.use(cookieParser());

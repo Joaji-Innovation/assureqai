@@ -368,63 +368,240 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
 
   /**
    * Call Gemini API with audio content (multimodal)
+   * Supports both inline data (for small files <10MB) and File API (for large files)
    */
   private async callGeminiWithAudio(prompt: string, audioBase64: string, mimeType: string): Promise<string> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
-    const requestBody = {
-      contents: [{
-        parts: [
-          { text: prompt },
-          {
-            inline_data: {
-              mime_type: mimeType,
-              data: audioBase64,
-            }
+    // Calculate audio size (base64 * 0.75 = actual bytes)
+    const audioSizeBytes = audioBase64.length * 0.75;
+    const SIZE_THRESHOLD = 10 * 1024 * 1024; // 10MB threshold
+    const isLargeFile = audioSizeBytes > SIZE_THRESHOLD;
+
+    let fileUri: string | null = null;
+    let requestBody: any;
+
+    try {
+      if (isLargeFile) {
+        // Use File API for large files
+        this.logger.log(`Large audio detected (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using File API`);
+        fileUri = await this.uploadToFileApi(audioBase64, mimeType);
+
+        requestBody = {
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                file_data: {
+                  mime_type: mimeType,
+                  file_uri: fileUri,
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            maxOutputTokens: 65536, // Max for Gemini 2.0 Flash - supports full 1hr transcription
+            temperature: 0.2,
+            responseMimeType: 'application/json',
           }
-        ]
-      }],
-      generationConfig: {
-        maxOutputTokens: 64000,
-        temperature: 0.2,
-        responseMimeType: 'application/json',
+        };
+      } else {
+        // Use inline data for small files (faster, no upload needed)
+        this.logger.log(`Small audio (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using inline data`);
+
+        requestBody = {
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: audioBase64,
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            maxOutputTokens: 65536, // Max output for full transcription
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          }
+        };
       }
-    };
 
-    // Retry with exponential backoff
-    const maxRetries = 3;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
+      // Retry with exponential backoff
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+          });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+          }
+
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+          if (!text) {
+            throw new Error('No response content from Gemini');
+          }
+
+          return text;
+        } catch (error: any) {
+          this.logger.warn(`Gemini multimodal call attempt ${attempt} failed: ${error.message}`);
+          if (attempt < maxRetries) {
+            await new Promise(r => setTimeout(r, 1000 * attempt));
+          } else {
+            throw error;
+          }
         }
+      }
 
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!text) {
-          throw new Error('No response content from Gemini');
-        }
-
-        return text;
-      } catch (error: any) {
-        this.logger.warn(`Gemini multimodal call attempt ${attempt} failed: ${error.message}`);
-        if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 1000 * attempt));
-        } else {
-          throw error;
-        }
+      throw new Error('Failed to call Gemini API after retries');
+    } finally {
+      // Cleanup: Delete uploaded file if using File API
+      if (fileUri) {
+        this.deleteFromFileApi(fileUri).catch(err =>
+          this.logger.warn(`Failed to cleanup file: ${err.message}`)
+        );
       }
     }
+  }
 
-    throw new Error('Failed to call Gemini API after retries');
+  /**
+   * Upload audio to Google File API for large files
+   * Returns the file URI for referencing in API calls
+   */
+  private async uploadToFileApi(audioBase64: string, mimeType: string): Promise<string> {
+    const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${this.apiKey}`;
+
+    // Convert base64 to binary
+    const binaryData = Buffer.from(audioBase64, 'base64');
+
+    // Determine file extension from mime type
+    const ext = mimeType.split('/')[1] || 'wav';
+    const displayName = `audit-call-${Date.now()}.${ext}`;
+
+    try {
+      // Step 1: Start resumable upload
+      const startResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Upload-Protocol': 'resumable',
+          'X-Goog-Upload-Command': 'start',
+          'X-Goog-Upload-Header-Content-Length': binaryData.length.toString(),
+          'X-Goog-Upload-Header-Content-Type': mimeType,
+        },
+        body: JSON.stringify({
+          file: { displayName }
+        }),
+      });
+
+      if (!startResponse.ok) {
+        const errorText = await startResponse.text();
+        throw new Error(`Failed to start upload: ${startResponse.status} - ${errorText}`);
+      }
+
+      const uploadUri = startResponse.headers.get('X-Goog-Upload-URL');
+      if (!uploadUri) {
+        throw new Error('No upload URL received from File API');
+      }
+
+      // Step 2: Upload the file content
+      const uploadResponse = await fetch(uploadUri, {
+        method: 'POST',
+        headers: {
+          'Content-Length': binaryData.length.toString(),
+          'X-Goog-Upload-Offset': '0',
+          'X-Goog-Upload-Command': 'upload, finalize',
+        },
+        body: binaryData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Failed to upload file: ${uploadResponse.status} - ${errorText}`);
+      }
+
+      const fileData = await uploadResponse.json();
+      const fileUri = fileData.file?.uri;
+
+      if (!fileUri) {
+        throw new Error('No file URI in upload response');
+      }
+
+      this.logger.log(`File uploaded successfully: ${fileUri}`);
+
+      // Wait for file to be processed (ACTIVE state)
+      await this.waitForFileProcessing(fileData.file.name);
+
+      return fileUri;
+    } catch (error: any) {
+      this.logger.error(`File API upload failed: ${error.message}`);
+      throw new BadRequestException(`Failed to upload audio file: ${error.message}`);
+    }
+  }
+
+  /**
+   * Wait for uploaded file to be processed by Google
+   */
+  private async waitForFileProcessing(fileName: string): Promise<void> {
+    const maxWaitMs = 60000; // Max 1 minute wait
+    const pollIntervalMs = 2000; // Poll every 2 seconds
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitMs) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${this.apiKey}`
+        );
+
+        if (response.ok) {
+          const fileInfo = await response.json();
+          if (fileInfo.state === 'ACTIVE') {
+            this.logger.log(`File ${fileName} is ready for processing`);
+            return;
+          } else if (fileInfo.state === 'FAILED') {
+            throw new Error(`File processing failed: ${fileInfo.error?.message || 'Unknown error'}`);
+          }
+        }
+      } catch (error: any) {
+        // Ignore errors during polling, just continue
+      }
+
+      await new Promise(r => setTimeout(r, pollIntervalMs));
+    }
+
+    // If we timeout, proceed anyway - the file might still work
+    this.logger.warn(`File processing timeout for ${fileName}, proceeding anyway`);
+  }
+
+  /**
+   * Delete file from Google File API (cleanup)
+   */
+  private async deleteFromFileApi(fileUri: string): Promise<void> {
+    try {
+      // Extract file name from URI
+      const fileName = fileUri.split('/').pop();
+      if (!fileName) return;
+
+      const deleteUrl = `https://generativelanguage.googleapis.com/v1beta/files/${fileName}?key=${this.apiKey}`;
+
+      const response = await fetch(deleteUrl, { method: 'DELETE' });
+
+      if (response.ok) {
+        this.logger.log(`Cleaned up uploaded file: ${fileName}`);
+      }
+    } catch (error: any) {
+      // Non-critical - just log
+      this.logger.warn(`File cleanup failed: ${error.message}`);
+    }
   }
 
   /**

@@ -21,7 +21,50 @@ import { PERMISSIONS, JwtPayload, ROLES } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('qa-parameters')
 export class QaParameterController {
-  constructor(private readonly qaParameterService: QaParameterService) {}
+  constructor(private readonly qaParameterService: QaParameterService) { }
+
+  @Get('templates')
+  @ApiOperation({ summary: 'Get available default templates' })
+  getTemplates() {
+    return this.qaParameterService.getTemplates();
+  }
+
+  @Get('templates/:templateId')
+  @ApiOperation({ summary: 'Get a specific template by ID' })
+  getTemplate(@Param('templateId') templateId: string) {
+    return this.qaParameterService.getTemplate(templateId);
+  }
+
+  @Post('from-template/:templateId')
+  @RequirePermissions(PERMISSIONS.MANAGE_PARAMETERS)
+  @ApiOperation({ summary: 'Create parameter set from a template' })
+  async createFromTemplate(
+    @Param('templateId') templateId: string,
+    @Body() dto: { name?: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.qaParameterService.createFromTemplate(
+      templateId,
+      user.projectId,
+      user.sub,
+      dto?.name,
+    );
+  }
+
+  @Post('seed-defaults')
+  @RequirePermissions(PERMISSIONS.MANAGE_PARAMETERS)
+  @ApiOperation({ summary: 'Seed all default parameter templates for the project' })
+  async seedDefaults(@CurrentUser() user: JwtPayload) {
+    const params = await this.qaParameterService.seedDefaultParameters(
+      user.projectId,
+      user.sub,
+    );
+    return {
+      success: true,
+      message: `Created ${params.length} default parameter sets`,
+      data: params,
+    };
+  }
 
   @Post()
   @RequirePermissions(PERMISSIONS.MANAGE_PARAMETERS)
@@ -62,3 +105,4 @@ export class QaParameterController {
     return { success: true, message: 'QA parameter set deleted' };
   }
 }
+

@@ -249,6 +249,24 @@ export const qaParameterApi = {
 
   delete: (id: string) =>
     request<void>(`/api/qa-parameters/${id}`, { method: 'DELETE' }),
+
+  // Template methods
+  getTemplates: () =>
+    request<{ id: string; name: string; description: string }[]>('/api/qa-parameters/templates'),
+
+  getTemplate: (templateId: string) =>
+    request<{ name: string; description: string; parameters: any[] }>(`/api/qa-parameters/templates/${templateId}`),
+
+  createFromTemplate: (templateId: string, name?: string) =>
+    request<QAParameter>(`/api/qa-parameters/from-template/${templateId}`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  seedDefaults: () =>
+    request<{ success: boolean; message: string; data: QAParameter[] }>('/api/qa-parameters/seed-defaults', {
+      method: 'POST',
+    }),
 };
 
 // Campaign APIs

@@ -13,12 +13,37 @@ export class CreateAuditDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  interactionId?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  auditName?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  customerName?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
   agentName?: string;
 
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   agentUserId?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  auditorId?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  auditorName?: string;
 
   @ApiPropertyOptional()
   @IsString()
@@ -35,6 +60,16 @@ export class CreateAuditDto {
   @IsOptional()
   projectId?: string;
 
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  qaParameterSetId?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  qaParameterSetName?: string;
+
   @ApiProperty({ enum: ['ai', 'manual'] })
   @IsEnum(['ai', 'manual'])
   auditType: 'ai' | 'manual';
@@ -43,6 +78,16 @@ export class CreateAuditDto {
   @IsString()
   @IsOptional()
   transcript?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  callTranscript?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  transcriptionInOriginalLanguage?: string;
 
   @ApiPropertyOptional()
   @IsString()
@@ -57,6 +102,11 @@ export class CreateAuditDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  identifiedAgentName?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
   audioUrl?: string;
 
   @ApiPropertyOptional()
@@ -65,9 +115,18 @@ export class CreateAuditDto {
   audioHash?: string;
 
   @ApiPropertyOptional()
+  @IsOptional()
+  auditDate?: Date;
+
+  @ApiPropertyOptional()
   @IsArray()
   @IsOptional()
   auditResults?: any[];
+
+  @ApiPropertyOptional()
+  @IsArray()
+  @IsOptional()
+  parameters?: any[];
 
   @ApiPropertyOptional()
   @IsNumber()

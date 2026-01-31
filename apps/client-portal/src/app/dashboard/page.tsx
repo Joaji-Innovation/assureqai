@@ -788,7 +788,8 @@ function DashboardPageContent() {
     if (!dateRange?.from) {
       const today = new Date();
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      // Set end date to end of last day of month (23:59:59.999) to include all audits on that day
+      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
       setDateRange({ from: firstDayOfMonth, to: lastDayOfMonth });
     }
   }, [isClient, dateRange?.from]);

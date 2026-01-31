@@ -230,9 +230,19 @@ export class AiService {
     }
 
     // Build parameters description for the prompt
-    const parametersDesc = request.parameters.map((param, idx) =>
-      `  ${idx + 1}. "${param.name}" - Weight: ${param.weight}%, Type: ${param.type || 'Non-Fatal'}`
-    ).join('\n');
+    // Build parameters description for the prompt - handling groups if present
+    const parametersDesc = request.parameters.map((param) => {
+      // Check if this is a group with sub-parameters
+      if (param.subParameters && param.subParameters.length > 0) {
+        const subParams = param.subParameters
+          .map((sp) => `    - "${sp.name}" - ${sp.weight}% (Non-Fatal)`) // Defaulting sub-params to Non-Fatal as per interface
+          .join('\n');
+        return `  - **Group: "${param.name}"**\n${subParams}`;
+      } else {
+        // Flat parameter
+        return `  - "${param.name}" - ${param.weight}% (${param.type || 'Non-Fatal'})`;
+      }
+    }).join('\n');
 
     // Check if large audio (>10MB) - use two-step approach for reliability
     const audioSizeBytes = audioBase64.length * 0.75;
@@ -302,37 +312,36 @@ export class AiService {
 - Call Language: ${request.language || 'Auto-detect'}
 ${request.sopContent ? `- SOP Reference: ${request.sopContent.substring(0, 500)}...` : ''}
 
-**Audit Parameters (Name - Weight% - Type):**
+**Audit Parameters (Parameter Name - Weight%):**
 ${parametersDesc}
 
-**Instructions:**
+**Audit Instructions:**
 1. **Transcription**: Provide accurate transcription with speaker labels (Agent: / Customer:).
-2. **Agent Name**: IMPORTANT - Extract agent's name from greeting/introduction (e.g., "मेरा नाम राहुल है", "This is John calling").
-3. **PII Masking** - Keep all names visible but mask these sensitive details:
+2. **Privacy Protection**: MASK ALL customer private details in any text:
    - Phone numbers → [PHONE MASKED]
-   - Addresses → [ADDRESS MASKED]
+   - Addresses → [ADDRESS MASKED]  
+   - Account/Card numbers → [ACCOUNT MASKED]
    - Email addresses → [EMAIL MASKED]
-   - Credit/Debit card numbers → [CARD NUMBER MASKED]
-   - CVV/Expiry dates → [CVV MASKED]
-   - Bank account numbers → [ACCOUNT NUMBER MASKED]
-   - Vehicle/Car registration → [VEHICLE NUMBER MASKED]
-   - Policy/Insurance numbers → [POLICY NUMBER MASKED]
-   - Aadhaar number → [AADHAAR MASKED]
-   - PAN number → [PAN MASKED]
-   - SSN/ID numbers → [ID NUMBER MASKED]
-   - Date of birth → [DOB MASKED]
-   - OTP/PIN codes → [OTP MASKED]
-   - Passwords → [PASSWORD MASKED]
-   - UPI ID → [UPI ID MASKED]
-   - IFSC codes → [IFSC MASKED]
-4. **Scoring** (0-100 scale):
-   - 100: Perfect compliance
-   - 80-99: Good with minor issues
-   - 50-79: Needs improvement
-   - 1-49: Poor performance
-   - 0: Complete failure
-5. **Fatal Parameters**: Score <50 on Fatal type = overall score becomes 0 (ZTP)
-6. **Provide scoring for EVERY parameter listed above**
+   - Aadhaar/PAN/ID numbers → [ID MASKED]
+
+3. **Audit Scoring Guidelines**:
+   
+   **Score Scale (0-100):**
+   - **100**: Perfect compliance - agent fully met the requirement
+   - **80-99**: Good - minor issues but acceptable performance
+   - **50-79**: Needs improvement - noticeable issues but not critical
+   - **1-49**: Poor - significant failure, requires immediate attention
+   - **0**: Complete failure - requirement was not met at all
+   
+   **Parameter Types & Their Impact:**
+   - **Fatal Parameters**: Critical compliance items. Score < 50% on ANY Fatal parameter triggers Zero Tolerance Policy (ZTP) - overall audit score becomes 0.
+   - **Non-Fatal Parameters**: Standard quality metrics. Low scores reduce overall score but don't trigger ZTP.
+   
+   **IMPORTANT**: Be precise and fair in your scoring. The score should reflect actual performance observed in the call.
+   
+4. **Root Cause Analysis**: If issues are found, provide thoughtful analysis of why they occurred.
+5. **Summary**: Give constructive feedback highlighting strengths and areas for improvement.
+6. **CRITICAL - COMPLETE ALL AUDIT RESULTS**: You MUST provide a score and comments for EVERY sub-parameter listed above. Do not truncate or skip any parameters. Use EXACT parameter names.
 
 **Respond ONLY with valid JSON:**
 {
@@ -361,7 +370,7 @@ ${parametersDesc}
   }
 }
 
-CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter names.`;
+CRITICAL: Score using EXACT parameter names listed above.`;
 
       // Call Gemini with multimodal content (audio + text)
       const response = await this.callGeminiWithAudio(textPrompt, audioBase64, mimeType);

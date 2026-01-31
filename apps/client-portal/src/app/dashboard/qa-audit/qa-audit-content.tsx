@@ -208,6 +208,12 @@ function convertSavedAuditItemToCreateAuditFormatV2(
     savedAudit.auditData?.auditResults ||
     [];
 
+  // DEBUG: Log the raw input to identify the source of corruption
+  console.log('[V2 Converter] savedAudit.auditData keys:', Object.keys(savedAudit.auditData || {}));
+  console.log('[V2 Converter] rawAuditResults type:', Array.isArray(rawAuditResults) ? 'Array' : typeof rawAuditResults);
+  console.log('[V2 Converter] rawAuditResults length:', rawAuditResults?.length);
+  console.log('[V2 Converter] rawAuditResults[0]:', JSON.stringify(rawAuditResults?.[0]));
+
   // Defensive mapping using explicit loop
   const mappedResults: any[] = [];
   if (Array.isArray(rawAuditResults)) {

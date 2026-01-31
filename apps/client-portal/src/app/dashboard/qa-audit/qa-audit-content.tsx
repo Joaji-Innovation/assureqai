@@ -197,16 +197,38 @@ function convertAuditDocumentToSavedAuditItem(
   };
 }
 
-// Helper function to convert SavedAuditItem to createAudit format
+// Helper function to convert SavedAuditItem to createAudit format - V2 (Defensive)
 function convertSavedAuditItemToCreateAuditFormat(
   savedAudit: SavedAuditItem,
   auditedBy: string
 ) {
   // Extract auditResults - they can be directly on savedAudit or nested in auditData
-  const auditResults =
+  const rawAuditResults =
     (savedAudit as any).auditResults ||
     savedAudit.auditData?.auditResults ||
     [];
+
+  // Defensive mapping using explicit loop
+  const mappedResults: any[] = [];
+  if (Array.isArray(rawAuditResults)) {
+    for (let i = 0; i < rawAuditResults.length; i++) {
+      const result = rawAuditResults[i];
+      // Explicitly construct object to avoid implicit Map behavior issues
+      const cleanResult = {
+        parameterId: result.parameterId || result.id || `param-${i}`,
+        parameterName: result.parameterName || result.parameter || result.name || "Unknown Parameter",
+        score: typeof result.score === 'number' ? result.score : parseFloat(result.score || '0'),
+        maxScore: result.weight || result.maxScore || 10,
+        weight: result.weight || result.maxScore || 10,
+        type: result.type || "Non-Fatal",
+        comments: result.comments || "",
+        confidence: result.confidence || 0,
+        evidence: result.evidence || [],
+        subResults: result.subResults || [],
+      };
+      mappedResults.push(cleanResult);
+    }
+  }
 
   // Extract transcript - can be directly on savedAudit or nested in auditData
   const transcript =
@@ -221,15 +243,7 @@ function convertSavedAuditItemToCreateAuditFormat(
     savedAudit.auditData?.englishTranslation ||
     "";
 
-  // Extract token usage and duration
-  const tokenUsage = savedAudit.auditData?.tokenUsage;
-  const auditDurationMs = savedAudit.auditData?.auditDurationMs;
-
-  // Extract sentiment, metrics, and compliance from AI response
-  const sentiment = savedAudit.auditData?.sentiment;
-  const metrics = savedAudit.auditData?.metrics;
-  const compliance = savedAudit.auditData?.compliance;
-
+  // Explicitly return the DTO object
   return {
     // Required fields for the API
     agentName: savedAudit.agentName || savedAudit.auditData?.identifiedAgentName || "Unknown Agent",
@@ -255,32 +269,11 @@ function convertSavedAuditItemToCreateAuditFormat(
     auditDate: new Date(savedAudit.auditDate).toISOString(),
 
     // AI audit metadata
-    tokenUsage: tokenUsage,
-    auditDurationMs: auditDurationMs,
+    tokenUsage: savedAudit.auditData?.tokenUsage,
+    auditDurationMs: savedAudit.auditData?.auditDurationMs,
 
     // IMPORTANT: Map auditResults directly (this is what the DB schema expects)
-    auditResults: Array.isArray(auditResults)
-      ? auditResults.map((result: any, index: number) => {
-        // Robust mapping to ensure we always return a valid object
-        const mappedParameter = {
-          parameterId: result.parameterId || result.id || `param-${index}`,
-          parameterName:
-            result.parameterName ||
-            result.parameter ||
-            result.name ||
-            "Unknown Parameter",
-          score: typeof result.score === 'number' ? result.score : parseFloat(result.score || '0'),
-          maxScore: result.weight || result.maxScore || 10,
-          weight: result.weight || result.maxScore || 10,
-          type: result.type || "Non-Fatal",
-          comments: result.comments || "",
-          confidence: result.confidence || 0,
-          evidence: result.evidence || [],
-          subResults: result.subResults || [],
-        };
-        return mappedParameter;
-      })
-      : [],
+    auditResults: mappedResults,
 
     // Sentiment analysis from AI
     sentiment: sentiment,
@@ -718,7 +711,8 @@ export default function QaAuditContent() {
     };
 
     // We don't need to fetch user profile - the API will extract username from JWT
-    const createAuditData = convertSavedAuditItemToCreateAuditFormat(
+    // Use V2 converter for defensive mapping
+    const createAuditData = convertSavedAuditItemToCreateAuditFormatV2(
       newSavedAudit,
       "will-be-set-by-api" // API will override this with JWT username
     );

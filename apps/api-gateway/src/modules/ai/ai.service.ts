@@ -304,7 +304,17 @@ ${parametersDesc}
 
 **Instructions:**
 1. **Transcription**: Provide accurate transcription with speaker labels (Agent: / Customer:).
-2. **Privacy Protection**: Mask customer PII: phone → [PHONE MASKED], address → [ADDRESS MASKED], etc.
+2. **PII Masking** - Keep names visible but mask these sensitive details:
+   - Phone numbers → [xxx phone xxx]
+   - Addresses → [xxx address xxx]
+   - Email addresses → [xxx email xxx]
+   - Credit/Debit card numbers → [xxx card number xxx]
+   - Bank account numbers → [xxx account xxx]
+   - Vehicle/Car registration → [xxx car number xxx]
+   - Policy/Insurance numbers → [xxx policy number xxx]
+   - Aadhaar/PAN/SSN/ID numbers → [xxx id number xxx]
+   - Date of birth → [xxx dob xxx]
+   - OTP/PIN codes → [xxx otp xxx]
 3. **Scoring** (0-100 scale):
    - 100: Perfect compliance
    - 80-99: Good with minor issues
@@ -458,7 +468,17 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
 **Requirements**:
 1. Use speaker labels: "Agent:" and "Customer:" (detect from context)
 2. Include relevant non-verbal cues in [brackets], e.g., [pause], [sighing]
-3. Mask customer PII: phone → [PHONE MASKED], address → [ADDRESS MASKED], etc.
+3. **PII Masking** - Keep names visible but mask these sensitive details:
+   - Phone numbers → [xxx phone xxx]
+   - Addresses → [xxx address xxx]
+   - Email addresses → [xxx email xxx]
+   - Credit/Debit card numbers → [xxx card number xxx]
+   - Bank account numbers → [xxx account xxx]
+   - Vehicle/Car registration → [xxx car number xxx]
+   - Policy/Insurance numbers → [xxx policy number xxx]
+   - Aadhaar/PAN/SSN/ID numbers → [xxx id number xxx]
+   - Date of birth → [xxx dob xxx]
+   - OTP/PIN codes → [xxx otp xxx]
 4. Detect the language being spoken
 5. Provide English translation if not already in English
 6. Identify the agent's name if mentioned

@@ -304,25 +304,32 @@ ${parametersDesc}
 
 **Instructions:**
 1. **Transcription**: Provide accurate transcription with speaker labels (Agent: / Customer:).
-2. **PII Masking** - Keep names visible but mask these sensitive details:
-   - Phone numbers → [xxx phone xxx]
-   - Addresses → [xxx address xxx]
-   - Email addresses → [xxx email xxx]
-   - Credit/Debit card numbers → [xxx card number xxx]
-   - Bank account numbers → [xxx account xxx]
-   - Vehicle/Car registration → [xxx car number xxx]
-   - Policy/Insurance numbers → [xxx policy number xxx]
-   - Aadhaar/PAN/SSN/ID numbers → [xxx id number xxx]
-   - Date of birth → [xxx dob xxx]
-   - OTP/PIN codes → [xxx otp xxx]
-3. **Scoring** (0-100 scale):
+2. **Agent Name**: IMPORTANT - Extract agent's name from greeting/introduction (e.g., "मेरा नाम राहुल है", "This is John calling").
+3. **PII Masking** - Keep all names visible but mask these sensitive details:
+   - Phone numbers → [PHONE MASKED]
+   - Addresses → [ADDRESS MASKED]
+   - Email addresses → [EMAIL MASKED]
+   - Credit/Debit card numbers → [CARD NUMBER MASKED]
+   - CVV/Expiry dates → [CVV MASKED]
+   - Bank account numbers → [ACCOUNT NUMBER MASKED]
+   - Vehicle/Car registration → [VEHICLE NUMBER MASKED]
+   - Policy/Insurance numbers → [POLICY NUMBER MASKED]
+   - Aadhaar number → [AADHAAR MASKED]
+   - PAN number → [PAN MASKED]
+   - SSN/ID numbers → [ID NUMBER MASKED]
+   - Date of birth → [DOB MASKED]
+   - OTP/PIN codes → [OTP MASKED]
+   - Passwords → [PASSWORD MASKED]
+   - UPI ID → [UPI ID MASKED]
+   - IFSC codes → [IFSC MASKED]
+4. **Scoring** (0-100 scale):
    - 100: Perfect compliance
    - 80-99: Good with minor issues
    - 50-79: Needs improvement
    - 1-49: Poor performance
    - 0: Complete failure
-4. **Fatal Parameters**: Score <50 on Fatal type = overall score becomes 0 (ZTP)
-5. **Provide scoring for EVERY parameter listed above**
+5. **Fatal Parameters**: Score <50 on Fatal type = overall score becomes 0 (ZTP)
+6. **Provide scoring for EVERY parameter listed above**
 
 **Respond ONLY with valid JSON:**
 {
@@ -468,26 +475,32 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
 **Requirements**:
 1. Use speaker labels: "Agent:" and "Customer:" (detect from context)
 2. Include relevant non-verbal cues in [brackets], e.g., [pause], [sighing]
-3. **PII Masking** - Keep names visible but mask these sensitive details:
-   - Phone numbers → [xxx phone xxx]
-   - Addresses → [xxx address xxx]
-   - Email addresses → [xxx email xxx]
-   - Credit/Debit card numbers → [xxx card number xxx]
-   - Bank account numbers → [xxx account xxx]
-   - Vehicle/Car registration → [xxx car number xxx]
-   - Policy/Insurance numbers → [xxx policy number xxx]
-   - Aadhaar/PAN/SSN/ID numbers → [xxx id number xxx]
-   - Date of birth → [xxx dob xxx]
-   - OTP/PIN codes → [xxx otp xxx]
-4. Detect the language being spoken
-5. Provide English translation if not already in English
-6. Identify the agent's name if mentioned
+3. **Agent Name Identification** - IMPORTANT: Listen carefully to the greeting/introduction at the start. The agent typically introduces themselves like "मेरा नाम राहुल है" or "This is John calling from...". Extract their name.
+4. **PII Masking** - Keep all names visible but mask these sensitive details:
+   - Phone numbers → [PHONE MASKED]
+   - Addresses → [ADDRESS MASKED]
+   - Email addresses → [EMAIL MASKED]
+   - Credit/Debit card numbers → [CARD NUMBER MASKED]
+   - CVV/Expiry dates → [CVV MASKED]
+   - Bank account numbers → [ACCOUNT NUMBER MASKED]
+   - Vehicle/Car registration → [VEHICLE NUMBER MASKED]
+   - Policy/Insurance numbers → [POLICY NUMBER MASKED]
+   - Aadhaar number → [AADHAAR MASKED]
+   - PAN number → [PAN MASKED]
+   - SSN/ID numbers → [ID NUMBER MASKED]
+   - Date of birth → [DOB MASKED]
+   - OTP/PIN codes → [OTP MASKED]
+   - Passwords → [PASSWORD MASKED]
+   - UPI ID → [UPI ID MASKED]
+   - IFSC codes → [IFSC MASKED]
+5. Detect the language being spoken
+6. Provide English translation if not already in English
 
 **Language hint**: ${language || 'Auto-detect'}
 
 **Respond ONLY with valid JSON:**
 {
-  "identifiedAgentName": "string (agent name if mentioned, else 'Unknown')",
+  "identifiedAgentName": "string (agent's name from greeting - MUST extract if mentioned)",
   "detectedLanguage": "string (e.g., 'Hindi', 'English', 'Spanish')",
   "transcriptionInOriginalLanguage": "string (full transcript with speaker labels)",
   "englishTranslation": "string (same as transcript if already English)",

@@ -17,11 +17,17 @@ export interface AuditRequest {
       id: string;
       name: string;
       weight: number;
+      type?: 'Fatal' | 'Non-Fatal' | 'ZTP';
     }[];
   }[];
   sopContent?: string;
   language?: string;
+  agentName?: string;
+  campaignName?: string;
+  audioDataUri?: string;
+  audioUrl?: string;
 }
+
 
 // Evidence citation from transcript
 export interface EvidenceCitation {

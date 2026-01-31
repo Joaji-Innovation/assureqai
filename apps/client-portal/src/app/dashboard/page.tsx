@@ -1084,7 +1084,7 @@ function DashboardPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(audit.auditResults || audit.auditData?.auditResults || []).map((res: any, i: number) => (
+                {((audit as any).auditResults || audit.auditData?.auditResults || []).map((res: any, i: number) => (
                   <TableRow key={i}>
                     <TableCell className="font-medium">
                       {res.parameterName || res.parameter || 'Unknown'}
@@ -1102,7 +1102,7 @@ function DashboardPageContent() {
                   Call Summary & Transcription
                 </h4>
                 <p className="text-sm p-3 bg-muted rounded-md">
-                  {audit.callSummary || audit.auditData?.callSummary || 'No summary available'}
+                  {(audit as any).callSummary || audit.auditData?.callSummary || 'No summary available'}
                 </p>
                 <Collapsible>
                   <CollapsibleTrigger asChild>

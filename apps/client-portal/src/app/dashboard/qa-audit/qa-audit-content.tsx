@@ -198,7 +198,7 @@ function convertAuditDocumentToSavedAuditItem(
 }
 
 // Helper function to convert SavedAuditItem to createAudit format - V2 (Defensive)
-function convertSavedAuditItemToCreateAuditFormat(
+function convertSavedAuditItemToCreateAuditFormatV2(
   savedAudit: SavedAuditItem,
   auditedBy: string
 ) {
@@ -242,6 +242,11 @@ function convertSavedAuditItemToCreateAuditFormat(
     (savedAudit as any).englishTranslation ||
     savedAudit.auditData?.englishTranslation ||
     "";
+
+  // Extract sentiment, metrics, and compliance from AI response
+  const sentiment = savedAudit.auditData?.sentiment;
+  const metrics = savedAudit.auditData?.metrics;
+  const compliance = savedAudit.auditData?.compliance;
 
   // Explicitly return the DTO object
   return {

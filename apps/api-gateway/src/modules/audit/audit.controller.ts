@@ -41,6 +41,8 @@ export class AuditController {
       agentName: dto.agentName,
       overallScore: dto.overallScore,
       campaignName: dto.campaignName,
+      auditResultsType: Array.isArray(dto.auditResults) ? 'Array' : typeof dto.auditResults,
+      auditResultsLength: dto.auditResults?.length,
       auditResultsSample: dto.auditResults?.[0] ? JSON.stringify(dto.auditResults[0]) : 'None'
     }));
 

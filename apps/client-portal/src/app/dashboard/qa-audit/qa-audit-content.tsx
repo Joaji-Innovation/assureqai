@@ -260,22 +260,26 @@ function convertSavedAuditItemToCreateAuditFormat(
 
     // IMPORTANT: Map auditResults directly (this is what the DB schema expects)
     auditResults: Array.isArray(auditResults)
-      ? auditResults.map((result: any, index: number) => ({
-        parameterId: result.parameterId || result.id || `param-${index}`,
-        parameterName:
-          result.parameterName ||
-          result.parameter ||
-          result.name ||
-          "Unknown",
-        score: result.score ?? 0,
-        maxScore: result.weight || result.maxScore || 100,  // Required by frontend type
-        weight: result.weight || result.maxScore || 100,
-        type: result.type || "Non-Fatal",
-        comments: result.comments || "",
-        confidence: result.confidence,
-        evidence: result.evidence,
-        subResults: result.subResults,
-      }))
+      ? auditResults.map((result: any, index: number) => {
+        // Robust mapping to ensure we always return a valid object
+        const mappedParameter = {
+          parameterId: result.parameterId || result.id || `param-${index}`,
+          parameterName:
+            result.parameterName ||
+            result.parameter ||
+            result.name ||
+            "Unknown Parameter",
+          score: typeof result.score === 'number' ? result.score : parseFloat(result.score || '0'),
+          maxScore: result.weight || result.maxScore || 10,
+          weight: result.weight || result.maxScore || 10,
+          type: result.type || "Non-Fatal",
+          comments: result.comments || "",
+          confidence: result.confidence || 0,
+          evidence: result.evidence || [],
+          subResults: result.subResults || [],
+        };
+        return mappedParameter;
+      })
       : [],
 
     // Sentiment analysis from AI

@@ -28,6 +28,8 @@ export class AuditService {
    * Create a new audit
    */
   async create(dto: CreateAuditDto, instanceId?: string): Promise<CallAudit> {
+    this.logger.log(`Creating audit: callId=${dto.callId}, auditType=${dto.auditType}, campaignName=${dto.campaignName}`);
+
     // Deduct audit credit if instanceId is provided
     if (instanceId) {
       try {
@@ -45,6 +47,8 @@ export class AuditService {
 
     const audit = new this.auditModel(dto);
     const savedAudit = await audit.save();
+
+    this.logger.log(`Audit saved successfully: id=${savedAudit._id}, callId=${savedAudit.callId}, score=${dto.overallScore}`);
 
     // Trigger alerts based on audit results
     try {
@@ -106,6 +110,8 @@ export class AuditService {
       query.disputeStatus = filters.disputeStatus;
     }
 
+    this.logger.log(`Finding audits with query: ${JSON.stringify(query)}, page=${page}, limit=${limit}`);
+
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       this.auditModel
@@ -116,6 +122,8 @@ export class AuditService {
         .exec(),
       this.auditModel.countDocuments(query).exec(),
     ]);
+
+    this.logger.log(`Found ${total} audits (returning ${data.length} for page ${page})`);
 
     return {
       data,

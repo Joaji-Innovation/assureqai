@@ -3157,7 +3157,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                     <div className="min-h-[300px]">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-muted/50 hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-background/80 z-10">
+                          <TableRow className=" hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-background/80 z-10">
                             <TableHead className="pl-6 font-semibold">Agent</TableHead>
                             <TableHead className="text-right font-semibold">Score</TableHead>
                             <TableHead className="text-right pr-6 font-semibold">Pass/Fail</TableHead>

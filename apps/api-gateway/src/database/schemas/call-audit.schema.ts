@@ -9,7 +9,7 @@ export type CallAuditDocument = CallAudit & Document;
 
 @Schema({ timestamps: true })
 export class CallAudit {
-  @Prop({ required: true, trim: true })
+  @Prop({ trim: true, default: () => `CALL-${Date.now()}-${Math.random().toString(36).substring(7)}` })
   callId: string;
 
   @Prop({ trim: true })

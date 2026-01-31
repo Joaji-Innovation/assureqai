@@ -170,7 +170,7 @@ export class AiService {
     agentName?: string;
     callId?: string;
     campaignName?: string;
-  }): Promise<AuditResult & { transcript: string; transcriptionInOriginalLanguage: string; englishTranslation?: string; callSummary?: string; rootCauseAnalysis?: string }> {
+  }): Promise<AuditResult & { transcript: string; transcriptionInOriginalLanguage: string; englishTranslation?: string; callSummary?: string; rootCauseAnalysis?: string; identifiedAgentName?: string; campaignName?: string; agentUserId?: string }> {
     if (!this.apiKey) {
       throw new BadRequestException('AI service not configured. Please set GEMINI_API_KEY.');
     }
@@ -274,6 +274,9 @@ export class AiService {
           transcriptionInOriginalLanguage: transcriptionResult.transcript,
           englishTranslation: transcriptionResult.englishTranslation,
           callSummary: transcriptionResult.callSummary || auditResult.callSummary,
+          identifiedAgentName: transcriptionResult.identifiedAgentName || 'Unknown',
+          campaignName: request.campaignName,
+          agentUserId: request.agentName,
           rootCauseAnalysis: auditResult.callSummary,
           timing: {
             startTime: new Date(startTime).toISOString(),
@@ -444,6 +447,10 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
         transcriptionInOriginalLanguage: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
         englishTranslation: output.englishTranslation,
         rootCauseAnalysis: output.rootCauseAnalysis,
+        // Add agent identification and campaign info
+        identifiedAgentName: output.identifiedAgentName || request.agentName || 'Unknown',
+        campaignName: request.campaignName,
+        agentUserId: request.agentName,
       };
 
     } catch (error: any) {

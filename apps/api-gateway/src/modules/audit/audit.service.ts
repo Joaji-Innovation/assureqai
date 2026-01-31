@@ -212,6 +212,7 @@ export class AuditService {
       {
         $project: {
           date: '$_id',
+          audits: '$count', // Use 'audits' to match agent-ai format
           count: 1,
           avgScore: { $round: ['$avgScore', 1] },
           passRate: { $round: [{ $multiply: [{ $divide: ['$passCount', '$count'] }, 100] }, 1] },

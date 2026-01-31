@@ -6,9 +6,10 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAuditDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  callId: string;
+  @IsOptional()
+  callId?: string;
 
   @ApiPropertyOptional()
   @IsString()

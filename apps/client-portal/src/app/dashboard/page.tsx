@@ -121,6 +121,7 @@ import {
   RefreshCw,
   Volume2,
   VolumeX,
+  Heart,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -2615,6 +2616,12 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
     fatalErrors: { label: "Fatal Errors", color: "hsl(var(--destructive))" },
   } as const;
 
+  const chartConfigSentiment = {
+    positive: { label: "Positive", color: "hsl(var(--confirm))" },
+    neutral: { label: "Neutral", color: "hsl(var(--warning))" },
+    negative: { label: "Negative", color: "hsl(var(--destructive))" },
+  } as const;
+
   const isAgentView = currentUser?.role === "Agent";
 
   // Skeleton loader for overview cards
@@ -3256,6 +3263,101 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                     </div>
                   </ScrollArea>
                 </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Row 2.5: Sentiment Analysis */}
+            <motion.div variants={fadeInUp} className="grid gap-4 md:grid-cols-2">
+              <Card className="shadow-md border-primary/10 hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="bg-muted/30 pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <span className="p-2 bg-pink-100 dark:bg-pink-900/30 text-pink-600 rounded-lg">
+                        <Heart className="h-4 w-4" />
+                      </span>
+                      Sentiment Analysis
+                    </CardTitle>
+                  </div>
+                  <CardDescription>
+                    Customer sentiment across all audited calls.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-[250px] w-full flex items-center justify-center p-4">
+                  <div className="grid grid-cols-3 gap-8 w-full max-w-md">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="relative flex items-center justify-center">
+                        <div className="h-24 w-24 rounded-full border-8 border-green-500/20" />
+                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                          <span className="text-2xl font-bold text-green-600">{sentimentData.positive}%</span>
+                        </div>
+                        <svg className="absolute inset-0 h-24 w-24 -rotate-90 transform" viewBox="0 0 100 100">
+                          <circle
+                            className="text-green-500"
+                            strokeWidth="8"
+                            strokeDasharray={`${sentimentData.positive * 2.51} 251`}
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="transparent"
+                            r="40"
+                            cx="50"
+                            cy="50"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">Positive</span>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="relative flex items-center justify-center">
+                        <div className="h-24 w-24 rounded-full border-8 border-yellow-500/20" />
+                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                          <span className="text-2xl font-bold text-yellow-600">{sentimentData.neutral}%</span>
+                        </div>
+                        <svg className="absolute inset-0 h-24 w-24 -rotate-90 transform" viewBox="0 0 100 100">
+                          <circle
+                            className="text-yellow-500"
+                            strokeWidth="8"
+                            strokeDasharray={`${sentimentData.neutral * 2.51} 251`}
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="transparent"
+                            r="40"
+                            cx="50"
+                            cy="50"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">Neutral</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="relative flex items-center justify-center">
+                        <div className="h-24 w-24 rounded-full border-8 border-red-500/20" />
+                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                          <span className="text-2xl font-bold text-red-600">{sentimentData.negative}%</span>
+                        </div>
+                        <svg className="absolute inset-0 h-24 w-24 -rotate-90 transform" viewBox="0 0 100 100">
+                          <circle
+                            className="text-red-500"
+                            strokeWidth="8"
+                            strokeDasharray={`${sentimentData.negative * 2.51} 251`}
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="transparent"
+                            r="40"
+                            cx="50"
+                            cy="50"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">Negative</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Placeholder for balance, or move Campaign Performance here */}
+              <Card className="shadow-md border-primary/10 hover:shadow-lg transition-shadow duration-300 opacity-0 pointer-events-none">
+                {/* Invisible card to keep grid alignment if needed, or remove grid-cols-2 */}
               </Card>
             </motion.div>
 

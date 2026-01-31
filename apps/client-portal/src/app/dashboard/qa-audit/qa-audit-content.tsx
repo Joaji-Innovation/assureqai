@@ -276,6 +276,8 @@ function convertSavedAuditItemToCreateAuditFormatV2(
               type: result.type || "Non-Fatal",
               score: result.score || 0,
               comments: result.comments || "",
+              confidence: result.confidence,
+              evidence: result.evidence,
             })),
           },
         ]
@@ -1124,23 +1126,31 @@ export default function QaAuditContent() {
                       <TableCell>
                         <div className="space-y-2">
                           <p className="text-sm">{item.comments}</p>
-                          {item.evidence && item.evidence.length > 0 && (
+                          {item.evidence && (
                             <div className="space-y-1">
-                              {item.evidence.slice(0, 2).map((ev: any, evIdx: number) => (
-                                <div
-                                  key={evIdx}
-                                  className="text-xs p-2 rounded bg-muted/50 border border-border/50 italic text-muted-foreground"
-                                >
-                                  <span className="text-primary/60 font-medium mr-1">
-                                    {ev.lineNumber ? `L${ev.lineNumber}:` : `#${evIdx + 1}:`}
-                                  </span>
-                                  &ldquo;{ev.text}&rdquo;
+                              {Array.isArray(item.evidence) ? (
+                                <>
+                                  {item.evidence.slice(0, 2).map((ev: any, evIdx: number) => (
+                                    <div
+                                      key={evIdx}
+                                      className="text-xs p-2 rounded bg-muted/50 border border-border/50 italic text-muted-foreground"
+                                    >
+                                      <span className="text-primary/60 font-medium mr-1">
+                                        {ev.lineNumber ? `L${ev.lineNumber}:` : `#${evIdx + 1}:`}
+                                      </span>
+                                      &ldquo;{ev.text || ev}&rdquo;
+                                    </div>
+                                  ))}
+                                  {item.evidence.length > 2 && (
+                                    <span className="text-xs text-muted-foreground">
+                                      +{item.evidence.length - 2} more citations
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="text-xs p-2 rounded bg-muted/50 border border-border/50 italic text-muted-foreground">
+                                  &ldquo;{item.evidence}&rdquo;
                                 </div>
-                              ))}
-                              {item.evidence.length > 2 && (
-                                <span className="text-xs text-muted-foreground">
-                                  +{item.evidence.length - 2} more citations
-                                </span>
                               )}
                             </div>
                           )}

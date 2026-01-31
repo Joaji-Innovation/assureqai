@@ -187,8 +187,11 @@ function convertAuditDocumentToSavedAuditItem(
         weightedScore: result.maxScore,
         comments: result.comments || "",
         type: result.type,
+        confidence: result.confidence,
+        evidence: result.evidence?.map((e: any) => e.text).join('\n') || "",
       })),
       overallScore: doc.overallScore,
+      overallConfidence: doc.overallConfidence,
       summary: `Overall score: ${doc.overallScore}/${doc.maxPossibleScore}`,
       tokenUsage: doc.tokenUsage,
       auditDurationMs: doc.auditDurationMs,
@@ -515,8 +518,9 @@ export default function QaAuditContent() {
       toast({
         title: "Audit Failed",
         description:
-          error instanceof Error ? error.message : "An unknown error occurred.",
+          error instanceof Error ? error.message : "An unexpected API error occurred. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsAuditing(false);

@@ -164,163 +164,455 @@ export class AuditService {
 
     this.logger.log(`[getStats] Match filter: ${JSON.stringify(match)}`);
 
-    // Main stats aggregation
     const [stats] = await this.auditModel.aggregate([
       { $match: match },
       {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          aiAudits: { $sum: { $cond: [{ $eq: ['$auditType', 'ai'] }, 1, 0] } },
-          manualAudits: { $sum: { $cond: [{ $eq: ['$auditType', 'manual'] }, 1, 0] } },
-          avgScore: { $avg: '$overallScore' },
-          passCount: { $sum: { $cond: [{ $gte: ['$overallScore', 70] }, 1, 0] } },
-          failCount: { $sum: { $cond: [{ $lt: ['$overallScore', 70] }, 1, 0] } },
-          totalTokens: { $sum: '$tokenUsage.totalTokens' },
-          // Sentiment breakdown
-          positiveCount: { $sum: { $cond: [{ $eq: ['$sentiment.overall', 'positive'] }, 1, 0] } },
-          neutralCount: { $sum: { $cond: [{ $eq: ['$sentiment.overall', 'neutral'] }, 1, 0] } },
-          negativeCount: { $sum: { $cond: [{ $eq: ['$sentiment.overall', 'negative'] }, 1, 0] } },
-          // Escalation risk
-          highRiskCount: { $sum: { $cond: [{ $eq: ['$sentiment.escalationRisk', 'high'] }, 1, 0] } },
-          mediumRiskCount: { $sum: { $cond: [{ $eq: ['$sentiment.escalationRisk', 'medium'] }, 1, 0] } },
-          // Call metrics averages
-          avgTalkRatio: { $avg: '$metrics.talkToListenRatio' },
-          avgSilence: { $avg: '$metrics.silencePercentage' },
-          avgResponseTime: { $avg: '$metrics.averageResponseTime' },
-          avgInterruptions: { $avg: '$metrics.interruptionCount' },
-          // Compliance
-          complianceViolationCount: { $sum: { $size: { $ifNull: ['$compliance.violations', []] } } },
-          avgComplianceScore: { $avg: '$compliance.complianceScore' },
-        },
-      },
+        $facet: {
+          // Basic counts and scores
+          overview: [
+            {
+              $group: {
+                _id: null,
+                totalAudits: { $sum: 1 },
+                totalScore: { $sum: "$overallScore" },
+                aiAudits: { $sum: { $cond: [{ $eq: ["$auditType", "ai"] }, 1, 0] } },
+                manualAudits: { $sum: { $cond: [{ $eq: ["$auditType", "manual"] }, 1, 0] } },
+                passCount: { $sum: { $cond: [{ $gte: ["$overallScore", 80] }, 1, 0] } },
+                ztpCount: { $sum: { $cond: [{ $eq: ["$overallScore", 0] }, 1, 0] } },
+              }
+            }
+          ],
+          // Fatal errors analysis
+          fatalErrors: [
+            { $unwind: { path: "$auditResults", preserveNullAndEmptyArrays: false } },
+            {
+              $match: {
+                "auditResults.type": "Fatal",
+                "auditResults.score": { $lt: 80 }
+              }
+            },
+            {
+              $group: {
+                _id: null,
+                totalFatalErrors: { $sum: 1 },
+                fatalAuditIds: { $addToSet: "$_id" }
+              }
+            },
+            {
+              $project: {
+                totalFatalErrors: 1,
+                fatalAuditsCount: { $size: "$fatalAuditIds" }
+              }
+            }
+          ],
+          // Daily audits trend
+          dailyTrend: [
+            {
+              $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                audits: { $sum: 1 }
+              }
+            },
+            { $sort: { _id: 1 } },
+            { $project: { date: "$_id", audits: 1, _id: 0 } }
+          ],
+          // Daily fatal errors trend
+          dailyFatalTrend: [
+            { $unwind: { path: "$auditResults", preserveNullAndEmptyArrays: false } },
+            {
+              $match: {
+                "auditResults.type": "Fatal",
+                "auditResults.score": { $lt: 80 }
+              }
+            },
+            {
+              $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                fatalErrors: { $sum: 1 }
+              }
+            },
+            { $sort: { _id: 1 } },
+            { $project: { date: "$_id", fatalErrors: 1, _id: 0 } }
+          ],
+          // Top QA issues
+          topIssues: [
+            { $unwind: { path: "$auditResults", preserveNullAndEmptyArrays: false } },
+            { $match: { "auditResults.score": { $lt: 80 } } },
+            {
+              $group: {
+                _id: "$auditResults.parameterName",
+                count: { $sum: 1 },
+                totalScore: { $sum: "$auditResults.score" },
+                criticalCount: { $sum: { $cond: [{ $lt: ["$auditResults.score", 50] }, 1, 0] } },
+                type: { $first: "$auditResults.type" }
+              }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+            {
+              $project: {
+                parameter: "$_id",
+                count: 1,
+                avgScore: { $round: [{ $divide: ["$totalScore", "$count"] }, 1] },
+                critical: { $gt: ["$criticalCount", 0] },
+                type: 1,
+                _id: 0
+              }
+            }
+          ],
+          // Agent performance
+          agentPerformance: [
+            {
+              $group: {
+                _id: { agentUserId: "$agentUserId", agentName: "$agentName" },
+                totalScore: { $sum: "$overallScore" },
+                auditCount: { $sum: 1 },
+                passCount: { $sum: { $cond: [{ $gte: ["$overallScore", 80] }, 1, 0] } }
+              }
+            },
+            {
+              $project: {
+                agentId: "$_id.agentUserId",
+                agentName: "$_id.agentName",
+                avgScore: { $round: [{ $divide: ["$totalScore", "$auditCount"] }, 1] },
+                audits: "$auditCount",
+                pass: "$passCount",
+                fail: { $subtract: ["$auditCount", "$passCount"] },
+                _id: 0
+              }
+            },
+            { $sort: { avgScore: -1 } }
+          ],
+          // Campaign performance
+          campaignPerformance: [
+            {
+              $group: {
+                _id: "$campaignName",
+                totalScore: { $sum: "$overallScore" },
+                auditCount: { $sum: 1 },
+                complianceIssues: {
+                  $sum: {
+                    $cond: [
+                      {
+                        $gt: [
+                          {
+                            $size: {
+                              $filter: {
+                                input: { $ifNull: ["$auditResults", []] },
+                                as: "r",
+                                cond: {
+                                  $and: [
+                                    { $eq: ["$$r.type", "Fatal"] },
+                                    { $lt: ["$$r.score", 80] }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          0
+                        ]
+                      },
+                      1,
+                      0
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              $project: {
+                name: { $ifNull: ["$_id", "Uncategorized"] },
+                avgScore: { $round: [{ $divide: ["$totalScore", "$auditCount"] }, 1] },
+                audits: "$auditCount",
+                compliance: {
+                  $round: [
+                    {
+                      $multiply: [
+                        {
+                          $divide: [
+                            { $subtract: ["$auditCount", "$complianceIssues"] },
+                            "$auditCount"
+                          ]
+                        },
+                        100
+                      ]
+                    },
+                    1
+                  ]
+                },
+                _id: 0
+              }
+            },
+            { $sort: { audits: -1 } }
+          ],
+          // Training needs
+          trainingNeeds: [
+            { $unwind: { path: "$auditResults", preserveNullAndEmptyArrays: false } },
+            {
+              $group: {
+                _id: {
+                  agentUserId: "$agentUserId",
+                  agentName: "$agentName",
+                  param: "$auditResults.parameterName"
+                },
+                totalScore: { $sum: "$auditResults.score" },
+                count: { $sum: 1 }
+              }
+            },
+            {
+              $project: {
+                agentId: "$_id.agentUserId",
+                agentName: "$_id.agentName",
+                param: "$_id.param",
+                avgScore: { $round: [{ $divide: ["$totalScore", "$count"] }, 1] },
+                count: 1,
+                _id: 0
+              }
+            },
+            { $sort: { avgScore: 1 } },
+            { $limit: 20 }
+          ],
+          // Sentiment distribution
+          sentiment: [
+            {
+              $group: {
+                _id: null,
+                totalAudits: { $sum: 1 },
+                positive: { $sum: { $cond: [{ $gte: ["$overallScore", 85] }, 1, 0] } },
+                neutral: {
+                  $sum: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $gte: ["$overallScore", 70] },
+                          { $lt: ["$overallScore", 85] }
+                        ]
+                      },
+                      1,
+                      0
+                    ]
+                  }
+                },
+                negative: { $sum: { $cond: [{ $lt: ["$overallScore", 70] }, 1, 0] } }
+              }
+            }
+          ]
+        }
+      }
     ]);
 
-    // Daily trend for the date range (last 30 days max)
-    const dailyTrend = await this.auditModel.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-          count: { $sum: 1 },
-          avgScore: { $avg: '$overallScore' },
-          passCount: { $sum: { $cond: [{ $gte: ['$overallScore', 70] }, 1, 0] } },
-        },
-      },
-      { $sort: { _id: 1 } },
-      { $limit: 30 },
-      {
-        $project: {
-          date: '$_id',
-          audits: '$count', // Use 'audits' to match agent-ai format
-          count: 1,
-          avgScore: { $round: ['$avgScore', 1] },
-          passRate: { $round: [{ $multiply: [{ $divide: ['$passCount', '$count'] }, 100] }, 1] },
-        },
-      },
-    ]);
+    // Process results
+    const overview = stats?.overview?.[0] || {
+      totalAudits: 0,
+      totalScore: 0,
+      aiAudits: 0,
+      manualAudits: 0,
+      passCount: 0,
+      ztpCount: 0
+    };
+    const fatalData = stats?.fatalErrors?.[0] || { totalFatalErrors: 0, fatalAuditsCount: 0 };
+    const sentimentData = stats?.sentiment?.[0] || { totalAudits: 0, positive: 0, neutral: 0, negative: 0 };
 
-    // Top failing parameters (from auditResults)
-    const topFailingParams = await this.auditModel.aggregate([
-      { $match: match },
-      { $unwind: '$auditResults' },
-      { $match: { 'auditResults.score': { $lt: 70 } } },
-      {
-        $group: {
-          _id: '$auditResults.parameterName',
-          failCount: { $sum: 1 },
-          avgScore: { $avg: '$auditResults.score' },
-        },
-      },
-      { $sort: { failCount: -1 } },
-      { $limit: 10 },
-      {
-        $project: {
-          parameterName: '$_id',
-          failCount: 1,
-          avgScore: { $round: ['$avgScore', 1] },
-        },
-      },
-    ]);
+    const totalAudits = overview.totalAudits || 0;
+    const overallQAScore = totalAudits > 0
+      ? parseFloat((overview.totalScore / totalAudits).toFixed(1))
+      : 0;
+    const fatalRate = totalAudits > 0
+      ? parseFloat(((fatalData.fatalAuditsCount / totalAudits) * 100).toFixed(1))
+      : 0;
+    const ztpRate = totalAudits > 0
+      ? parseFloat(((overview.ztpCount / totalAudits) * 100).toFixed(1))
+      : 0;
+    const passRate = totalAudits > 0
+      ? parseFloat(((overview.passCount / totalAudits) * 100).toFixed(1))
+      : 0;
 
-    // Campaign performance breakdown
-    const campaignPerformance = await this.auditModel.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: '$campaignName',
-          totalAudits: { $sum: 1 },
-          avgScore: { $avg: '$overallScore' },
-          passCount: { $sum: { $cond: [{ $gte: ['$overallScore', 70] }, 1, 0] } },
-        },
-      },
-      { $sort: { totalAudits: -1 } },
-      { $limit: 10 },
-      {
-        $project: {
-          campaignName: { $ifNull: ['$_id', 'Uncategorized'] },
-          totalAudits: 1,
-          avgScore: { $round: ['$avgScore', 1] },
-          passRate: { $round: [{ $multiply: [{ $divide: ['$passCount', '$totalAudits'] }, 100] }, 1] },
-        },
-      },
-    ]);
+    // Agent performance: split into top and underperforming
+    const allAgents = stats?.agentPerformance || [];
+    const topAgents = allAgents.slice(0, 5);
+    const underperformingAgents = allAgents
+      .filter((a: any) => a.avgScore < 80)
+      .slice(-5)
+      .reverse();
 
-    if (!stats) {
+    // Training needs: find the agent with the lowest score on any parameter
+    const trainingNeedsList = stats?.trainingNeeds || [];
+    const primaryTrainingNeed = trainingNeedsList.length > 0
+      ? {
+        agentName: trainingNeedsList[0].agentName,
+        lowestParam: trainingNeedsList[0].param
+      }
+      : null;
+
+    // Build training needs list for modal (bottom 5 agents by score)
+    const trainingNeedsForModal = underperformingAgents.map((agent: any) => {
+      // Find worst parameter for this agent
+      const agentParams = trainingNeedsList.filter((t: any) => t.agentId === agent.agentId);
+      const worstParam = agentParams.length > 0 ? agentParams[0] : null;
+
       return {
-        total: 0,
-        aiAudits: 0,
-        manualAudits: 0,
-        avgScore: 0,
-        passRate: 0,
-        failRate: 0,
-        totalTokens: 0,
-        sentimentBreakdown: { positive: 0, neutral: 0, negative: 0 },
-        escalationRisk: { high: 0, medium: 0, low: 0 },
-        callMetrics: { avgTalkRatio: 50, avgSilence: 5, avgResponseTime: 2, avgInterruptions: 0 },
-        compliance: { violationCount: 0, avgScore: 100 },
-        dailyTrend: [],
-        topFailingParams: [],
-        campaignPerformance: [],
+        agentName: agent.agentName,
+        agentId: agent.agentId,
+        score: agent.avgScore,
+        lowestParam: worstParam?.param || "N/A",
+        lowestParamScore: worstParam?.avgScore || 0,
       };
+    });
+
+    // Fill in missing dates for daily trends
+    const dailyAuditsTrend = stats?.dailyTrend || [];
+    const dailyFatalTrend = stats?.dailyFatalTrend || [];
+
+    let filledDailyAuditsTrend = dailyAuditsTrend;
+    let filledDailyFatalTrend = dailyFatalTrend;
+
+    if (dateRange && dateRange.start && dateRange.end) {
+      const start = new Date(dateRange.start);
+      const end = new Date(dateRange.end);
+      const dateMap = new Map(dailyAuditsTrend.map((d: any) => [d.date, d.audits]));
+      const fatalDateMap = new Map(dailyFatalTrend.map((d: any) => [d.date, d.fatalErrors]));
+
+      filledDailyAuditsTrend = [];
+      filledDailyFatalTrend = [];
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        filledDailyAuditsTrend.push({
+          date: dateStr,
+          audits: dateMap.get(dateStr) || 0
+        });
+        filledDailyFatalTrend.push({
+          date: dateStr,
+          fatalErrors: fatalDateMap.get(dateStr) || 0
+        });
+      }
     }
 
-    this.logger.log(`[getStats] Results: total=${stats.total}, dailyTrendLength=${dailyTrend.length}, topFailingLength=${topFailingParams.length}, campaignPerfLength=${campaignPerformance.length}`);
-    if (dailyTrend.length > 0) {
-      this.logger.log(`[getStats] dailyTrend sample: ${JSON.stringify(dailyTrend[0])}`);
-    }
+    // Process top issues - filter out FATAL/CRITICAL group
+    const topIssues = (stats?.topIssues || []).filter((issue: any) => {
+      const normalizedParam = issue.parameter?.toUpperCase().replace(/\s/g, "") || "";
+      return normalizedParam !== "FATAL/CRITICAL";
+    });
+
+    // Calculate Pareto data from top issues
+    const totalFailures = topIssues.reduce((sum: number, i: any) => sum + i.count, 0);
+    let cumulative = 0;
+    const paretoData = topIssues.slice(0, 10).map((issue: any) => {
+      const frequencyPercentage = totalFailures > 0 ? (issue.count / totalFailures) * 100 : 0;
+      cumulative += issue.count;
+      return {
+        parameter: issue.parameter,
+        count: issue.count,
+        frequencyPercentage: parseFloat(frequencyPercentage.toFixed(1)),
+        cumulative,
+        percentage: totalFailures > 0 ? parseFloat(((cumulative / totalFailures) * 100).toFixed(1)) : 0,
+      };
+    });
+
+    // Sentiment percentages
+    const sentimentPercentages = {
+      positive: totalAudits > 0 ? parseFloat(((sentimentData.positive / totalAudits) * 100).toFixed(1)) : 0,
+      neutral: totalAudits > 0 ? parseFloat(((sentimentData.neutral / totalAudits) * 100).toFixed(1)) : 0,
+      negative: totalAudits > 0 ? parseFloat(((sentimentData.negative / totalAudits) * 100).toFixed(1)) : 0,
+    };
 
     return {
-      total: stats.total,
-      aiAudits: stats.aiAudits,
-      manualAudits: stats.manualAudits,
-      avgScore: Math.round(stats.avgScore * 100) / 100,
-      passRate: stats.total > 0 ? Math.round((stats.passCount / stats.total) * 100) : 0,
-      failRate: stats.total > 0 ? Math.round((stats.failCount / stats.total) * 100) : 0,
-      totalTokens: stats.totalTokens || 0,
-      sentimentBreakdown: {
-        positive: stats.positiveCount || 0,
-        neutral: stats.neutralCount || 0,
-        negative: stats.negativeCount || 0,
+      // Overview metrics
+      total: totalAudits,
+      overallQAScore,
+      totalAudits,
+      aiAudits: overview.aiAudits || 0,
+      manualAudits: overview.manualAudits || 0,
+      passRate,
+      passCount: overview.passCount || 0,
+      failRate: totalAudits > 0 ? (100 - passRate) : 0,
+
+      // Fatal errors
+      fatalRate,
+      totalFatalErrors: fatalData.totalFatalErrors || 0,
+      fatalAuditsCount: fatalData.fatalAuditsCount || 0,
+
+      // ZTP
+      ztpCount: overview.ztpCount || 0,
+      ztpRate,
+
+      // Training needs
+      trainingNeeds: primaryTrainingNeed,
+      trainingNeedsList: trainingNeedsForModal,
+
+      // Charts data
+      dailyTrend: filledDailyAuditsTrend,
+      dailyFatalTrend: filledDailyFatalTrend,
+      topFailingParams: topIssues.slice(0, 5).map((issue: any) => ({
+        parameterName: issue.parameter, // Keep old property name if needed for compatibility, or transition
+        count: issue.count,
+        critical: issue.critical,
+        avgScore: issue.avgScore,
+        type: issue.type,
+      })),
+      topIssues: topIssues.slice(0, 5).map((issue: any) => ({
+        id: issue.parameter,
+        reason: issue.parameter,
+        count: issue.count,
+        critical: issue.critical,
+        avgScore: issue.avgScore,
+        subParameters: [],
+        suggestion: `Average score: ${issue.avgScore}%. Focus on improving this parameter.`,
+      })),
+      paretoData,
+
+      // Performance data
+      agentPerformance: {
+        topAgents: topAgents.map((a: any) => ({
+          id: a.agentId,
+          name: a.agentName,
+          score: a.avgScore,
+          audits: a.audits,
+          pass: a.pass,
+          fail: a.fail,
+        })),
+        underperformingAgents: underperformingAgents.map((a: any) => ({
+          id: a.agentId,
+          name: a.agentName, // Use name instead of agentName for consistency
+          agentName: a.agentName,
+          score: a.avgScore,
+          audits: a.audits,
+          pass: a.pass,
+          fail: a.fail,
+          lowestParam: a.lowestParam,
+          lowestParamScore: a.lowestParamScore
+        })),
       },
-      escalationRisk: {
-        high: stats.highRiskCount || 0,
-        medium: stats.mediumRiskCount || 0,
-        low: stats.total - (stats.highRiskCount || 0) - (stats.mediumRiskCount || 0),
-      },
-      callMetrics: {
-        avgTalkRatio: Math.round(stats.avgTalkRatio || 50),
-        avgSilence: Math.round((stats.avgSilence || 5) * 10) / 10,
-        avgResponseTime: Math.round((stats.avgResponseTime || 2) * 10) / 10,
-        avgInterruptions: Math.round((stats.avgInterruptions || 0) * 10) / 10,
-      },
+      campaignPerformance: (stats?.campaignPerformance || []).map((c: any) => ({
+        name: c.name,
+        avgScore: c.avgScore, // Keep avgScore for consistency
+        score: c.avgScore, // Alias as score
+        compliance: c.compliance,
+        audits: c.audits,
+      })),
+
+      // Sentiment
+      sentimentBreakdown: sentimentPercentages, // Keep old property name
+      sentiment: sentimentPercentages, // New property name
+
+      // Compliance data
       compliance: {
-        violationCount: stats.complianceViolationCount || 0,
-        avgScore: Math.round(stats.avgComplianceScore || 100),
+        violationCount: fatalData.fatalAuditsCount || 0, // Using fatal audits as proxy for violations if detailed violation data isn't in this facet
+        avgScore: Math.round(100 - fatalRate), // Proxy calculation if avgComplianceScore isn't available
+        interactionsWithIssues: fatalData.fatalAuditsCount || 0,
+        totalAuditedInteractionsForCompliance: totalAudits,
+        complianceRate: totalAudits > 0
+          ? parseFloat((((totalAudits - fatalData.fatalAuditsCount) / totalAudits) * 100).toFixed(1))
+          : 0,
       },
-      dailyTrend,
-      topFailingParams,
-      campaignPerformance,
+
+      // Call metrics (mock or default as it's not in the facet yet)
+      callMetrics: {
+        avgTalkRatio: 50,
+        avgSilence: 5,
+        avgResponseTime: 2,
+        avgInterruptions: 0
+      }
     };
   }
 

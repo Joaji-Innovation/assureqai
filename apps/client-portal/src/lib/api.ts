@@ -87,14 +87,137 @@ export interface AuditStats {
   total: number;
   aiAudits: number;
   manualAudits: number;
-  avgScore: number;
+  avgScore: number; // overallQAScore
   passRate: number;
+  failRate: number;
   totalTokens: number;
+
+  // Fatal errors & ZTP
+  fatalRate: number;
+  totalFatalErrors: number;
+  fatalAuditsCount: number;
+  ztpCount: number;
+  ztpRate: number;
+
+  // Sentiment
+  sentiment: {
+    positive: number;
+    neutral: number;
+    negative: number;
+  };
   sentimentBreakdown: {
     positive: number;
     neutral: number;
     negative: number;
   };
+
+  // Compliance
+  compliance: {
+    violationCount: number;
+    avgScore: number;
+    interactionsWithIssues: number;
+    totalAuditedInteractionsForCompliance: number;
+    complianceRate: number;
+  };
+
+  // Call Metrics
+  callMetrics: {
+    avgTalkRatio: number;
+    avgSilence: number;
+    avgResponseTime: number;
+    avgInterruptions: number;
+  };
+
+  // Escalation Risk
+  escalationRisk: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+
+  // Charts & Listeners
+  dailyTrend: {
+    date: string;
+    audits: number;
+    count?: number; // legacy
+    avgScore: number;
+    passRate: number;
+  }[];
+
+  dailyFatalTrend: {
+    date: string;
+    fatalErrors: number;
+  }[];
+
+  topIssues: {
+    id: string;
+    reason: string;
+    count: number;
+    critical: boolean;
+    avgScore: number;
+    suggestion?: string;
+    subParameters?: any[];
+  }[]; // Alias for topFailingParams with UI fields
+
+  topFailingParams: {
+    parameterName: string;
+    count: number;
+    critical: boolean;
+    avgScore: number;
+    type?: string;
+  }[];
+
+  paretoData: {
+    parameter: string;
+    count: number;
+    frequencyPercentage: number;
+    cumulative: number;
+    percentage: number;
+  }[];
+
+  // Performance Analysis
+  agentPerformance: {
+    topAgents: {
+      id: string;
+      name: string;
+      score: number;
+      audits: number;
+      pass: number;
+      fail: number;
+    }[];
+    underperformingAgents: {
+      id: string;
+      name: string;
+      agentName?: string;
+      score: number;
+      audits: number;
+      pass: number;
+      fail: number;
+      lowestParam: string;
+      lowestParamScore: number;
+    }[];
+  };
+
+  campaignPerformance: {
+    name: string;
+    avgScore: number; // score
+    score?: number;
+    compliance: number;
+    audits: number;
+  }[];
+
+  trainingNeeds: {
+    agentName: string;
+    lowestParam: string;
+  } | null;
+
+  trainingNeedsList: {
+    agentName: string;
+    agentId: string;
+    score: number;
+    lowestParam: string;
+    lowestParamScore: number;
+  }[];
 }
 
 

@@ -113,6 +113,14 @@ import {
   PieChart,
   BookOpen,
   CheckCircle2,
+  AlertTriangle,
+  User as UserIcon,
+  MoreVertical,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -123,6 +131,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -247,8 +256,11 @@ function convertAuditDocumentToSavedAuditItem(
         weightedScore: result.maxScore,
         comments: result.comments || "",
         type: result.type,
+        confidence: result.confidence,
+        evidence: result.evidence?.map(e => e.text).join('\n') || "",
       })),
       overallScore: doc.overallScore,
+      overallConfidence: doc.overallConfidence,
       summary: `Overall score: ${doc.overallScore}/${doc.maxPossibleScore}`,
       tokenUsage: doc.tokenUsage,
       auditDurationMs: doc.auditDurationMs,
@@ -931,66 +943,13 @@ function DashboardPageContent() {
           total: (stats as any)?.total,
           avgScore: (stats as any)?.avgScore,
           dailyTrendLength: (stats as any)?.dailyTrend?.length,
-          dailyTrendSample: (stats as any)?.dailyTrend?.[0],
           topFailingParamsLength: (stats as any)?.topFailingParams?.length,
           campaignPerformanceLength: (stats as any)?.campaignPerformance?.length,
         });
 
         if (stats) {
-          // Transform API response to match frontend expected format
-          const apiStats = stats as any; // Type assertion for new fields
-          const transformedStats = {
-            // Core metrics
-            overallQAScore: apiStats.avgScore ?? 0,
-            passRate: apiStats.passRate ?? 0,
-            failRate: apiStats.failRate ?? 0,
-            total: apiStats.total ?? 0,
-            aiAudits: apiStats.aiAudits ?? 0,
-            manualAudits: apiStats.manualAudits ?? 0,
-            totalTokens: apiStats.totalTokens ?? 0,
-
-            // Sentiment analysis
-            sentiment: apiStats.sentimentBreakdown ?? { positive: 0, neutral: 0, negative: 0 },
-
-            // Escalation risk breakdown
-            escalationRisk: apiStats.escalationRisk ?? { high: 0, medium: 0, low: 0 },
-
-            // Call metrics (NEW)
-            callMetrics: apiStats.callMetrics ?? {
-              avgTalkRatio: 50,
-              avgSilence: 5,
-              avgResponseTime: 2,
-              avgInterruptions: 0,
-            },
-
-            // Compliance stats (NEW)
-            compliance: apiStats.compliance ?? {
-              violationCount: 0,
-              avgScore: 100,
-            },
-
-            // Trend data (NEW - from backend aggregation)
-            dailyAuditsTrend: apiStats.dailyTrend ?? [],
-
-            // Top failing parameters (NEW)
-            topIssues: apiStats.topFailingParams ?? [],
-
-            // Campaign performance breakdown (NEW)
-            campaignPerformance: apiStats.campaignPerformance ?? [],
-
-            // Legacy fields for backward compatibility
-            totalFatalErrors: 0,
-            fatalRate: 0,
-            fatalAuditsCount: 0,
-            ztpCount: 0,
-            ztpRate: 0,
-            dailyFatalTrend: [],
-            paretoData: [],
-            agentPerformance: { topAgents: [], underperformingAgents: [] },
-            trainingNeeds: [],
-            trainingNeedsList: [],
-          };
-          setDashboardStats(transformedStats);
+          // Direct assignment now that backend returns correct structure (AuditStats)
+          setDashboardStats(stats);
         }
       } catch (e) {
         console.error("Failed to load dashboard stats", e);
@@ -1107,23 +1066,60 @@ function DashboardPageContent() {
                 )}
             </div>
             <Separator />
-            <h4 className="font-semibold text-md">Parameter Results</h4>
+            <div className="flex items-center justify-between mb-2 mt-6">
+              <h4 className="font-semibold text-md">Detailed Scoring</h4>
+              {audit.auditType === "ai" && (
+                <div className="text-sm text-muted-foreground flex gap-4">
+                  <span>
+                    Processing Time:{" "}
+                    <span className="font-medium text-foreground">
+                      {audit.auditData?.auditDurationMs
+                        ? `${(audit.auditData.auditDurationMs / 1000).toFixed(1)}s`
+                        : "N/A"}
+                    </span>
+                  </span>
+                  <span>
+                    Overall Confidence:{" "}
+                    <span className="font-medium text-green-500">
+                      {audit.auditData?.overallConfidence
+                        ? `${Math.round(audit.auditData.overallConfidence * 100)}%`
+                        : "85%"} {/* Fallback to 85% if missing, or calculate from items */}
+                    </span>
+                  </span>
+                </div>
+              )}
+            </div>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Parameter</TableHead>
-                  <TableHead className="text-center">Score</TableHead>
-                  <TableHead>Comments</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[250px]">Parameter</TableHead>
+                  <TableHead className="text-center w-[80px]">Score</TableHead>
+                  <TableHead className="text-center w-[100px]">Confidence</TableHead>
+                  <TableHead>Comments & Evidence</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {((audit as any).auditResults || audit.auditData?.auditResults || []).map((res: any, i: number) => (
                   <TableRow key={i}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium align-top py-4">
                       {res.parameterName || res.parameter || 'Unknown'}
                     </TableCell>
-                    <TableCell className="text-center">{res.score}</TableCell>
-                    <TableCell>{res.comments}</TableCell>
+                    <TableCell className="text-center font-medium align-top py-4 text-green-500">
+                      {res.score}
+                    </TableCell>
+                    <TableCell className="text-center align-top py-4">
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-none">
+                        {res.confidence ? `${Math.round(res.confidence * 100)}%` : "100%"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="align-top py-4 space-y-2">
+                      <p className="text-sm">{res.comments}</p>
+                      {res.evidence && (
+                        <p className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
+                          "{res.evidence}"
+                        </p>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -1132,11 +1128,30 @@ function DashboardPageContent() {
               <>
                 <Separator />
                 <h4 className="font-semibold text-md">
-                  Call Summary & Transcription
+                  Detailed Analysis
                 </h4>
-                <p className="text-sm p-3 bg-muted rounded-md">
-                  {(audit as any).callSummary || audit.auditData?.callSummary || 'No summary available'}
-                </p>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Call Summary</Label>
+                    <Textarea
+                      readOnly
+                      value={(audit as any).callSummary || audit.auditData?.callSummary || 'No summary available'}
+                      className="h-40 bg-muted/50 resize-none header-none focus-visible:ring-0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Root Cause Analysis</Label>
+                    <Textarea
+                      readOnly
+                      value={
+                        (audit as any).rootCauseAnalysis ||
+                        (audit.auditData as any)?.rootCauseAnalysis ||
+                        "No significant issues requiring RCA identified."
+                      }
+                      className="h-40 bg-muted/50 resize-none header-none focus-visible:ring-0"
+                    />
+                  </div>
+                </div>
                 <Collapsible>
                   <CollapsibleTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -1684,7 +1699,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
   useEffect(() => {
     if (dashboardStats) {
       // Overview data
-      setOverallQAScore(dashboardStats.overallQAScore || 0);
+      setOverallQAScore(dashboardStats.overallQAScore || 0); // Note: avgScore maps to overallQAScore
 
       // Fatal errors
       setFatalErrorsData({
@@ -1699,7 +1714,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
         ztpRate: dashboardStats.ztpRate || 0,
       });
 
-      // Sentiment
+      // Sentiment - use 'sentiment' property (percentages) or fall back to breakdown if needed
       if (dashboardStats.sentiment) {
         setSentimentData({
           positive: dashboardStats.sentiment.positive || 0,
@@ -3191,7 +3206,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                     <div className="min-h-[300px]">
                       <Table>
                         <TableHeader>
-                          <TableRow className=" hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-background/80 z-10">
+                          <TableRow className=" hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-muted/50 z-10">
                             <TableHead className="pl-6 font-semibold">Agent</TableHead>
                             <TableHead className="text-right font-semibold">Score</TableHead>
                             <TableHead className="text-right pr-6 font-semibold">Pass/Fail</TableHead>
@@ -3207,8 +3222,8 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                                   agentName: agent.name,
                                   agentId: agent.id,
                                   score: agent.score,
-                                  lowestParam: "N/A",
-                                  lowestParamScore: 0,
+                                  lowestParam: (agent as any).lowestParam || "N/A",
+                                  lowestParamScore: (agent as any).lowestParamScore || 0,
                                 });
                                 setIsTrainingNeedsModalOpen(true);
                               }}
@@ -3277,7 +3292,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                   <ScrollArea className="h-[200px]">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-muted/50 hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-background/80 z-10">
+                        <TableRow className="bg-muted/50 hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-muted/50 z-10">
                           <TableHead className="pl-6 font-semibold">Campaign</TableHead>
                           <TableHead className="text-right font-semibold">QA Score</TableHead>
                           <TableHead className="text-right pr-6 font-semibold">Compliance</TableHead>

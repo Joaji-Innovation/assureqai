@@ -396,6 +396,11 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
       // Calculate processing time
       const processingDurationMs = Date.now() - startTime;
 
+      // Log raw audit results for debugging
+      if (output.auditResults) {
+        this.logger.log(`Raw AI Audit Results (Sample): ${JSON.stringify(output.auditResults[0])}`);
+      }
+
       // Apply ZTP (Zero Tolerance Policy) if Fatal parameter failed
       let finalOverallScore = output.overallScore || 0;
       if (output.auditResults && Array.isArray(output.auditResults)) {
@@ -409,16 +414,20 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
       }
 
       // Transform to AuditResult format
-      const auditResults = (output.auditResults || []).map((r: any) => ({
-        parameterId: r.parameterId || r.parameterName,
-        parameterName: r.parameterName || r.parameter || 'Unknown',
-        score: r.score || 0,
-        weight: r.weight || 0,
-        type: r.type || 'Non-Fatal',
-        comments: r.comments || '',
-        confidence: r.confidence || 80,
-        evidence: r.evidence || [],
-      }));
+      const auditResults = (output.auditResults || []).map((r: any) => {
+        // Debug individual item mapping if needed (optional)
+        // console.log('Mapping item:', r);
+        return {
+          parameterId: r.parameterId || r.parameterName || r.parameter || r.name,
+          parameterName: r.parameterName || r.parameter || r.name || 'Unknown',
+          score: r.score || 0,
+          weight: r.weight || 0,
+          type: r.type || 'Non-Fatal',
+          comments: r.comments || '',
+          confidence: r.confidence || 80,
+          evidence: r.evidence || [],
+        };
+      });
 
       this.logger.log(
         `Audio audit completed in ${processingDurationMs}ms, score: ${finalOverallScore}`

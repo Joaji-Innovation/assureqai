@@ -40,7 +40,8 @@ export class AuditController {
       auditType: dto.auditType,
       agentName: dto.agentName,
       overallScore: dto.overallScore,
-      campaignName: dto.campaignName
+      campaignName: dto.campaignName,
+      auditResultsSample: dto.auditResults?.[0] ? JSON.stringify(dto.auditResults[0]) : 'None'
     }));
 
     try {

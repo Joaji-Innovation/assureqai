@@ -1044,7 +1044,7 @@ Respond ONLY with valid JSON in this exact format:
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.1,
-              maxOutputTokens: 8192,
+              maxOutputTokens: 65536, // Max for Gemini 2.0 Flash - supports 1hr+ calls
             },
           }),
         });

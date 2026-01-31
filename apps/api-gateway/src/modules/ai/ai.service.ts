@@ -1044,7 +1044,7 @@ Respond ONLY with valid JSON in this exact format:
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.1,
-              maxOutputTokens: 4096,
+              maxOutputTokens: 8192,
             },
           }),
         });
@@ -1081,15 +1081,43 @@ Respond ONLY with valid JSON in this exact format:
     const processingDurationMs = endTime.getTime() - startTime.getTime();
 
     // Extract JSON from response (may be wrapped in markdown code blocks)
-    const jsonMatch = response.match(/```json\n?([\s\S]*?)\n?```/) ||
-      response.match(/\{[\s\S]*\}/);
+    let jsonStr = response.trim();
 
-    if (!jsonMatch) {
-      throw new Error('Failed to parse AI response');
+    // Remove markdown code blocks if present
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    const jsonStr = jsonMatch[1] || jsonMatch[0];
-    const parsed = JSON.parse(jsonStr);
+    // Try to find JSON object if wrapped in other text
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
+    if (!jsonStr || jsonStr.length < 10) {
+      this.logger.error('Empty or invalid AI response');
+      throw new Error('Failed to parse AI response: empty response');
+    }
+
+    // Try to parse JSON with repair fallback
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (parseError: any) {
+      this.logger.warn(`Initial audit JSON parse failed: ${parseError.message}. Attempting repair...`);
+
+      // Try to repair truncated JSON
+      const repairedJson = this.repairTruncatedJson(jsonStr);
+      try {
+        parsed = JSON.parse(repairedJson);
+        this.logger.log('Audit JSON repair successful');
+      } catch (repairError: any) {
+        this.logger.warn(`Audit JSON repair failed: ${repairError.message}. Extracting partial data...`);
+        parsed = this.extractPartialData(jsonStr, parameters);
+      }
+    }
 
     // Process audit results to ensure confidence and evidence fields
     const auditResults = (parsed.auditResults || []).map((result: any) => ({

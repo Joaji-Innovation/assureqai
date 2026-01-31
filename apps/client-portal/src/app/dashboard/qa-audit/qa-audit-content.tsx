@@ -234,6 +234,7 @@ function convertSavedAuditItemToCreateAuditFormatV2(
     // Optional fields
     auditName: `Audit for ${savedAudit.agentName}`,
     customerName: (savedAudit as any).customerName || "Unknown Customer",
+    campaignName: savedAudit.campaignName, // IMPORTANT: Backend expects this for Campaign Performance chart
     qaParameterSetId: savedAudit.campaignName || "default",
     qaParameterSetName: savedAudit.campaignName || "Unknown Parameter Set",
     callTranscript: transcript,

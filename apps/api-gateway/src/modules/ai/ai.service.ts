@@ -170,7 +170,7 @@ export class AiService {
     agentName?: string;
     callId?: string;
     campaignName?: string;
-  }): Promise<AuditResult & { transcript: string; englishTranslation?: string; callSummary?: string; rootCauseAnalysis?: string }> {
+  }): Promise<AuditResult & { transcript: string; transcriptionInOriginalLanguage: string; englishTranslation?: string; callSummary?: string; rootCauseAnalysis?: string }> {
     if (!this.apiKey) {
       throw new BadRequestException('AI service not configured. Please set GEMINI_API_KEY.');
     }
@@ -194,6 +194,7 @@ export class AiService {
       return {
         ...result,
         transcript: request.transcript,
+        transcriptionInOriginalLanguage: request.transcript,
       };
     }
 
@@ -270,6 +271,7 @@ export class AiService {
         return {
           ...auditResult,
           transcript: transcriptionResult.transcript,
+          transcriptionInOriginalLanguage: transcriptionResult.transcript,
           englishTranslation: transcriptionResult.englishTranslation,
           callSummary: transcriptionResult.callSummary || auditResult.callSummary,
           rootCauseAnalysis: auditResult.callSummary,
@@ -422,6 +424,7 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
           suggestedActions: [],
         },
         transcript: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
+        transcriptionInOriginalLanguage: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
         englishTranslation: output.englishTranslation,
         rootCauseAnalysis: output.rootCauseAnalysis,
       };

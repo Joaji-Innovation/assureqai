@@ -25,7 +25,7 @@ import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('audits')
 export class AuditController {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(private readonly auditService: AuditService) { }
 
   /**
    * Create a new audit
@@ -35,10 +35,25 @@ export class AuditController {
   @ApiOperation({ summary: 'Create a new audit' })
   @ApiResponse({ status: 201, description: 'Audit created successfully' })
   async create(@Body() dto: CreateAuditDto, @CurrentUser() user: JwtPayload) {
-    return this.auditService.create({
-      ...dto,
-      projectId: dto.projectId || user.projectId,
-    });
+    console.log('[AuditController] POST /audits called by user:', user?.username, 'role:', user?.role);
+    console.log('[AuditController] DTO received:', JSON.stringify({
+      auditType: dto.auditType,
+      agentName: dto.agentName,
+      overallScore: dto.overallScore,
+      campaignName: dto.campaignName
+    }));
+
+    try {
+      const result = await this.auditService.create({
+        ...dto,
+        projectId: dto.projectId || user.projectId,
+      });
+      console.log('[AuditController] Audit created successfully, id:', (result as any)._id);
+      return result;
+    } catch (error) {
+      console.error('[AuditController] Error creating audit:', error);
+      throw error;
+    }
   }
 
   /**
@@ -83,7 +98,7 @@ export class AuditController {
       : undefined;
 
     // Scope to user's project if not admin
-    const scopedProjectId = 
+    const scopedProjectId =
       user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.CLIENT_ADMIN
         ? projectId
         : user?.projectId;
@@ -104,7 +119,7 @@ export class AuditController {
     @Query('limit') limit = 10,
     @CurrentUser() user?: JwtPayload,
   ) {
-    const scopedProjectId = 
+    const scopedProjectId =
       user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.CLIENT_ADMIN
         ? projectId
         : user?.projectId;

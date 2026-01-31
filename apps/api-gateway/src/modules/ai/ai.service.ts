@@ -344,7 +344,7 @@ ${parametersDesc}
   "auditResults": [
     {
       "parameterId": "string",
-      "parameterName": "exact name from input",
+      "parameter": "exact name from input",
       "score": number (0-100),
       "weight": number,
       "type": "Fatal" | "Non-Fatal" | "ZTP",
@@ -417,11 +417,15 @@ CRITICAL: Score ALL ${request.parameters.length} parameters. Use exact parameter
       const auditResults = (output.auditResults || []).map((r: any) => {
         // Debug individual item mapping if needed (optional)
         // console.log('Mapping item:', r);
+        // Ensure scores are numbers
+        const score = typeof r.score === 'string' ? parseFloat(r.score) : (r.score || 0);
+        const weight = typeof r.weight === 'string' ? parseFloat(r.weight) : (r.weight || 0);
+
         return {
-          parameterId: r.parameterId || r.parameterName || r.parameter || r.name,
-          parameterName: r.parameterName || r.parameter || r.name || 'Unknown',
-          score: r.score || 0,
-          weight: r.weight || 0,
+          parameterId: r.parameterId || r.parameter || r.parameterName || r.name,
+          parameterName: r.parameter || r.parameterName || r.name || 'Unknown',
+          score: isNaN(score) ? 0 : score,
+          weight: isNaN(weight) ? 0 : weight,
           type: r.type || 'Non-Fatal',
           comments: r.comments || '',
           confidence: r.confidence || 80,
@@ -906,10 +910,12 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     const scoreMatch = jsonText.match(/"overallScore"\s*:\s*(\d+(?:\.\d+)?)/);
     if (scoreMatch) result.overallScore = parseFloat(scoreMatch[1]);
 
-    // Try to extract individual audit results using regex
+    // Try to extract individual audit results using regex - Support both parameterName and parameter
     const auditResultsSection = jsonText.match(/"auditResults"\s*:\s*\[([\s\S]*?)(?:\]|$)/);
     if (auditResultsSection) {
-      const resultPattern = /"parameterName"\s*:\s*"([^"]+)".*?"score"\s*:\s*(\d+)/g;
+      // Regex that matches "parameterName": "..." OR "parameter": "..." followed eventually by score
+      // Note: This is simplified and might miss complex cases but handles the standard format
+      const resultPattern = /"(?:parameterName|parameter)"\s*:\s*"([^"]+)".*?"score"\s*:\s*(\d+)/g;
       let match;
       while ((match = resultPattern.exec(auditResultsSection[1])) !== null) {
         result.auditResults.push({

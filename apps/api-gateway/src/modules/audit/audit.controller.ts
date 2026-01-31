@@ -36,20 +36,40 @@ export class AuditController {
   @ApiResponse({ status: 201, description: 'Audit created successfully' })
   async create(@Body() dto: CreateAuditDto, @CurrentUser() user: JwtPayload) {
     console.log('[AuditController] POST /audits called by user:', user?.username, 'role:', user?.role);
+
+    // Transform parameters to auditResults if parameters is provided (agent-ai format)
+    // This matches the agent-ai API route transformation at lines 309-319
+    let processedDto = { ...dto };
+    if (dto.parameters && Array.isArray(dto.parameters) && dto.parameters.length > 0) {
+      console.log('[AuditController] Transforming parameters to auditResults');
+      processedDto.auditResults = dto.parameters.flatMap((param: any) =>
+        (param.subParameters || []).map((subParam: any) => ({
+          parameterId: subParam.id,
+          parameterName: subParam.name,
+          score: subParam.score || 0,
+          maxScore: subParam.weight || 100,
+          weight: subParam.weight || 100,
+          type: subParam.type || 'Non-Fatal',
+          comments: subParam.comments || '',
+        }))
+      );
+      console.log('[AuditController] Transformed auditResults:', JSON.stringify(processedDto.auditResults?.[0]));
+    }
+
     console.log('[AuditController] DTO received:', JSON.stringify({
-      auditType: dto.auditType,
-      agentName: dto.agentName,
-      overallScore: dto.overallScore,
-      campaignName: dto.campaignName,
-      auditResultsType: Array.isArray(dto.auditResults) ? 'Array' : typeof dto.auditResults,
-      auditResultsLength: dto.auditResults?.length,
-      auditResultsSample: dto.auditResults?.[0] ? JSON.stringify(dto.auditResults[0]) : 'None'
+      auditType: processedDto.auditType,
+      agentName: processedDto.agentName,
+      overallScore: processedDto.overallScore,
+      campaignName: processedDto.campaignName,
+      auditResultsType: Array.isArray(processedDto.auditResults) ? 'Array' : typeof processedDto.auditResults,
+      auditResultsLength: processedDto.auditResults?.length,
+      auditResultsSample: processedDto.auditResults?.[0] ? JSON.stringify(processedDto.auditResults[0]) : 'None'
     }));
 
     try {
       const result = await this.auditService.create({
-        ...dto,
-        projectId: dto.projectId || user.projectId,
+        ...processedDto,
+        projectId: processedDto.projectId || user.projectId,
       });
       console.log('[AuditController] Audit created successfully, id:', (result as any)._id);
       return result;

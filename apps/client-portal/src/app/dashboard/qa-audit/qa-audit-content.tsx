@@ -197,50 +197,22 @@ function convertAuditDocumentToSavedAuditItem(
   };
 }
 
-// Helper function to convert SavedAuditItem to createAudit format - V2 (Defensive)
+// Helper function to convert SavedAuditItem to createAudit format
+// COPIED FROM WORKING agent-ai IMPLEMENTATION
 function convertSavedAuditItemToCreateAuditFormatV2(
   savedAudit: SavedAuditItem,
   auditedBy: string
 ) {
   // Extract auditResults - they can be directly on savedAudit or nested in auditData
-  const rawAuditResults =
+  const auditResults =
     (savedAudit as any).auditResults ||
     savedAudit.auditData?.auditResults ||
     [];
-
-  // DEBUG: Log the raw input to identify the source of corruption
-  console.log('[V2 Converter] savedAudit.auditData keys:', Object.keys(savedAudit.auditData || {}));
-  console.log('[V2 Converter] rawAuditResults type:', Array.isArray(rawAuditResults) ? 'Array' : typeof rawAuditResults);
-  console.log('[V2 Converter] rawAuditResults length:', rawAuditResults?.length);
-  console.log('[V2 Converter] rawAuditResults[0]:', JSON.stringify(rawAuditResults?.[0]));
-
-  // Defensive mapping using explicit loop
-  const mappedResults: any[] = [];
-  if (Array.isArray(rawAuditResults)) {
-    for (let i = 0; i < rawAuditResults.length; i++) {
-      const result = rawAuditResults[i];
-      // Explicitly construct object to avoid implicit Map behavior issues
-      const cleanResult = {
-        parameterId: result.parameterId || result.id || `param-${i}`,
-        parameterName: result.parameterName || result.parameter || result.name || "Unknown Parameter",
-        score: typeof result.score === 'number' ? result.score : parseFloat(result.score || '0'),
-        maxScore: result.weight || result.maxScore || 10,
-        weight: result.weight || result.maxScore || 10,
-        type: result.type || "Non-Fatal",
-        comments: result.comments || "",
-        confidence: result.confidence || 0,
-        evidence: result.evidence || [],
-        subResults: result.subResults || [],
-      };
-      mappedResults.push(cleanResult);
-    }
-  }
 
   // Extract transcript - can be directly on savedAudit or nested in auditData
   const transcript =
     (savedAudit as any).transcript ||
     savedAudit.auditData?.transcriptionInOriginalLanguage ||
-    savedAudit.auditData?.transcript ||
     "";
 
   // Extract English translation
@@ -249,51 +221,61 @@ function convertSavedAuditItemToCreateAuditFormatV2(
     savedAudit.auditData?.englishTranslation ||
     "";
 
-  // Extract sentiment, metrics, and compliance from AI response
-  const sentiment = savedAudit.auditData?.sentiment;
-  const metrics = savedAudit.auditData?.metrics;
-  const compliance = savedAudit.auditData?.compliance;
+  // Extract token usage and duration
+  const tokenUsage = savedAudit.auditData?.tokenUsage;
+  const auditDurationMs = savedAudit.auditData?.auditDurationMs;
 
-  // Explicitly return the DTO object
   return {
     // Required fields for the API
-    agentName: savedAudit.agentName || savedAudit.auditData?.identifiedAgentName || "Unknown Agent",
+    agentName: savedAudit.agentName,
     agentUserId: savedAudit.agentUserId || savedAudit.auditData?.agentUserId,
-    campaignName: savedAudit.campaignName || savedAudit.auditData?.campaignName,
-
-    // Interaction ID
     interactionId: (savedAudit as any).callId || savedAudit.id,
 
-    // Transcription and summary
-    transcript: transcript,
+    // Optional fields
+    auditName: `Audit for ${savedAudit.agentName}`,
+    customerName: (savedAudit as any).customerName || "Unknown Customer",
+    qaParameterSetId: savedAudit.campaignName || "default",
+    qaParameterSetName: savedAudit.campaignName || "Unknown Parameter Set",
     callTranscript: transcript,
     englishTranslation: englishTranslation,
     callSummary: savedAudit.auditData?.callSummary || `Audit for ${savedAudit.agentName}`,
-
-    // Scores
     overallScore: savedAudit.overallScore,
     auditType: savedAudit.auditType,
-
-    // Auditor info
     auditorId: auditedBy,
     auditorName: "AI Auditor",
     auditDate: new Date(savedAudit.auditDate).toISOString(),
 
     // AI audit metadata
-    tokenUsage: savedAudit.auditData?.tokenUsage,
-    auditDurationMs: savedAudit.auditData?.auditDurationMs,
+    tokenUsage: tokenUsage,
+    auditDurationMs: auditDurationMs,
 
-    // IMPORTANT: Map auditResults directly (this is what the DB schema expects)
-    auditResults: mappedResults,
-
-    // Sentiment analysis from AI
-    sentiment: sentiment,
-
-    // Call metrics from AI 
-    metrics: metrics,
-
-    // Compliance from AI
-    compliance: compliance,
+    // Map auditResults to parameters with subParameters structure
+    // THIS IS THE EXACT STRUCTURE EXPECTED BY THE BACKEND
+    parameters:
+      auditResults && Array.isArray(auditResults)
+        ? [
+          {
+            id: "audit-results",
+            name: "Audit Results",
+            subParameters: auditResults.map((result: any, index: number) => ({
+              id: result.parameterId || result.id || `param-${index}`,
+              name:
+                result.parameter ||
+                result.parameterName ||
+                result.name ||
+                "Unknown",
+              weight:
+                result.weightedScore ||
+                result.maxScore ||
+                result.weight ||
+                100,
+              type: result.type || "Non-Fatal",
+              score: result.score || 0,
+              comments: result.comments || "",
+            })),
+          },
+        ]
+        : [],
   };
 }
 

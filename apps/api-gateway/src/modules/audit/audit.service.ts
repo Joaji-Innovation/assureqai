@@ -162,6 +162,8 @@ export class AuditService {
       match.campaignName = filters.campaignName;
     }
 
+    this.logger.log(`[getStats] Match filter: ${JSON.stringify(match)}`);
+
     // Main stats aggregation
     const [stats] = await this.auditModel.aggregate([
       { $match: match },
@@ -280,6 +282,11 @@ export class AuditService {
         topFailingParams: [],
         campaignPerformance: [],
       };
+    }
+
+    this.logger.log(`[getStats] Results: total=${stats.total}, dailyTrendLength=${dailyTrend.length}, topFailingLength=${topFailingParams.length}, campaignPerfLength=${campaignPerformance.length}`);
+    if (dailyTrend.length > 0) {
+      this.logger.log(`[getStats] dailyTrend sample: ${JSON.stringify(dailyTrend[0])}`);
     }
 
     return {

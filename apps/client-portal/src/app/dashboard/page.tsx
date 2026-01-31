@@ -854,11 +854,35 @@ function DashboardPageContent() {
         if (dateRange.from) filters.startDate = dateRange.from.toISOString();
         if (dateRange.to) filters.endDate = dateRange.to.toISOString();
 
+        console.log('[Dashboard] Loading audits with filters:', filters);
         const response = await auditApi.list(filters);
+        console.log('[Dashboard] API response:', {
+          dataLength: response?.data?.length,
+          firstAudit: response?.data?.[0] ? {
+            id: response.data[0]._id,
+            agentName: response.data[0].agentName,
+            campaignName: response.data[0].campaignName,
+            overallScore: response.data[0].overallScore,
+            auditResultsLength: response.data[0].auditResults?.length,
+            auditResultsSample: response.data[0].auditResults?.[0],
+          } : 'No audits'
+        });
+
         if (response?.data) {
           const savedAuditsData: SavedAuditItem[] = response.data.map(
             convertAuditDocumentToSavedAuditItem
           );
+          console.log('[Dashboard] Converted audits:', {
+            count: savedAuditsData.length,
+            firstConverted: savedAuditsData[0] ? {
+              id: savedAuditsData[0].id,
+              agentName: savedAuditsData[0].agentName,
+              campaignName: savedAuditsData[0].campaignName,
+              overallScore: savedAuditsData[0].overallScore,
+              auditResultsCount: savedAuditsData[0].auditData?.auditResults?.length,
+              auditResultsSample: savedAuditsData[0].auditData?.auditResults?.[0],
+            } : 'No audits'
+          });
           setSavedAudits(savedAuditsData);
         }
       } catch (e) {
@@ -901,7 +925,16 @@ function DashboardPageContent() {
           filters.auditType = auditType;
         }
 
+        console.log('[Dashboard] Stats API filters:', filters);
         const stats = await auditApi.getStats(filters);
+        console.log('[Dashboard] Stats API response:', {
+          total: (stats as any)?.total,
+          avgScore: (stats as any)?.avgScore,
+          dailyTrendLength: (stats as any)?.dailyTrend?.length,
+          dailyTrendSample: (stats as any)?.dailyTrend?.[0],
+          topFailingParamsLength: (stats as any)?.topFailingParams?.length,
+          campaignPerformanceLength: (stats as any)?.campaignPerformance?.length,
+        });
 
         if (stats) {
           // Transform API response to match frontend expected format

@@ -212,6 +212,7 @@ function convertSavedAuditItemToCreateAuditFormat(
   const transcript =
     (savedAudit as any).transcript ||
     savedAudit.auditData?.transcriptionInOriginalLanguage ||
+    savedAudit.auditData?.transcript ||
     "";
 
   // Extract English translation
@@ -224,22 +225,31 @@ function convertSavedAuditItemToCreateAuditFormat(
   const tokenUsage = savedAudit.auditData?.tokenUsage;
   const auditDurationMs = savedAudit.auditData?.auditDurationMs;
 
+  // Extract sentiment, metrics, and compliance from AI response
+  const sentiment = savedAudit.auditData?.sentiment;
+  const metrics = savedAudit.auditData?.metrics;
+  const compliance = savedAudit.auditData?.compliance;
+
   return {
     // Required fields for the API
-    agentName: savedAudit.agentName,
+    agentName: savedAudit.agentName || savedAudit.auditData?.identifiedAgentName || "Unknown Agent",
     agentUserId: savedAudit.agentUserId || savedAudit.auditData?.agentUserId,
+    campaignName: savedAudit.campaignName || savedAudit.auditData?.campaignName,
+
+    // Interaction ID
     interactionId: (savedAudit as any).callId || savedAudit.id,
 
-    // Optional fields
-    auditName: `Audit for ${savedAudit.agentName}`,
-    customerName: (savedAudit as any).customerName || "Unknown Customer",
-    qaParameterSetId: savedAudit.campaignName || "default",
-    qaParameterSetName: savedAudit.campaignName || "Unknown Parameter Set",
+    // Transcription and summary
+    transcript: transcript,
     callTranscript: transcript,
     englishTranslation: englishTranslation,
     callSummary: savedAudit.auditData?.callSummary || `Audit for ${savedAudit.agentName}`,
+
+    // Scores
     overallScore: savedAudit.overallScore,
     auditType: savedAudit.auditType,
+
+    // Auditor info
     auditorId: auditedBy,
     auditorName: "AI Auditor",
     auditDate: new Date(savedAudit.auditDate).toISOString(),
@@ -248,32 +258,34 @@ function convertSavedAuditItemToCreateAuditFormat(
     tokenUsage: tokenUsage,
     auditDurationMs: auditDurationMs,
 
-    // Map auditResults to parameters with subParameters structure
-    parameters:
-      auditResults && Array.isArray(auditResults)
-        ? [
-          {
-            id: "audit-results",
-            name: "Audit Results",
-            subParameters: auditResults.map((result: any, index: number) => ({
-              id: result.parameterId || result.id || `param-${index}`,
-              name:
-                result.parameter ||
-                result.parameterName ||
-                result.name ||
-                "Unknown",
-              weight:
-                result.weightedScore ||
-                result.maxScore ||
-                result.weight ||
-                100,
-              type: result.type || "Non-Fatal",
-              score: result.score || 0,
-              comments: result.comments || "",
-            })),
-          },
-        ]
-        : [],
+    // IMPORTANT: Map auditResults directly (this is what the DB schema expects)
+    auditResults: Array.isArray(auditResults)
+      ? auditResults.map((result: any, index: number) => ({
+        parameterId: result.parameterId || result.id || `param-${index}`,
+        parameterName:
+          result.parameterName ||
+          result.parameter ||
+          result.name ||
+          "Unknown",
+        score: result.score ?? 0,
+        maxScore: result.weight || result.maxScore || 100,  // Required by frontend type
+        weight: result.weight || result.maxScore || 100,
+        type: result.type || "Non-Fatal",
+        comments: result.comments || "",
+        confidence: result.confidence,
+        evidence: result.evidence,
+        subResults: result.subResults,
+      }))
+      : [],
+
+    // Sentiment analysis from AI
+    sentiment: sentiment,
+
+    // Call metrics from AI 
+    metrics: metrics,
+
+    // Compliance from AI
+    compliance: compliance,
   };
 }
 

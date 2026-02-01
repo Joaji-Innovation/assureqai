@@ -1010,7 +1010,7 @@ function DashboardPageContent() {
     };
 
     setModalContent(
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-6xl w-[90vw]">
         <DialogHeader>
           <DialogTitle>{`Audit Details - ${audit.agentName} (${format(
             new Date(audit.auditDate),
@@ -1093,7 +1093,7 @@ function DashboardPageContent() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[250px]">Parameter</TableHead>
+                  <TableHead className="w-[180px]">Parameter</TableHead>
                   <TableHead className="text-center w-[80px]">Score</TableHead>
                   <TableHead className="text-center w-[100px]">Confidence</TableHead>
                   <TableHead>Comments & Evidence</TableHead>
@@ -1147,6 +1147,36 @@ function DashboardPageContent() {
                       }
                       className="h-40 bg-muted/50 resize-none header-none focus-visible:ring-0"
                     />
+                  </div>
+                  <div className="space-y-4 col-span-2">
+                    <h5 className="font-semibold text-sm">Sentiment Analysis</h5>
+                    <div className="grid grid-cols-3 gap-4 p-4 border rounded-md bg-muted/20">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground uppercase font-semibold">Overall</span>
+                        <Badge variant="outline" className={`w-fit capitalized ${(audit.auditData?.sentiment?.overall || 'neutral') === 'positive' ? 'bg-green-500/10 text-green-600 border-green-200' :
+                          (audit.auditData?.sentiment?.overall || 'neutral') === 'negative' ? 'bg-red-500/10 text-red-600 border-red-200' :
+                            'bg-gray-500/10 text-gray-600 border-gray-200'
+                          }`}>
+                          {audit.auditData?.sentiment?.overall || 'Neutral'}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground uppercase font-semibold">Customer Sentiment</span>
+                        <span className={`font-mono text-lg font-medium ${(audit.auditData?.sentiment?.customerScore || 0) > 0 ? 'text-green-600' :
+                          (audit.auditData?.sentiment?.customerScore || 0) < 0 ? 'text-red-600' : 'text-gray-600'
+                          }`}>
+                          {((audit.auditData?.sentiment?.customerScore || 0) * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground uppercase font-semibold">Agent Sentiment</span>
+                        <span className={`font-mono text-lg font-medium ${(audit.auditData?.sentiment?.agentScore || 0) > 0 ? 'text-green-600' :
+                          (audit.auditData?.sentiment?.agentScore || 0) < 0 ? 'text-red-600' : 'text-gray-600'
+                          }`}>
+                          {((audit.auditData?.sentiment?.agentScore || 0) * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <Collapsible>
@@ -1612,7 +1642,13 @@ const ExpandableEvidence: React.FC<ExpandableEvidenceProps> = ({ evidence }) => 
 
   // Handle array case
   const citations = evidence;
-  if (citations.length === 0) return null;
+  if (citations.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground italic pl-2 opacity-50">
+        No specific evidence cited by AI.
+      </p>
+    );
+  }
 
   // Configuration
   const INITIAL_COUNT = 2; // Show 2 lines initially
@@ -2048,108 +2084,102 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
         { totalScore: number; count: number; agentName: string }
       >();
 
+      // Build a lookup map: L2 sub-parameter name -> L1 group name
+      const subParamToL1Map = new Map<string, string>();
+      const allL1Names = new Set<string>();
+      for (const paramSet of availableQaParameterSets) {
+        for (const group of paramSet.parameters) {
+          allL1Names.add(group.name);
+          allL1Names.add(group.name.toLowerCase());
+          for (const sub of group.subParameters) {
+            subParamToL1Map.set(sub.name, group.name);
+            subParamToL1Map.set(sub.name.toLowerCase(), group.name);
+            subParamToL1Map.set(sub.name.trim(), group.name);
+          }
+        }
+      }
+
       filteredAudits.forEach((audit) => {
         audit.auditData.auditResults.forEach((res: any) => {
           // Top Issues Calculation
           if (res.score < 80) {
-            let mainParamName = res.parameter;
+            let mainParamName = "Uncategorized"; // Default to Uncategorized
             let subParamName = "";
             let found = false;
 
-            // Try to parse Main Parameter from "Main - Sub" format using availableQaParameterSets
-            if (audit.campaignName) {
-              const campaignParams = availableQaParameterSets.find(
-                (p) => p.name === audit.campaignName
-              );
-              if (campaignParams) {
-                // Iterate over groups and sub-params to find a match
-                const sortedGroups = [...campaignParams.parameters].sort(
-                  (a, b) => b.name.length - a.name.length
-                ); // Sort groups by length descending to match longest first
-                for (const group of sortedGroups) {
-                  // Sort sub-parameters by length descending to match longest first
-                  const sortedSubParams = [...group.subParameters].sort(
-                    (a, b) => b.name.length - a.name.length
-                  );
+            const rawParam = res.parameter || res.parameterName || "";
 
-                  for (const sub of sortedSubParams) {
-                    // Check if res.parameter matches "Group - Sub" pattern
-                    // We check if res.parameter includes the sub-parameter name AND the group name
-                    const combined = `${group.name} - ${sub.name}`;
+            // Step 1: Check if rawParam is EXACTLY an L1 group name
+            for (const paramSet of availableQaParameterSets) {
+              for (const group of paramSet.parameters) {
+                if (group.name === rawParam || group.name.toLowerCase() === rawParam.toLowerCase()) {
+                  mainParamName = group.name;
+                  found = true;
+                  break;
+                }
+              }
+              if (found) break;
+            }
 
-                    // Check for exact match or if it contains the combined string
-                    if (
-                      res.parameter === combined ||
-                      res.parameter.includes(combined)
-                    ) {
-                      mainParamName = group.name;
-                      subParamName = sub.name;
-                      found = true;
-                      break;
-                    }
+            // Step 2: Check if rawParam is EXACTLY an L2 sub-parameter name
+            if (!found) {
+              const l1FromMap = subParamToL1Map.get(rawParam) || subParamToL1Map.get(rawParam.toLowerCase()) || subParamToL1Map.get(rawParam.trim());
+              if (l1FromMap) {
+                mainParamName = l1FromMap;
+                subParamName = rawParam;
+                found = true;
+              }
+            }
 
-                    // Fallback: Check if it ends with sub-parameter name and starts with group name
-                    if (
-                      res.parameter.startsWith(group.name) &&
-                      res.parameter.endsWith(sub.name)
-                    ) {
-                      mainParamName = group.name;
-                      subParamName = sub.name;
-                      found = true;
-                      break;
-                    }
-
-                    // NEW: Check if parameter matches sub-parameter exactly (orphan sub-param case)
-                    // This handles cases where data only contains L2 name but we want to group by L1
-                    if (res.parameter === sub.name || res.parameter.trim() === sub.name.trim()) {
-                      mainParamName = group.name;
-                      subParamName = sub.name;
-                      found = true;
-                      break;
-                    }
-                  }
-                  if (found) break;
+            // Step 3: Check if rawParam CONTAINS any L2 sub-parameter name (substring match)
+            if (!found) {
+              for (const [subName, l1Name] of subParamToL1Map.entries()) {
+                if (rawParam.includes(subName) || rawParam.toLowerCase().includes(subName.toLowerCase())) {
+                  mainParamName = l1Name;
+                  subParamName = subName;
+                  found = true;
+                  break;
                 }
               }
             }
 
-            // Fallback if not found but looks like "A - B"
-            if (!found && res.parameter.includes(" - ")) {
-              // Heuristic: Split by first " - "
-              const parts = res.parameter.split(" - ");
+            // Step 4: Try splitting by " - " and validate left part against known L1 names
+            if (!found && rawParam.includes(" - ")) {
+              const parts = rawParam.split(" - ");
               if (parts.length >= 2) {
-                const rawMainParam = parts[0];
-                subParamName = parts.slice(1).join(" - ");
+                const leftPart = parts[0].trim();
+                subParamName = parts.slice(1).join(" - ").trim();
 
-                // Try to find a matching group name across all available QA parameter sets
-                // This handles cases where stored data has "Call" but the group is named "Call-handling"
-                let matchedGroupName = rawMainParam;
+                // Check if leftPart is a known L1 name
                 for (const paramSet of availableQaParameterSets) {
                   for (const group of paramSet.parameters) {
-                    // Check for exact match first
-                    if (group.name === rawMainParam) {
-                      matchedGroupName = group.name;
-                      found = true;
-                      break;
-                    }
-                    // Check if the raw param is a prefix of the group name (e.g., "Call" matches "Call-handling")
-                    if (group.name.toLowerCase().startsWith(rawMainParam.toLowerCase())) {
-                      matchedGroupName = group.name;
-                      found = true;
-                      break;
-                    }
-                    // Check if the group name starts with the raw param followed by common separators
-                    if (group.name.toLowerCase().replace(/[-\s]/g, '').startsWith(rawMainParam.toLowerCase().replace(/[-\s]/g, ''))) {
-                      matchedGroupName = group.name;
+                    if (
+                      group.name === leftPart ||
+                      group.name.toLowerCase() === leftPart.toLowerCase() ||
+                      group.name.toLowerCase().startsWith(leftPart.toLowerCase()) ||
+                      group.name.toLowerCase().replace(/[-\s]/g, '').startsWith(leftPart.toLowerCase().replace(/[-\s]/g, ''))
+                    ) {
+                      mainParamName = group.name;
                       found = true;
                       break;
                     }
                   }
                   if (found) break;
                 }
-                mainParamName = matchedGroupName;
+
+                // If left part isn't an L1, check if the right part (subParamName) maps to an L1
+                if (!found) {
+                  const l1FromRightPart = subParamToL1Map.get(subParamName) || subParamToL1Map.get(subParamName.toLowerCase());
+                  if (l1FromRightPart) {
+                    mainParamName = l1FromRightPart;
+                    found = true;
+                  }
+                }
               }
             }
+
+            // Step 5: Final fallback - if still not found, use "Uncategorized"
+            // mainParamName is already set to "Uncategorized" as default
 
             const existing = issuesMap.get(mainParamName) || {
               count: 0,
@@ -3385,7 +3415,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                       <div className="relative flex items-center justify-center">
                         <div className="h-24 w-24 rounded-full border-8 border-green-500/20" />
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
-                          <span className="text-2xl font-bold text-green-600">{sentimentData.positive}%</span>
+                          <span className="text-lg font-bold text-green-600">{sentimentData.positive}%</span>
                         </div>
                         <svg className="absolute inset-0 h-24 w-24 -rotate-90 transform" viewBox="0 0 100 100">
                           <circle

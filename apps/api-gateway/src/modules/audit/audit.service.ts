@@ -494,7 +494,7 @@ export class AuditService {
     // --- Manual Parameter Grouping / Correction Logic ---
     // Fetch all active QA Parameters to build a map: SubParam -> GroupName
     // This allows us to rollup "orphaned" sub-parameters into their parent groups for cleaner charts.
-    var topIssues: any[]; // Declare topIssues with var to allow reassignment
+    let topIssues: any[]; // Declare topIssues with let
     try {
       const allParams = await this.qaParameterModel.find({ isActive: true }).lean().exec();
       const paramToGroupMap = new Map<string, string>();

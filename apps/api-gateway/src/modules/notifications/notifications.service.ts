@@ -8,6 +8,8 @@ import { Model, Types } from 'mongoose';
 import { NotificationSettings, NotificationSettingsDocument, AlertRuleConfig } from '../../database/schemas/notification-settings.schema';
 import { Webhook, WebhookDocument } from '../../database/schemas/webhook.schema';
 import axios from 'axios';
+import { OnEvent } from '@nestjs/event-emitter';
+import { EmailService } from '../email/email.service';
 
 export interface UpdateSettingsDto {
   alertRules?: AlertRuleConfig[];
@@ -38,7 +40,54 @@ export class NotificationsService {
   constructor(
     @InjectModel(NotificationSettings.name) private settingsModel: Model<NotificationSettingsDocument>,
     @InjectModel(Webhook.name) private webhookModel: Model<WebhookDocument>,
+    private emailService: EmailService,
   ) { }
+
+  /**
+   * Handle alert created event - trigger notifications
+   */
+  @OnEvent('alert.created')
+  async handleAlertCreated(payload: { alert: any; projectId?: string }) {
+    try {
+      const { alert, projectId } = payload;
+      if (!projectId) return;
+
+      const settings = await this.getSettings(projectId);
+      if (!settings || !settings.alertRules) return;
+
+      const rule = settings.alertRules.find(r => r.type === alert.type && r.enabled);
+      if (!rule) return;
+
+      // 1. Webhooks
+      if (rule.channels.includes('webhook')) {
+        await this.triggerWebhooks(projectId, alert.type, alert);
+      }
+
+      // 2. Email
+      if (rule.channels.includes('email') && settings.emailNotificationsEnabled && settings.alertRecipientEmails?.length > 0) {
+        const subject = `[AssureQai Alert] ${alert.title}`;
+        const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">${alert.title}</h2>
+            <div style="padding: 15px; background-color: #f8f9fa; border-left: 4px solid ${alert.severity === 'critical' ? '#dc3545' : '#ffc107'}; margin-bottom: 20px;">
+              <p style="margin: 0; font-weight: bold;">Severity: ${alert.severity.toUpperCase()}</p>
+            </div>
+            <p style="font-size: 16px; line-height: 1.5;">${alert.message}</p>
+            ${alert.metadata ? `<pre style="background: #f1f1f1; padding: 10px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(alert.metadata, null, 2)}</pre>` : ''}
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+            <p style="font-size: 12px; color: #666; text-align: center;">AssureQai Alert System</p>
+          </div>
+        `;
+
+        for (const email of settings.alertRecipientEmails) {
+          await this.emailService.sendEmail(email, subject, html);
+        }
+        this.logger.log(`Sent alert emails to ${settings.alertRecipientEmails.length} recipients for ${alert.type}`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to process alert notifications', error);
+    }
+  }
 
   /**
    * Get or create notification settings for a project
@@ -51,6 +100,16 @@ export class NotificationsService {
       settings = new this.settingsModel({
         projectId: new Types.ObjectId(projectId),
       });
+      await settings.save();
+    } else if (!settings.alertRules || settings.alertRules.length === 0) {
+      // Seed default rules if missing
+      settings.alertRules = [
+        { type: 'fatal_failure', enabled: true, channels: ['push', 'email'], config: {} },
+        { type: 'threshold_breach', enabled: true, channels: ['push'], config: { threshold: 70 } },
+        { type: 'at_risk', enabled: true, channels: ['email'], config: { consecutiveLow: 3 } },
+        { type: 'compliance', enabled: false, channels: ['push'], config: {} },
+        { type: 'low_score', enabled: true, channels: ['push'], config: { threshold: 60 } },
+      ] as any[]; // Cast to any to avoid strict type issues with Mongo types
       await settings.save();
     }
 
@@ -222,7 +281,13 @@ export class NotificationsService {
   private generateSignature(payload: any, secret: string): string {
     const crypto = require('crypto');
     const hmac = crypto.createHmac('sha256', secret);
-    hmac.update(JSON.stringify(payload));
     return `sha256=${hmac.digest('hex')}`;
+  }
+
+  /**
+   * Send a test email
+   */
+  async sendTestEmail(email: string): Promise<{ success: boolean; message: string }> {
+    return this.emailService.sendTestEmail(email);
   }
 }

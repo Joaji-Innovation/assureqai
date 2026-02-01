@@ -127,4 +127,18 @@ export class NotificationsController {
   async testWebhook(@Param('id') id: string) {
     return this.notificationsService.testWebhook(id);
   }
+
+  /**
+   * Test email sending
+   */
+  @Post('email/test')
+  @RequirePermissions(PERMISSIONS.MANAGE_USERS)
+  @ApiOperation({ summary: 'Test email sending' })
+  @ApiResponse({ status: 200, description: 'Test result' })
+  async testEmail(@Body() body: { email: string }) {
+    if (!body.email) {
+      return { success: false, message: 'Email is required' };
+    }
+    return this.notificationsService.sendTestEmail(body.email);
+  }
 }

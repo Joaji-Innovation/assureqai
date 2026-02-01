@@ -803,10 +803,13 @@ function DashboardPageContent() {
     if (!isClient) return;
     if (!dateRange?.from) {
       const today = new Date();
-      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      // Set end date to end of last day of month (23:59:59.999) to include all audits on that day
-      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-      setDateRange({ from: firstDayOfMonth, to: lastDayOfMonth });
+      // Set to last 30 days by default
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+
+      // Ensure we include the full end day
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+      setDateRange({ from: thirtyDaysAgo, to: endOfDay });
     }
   }, [isClient, dateRange?.from]);
 

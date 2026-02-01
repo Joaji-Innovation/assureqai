@@ -12,6 +12,7 @@ import {
   useUpdateWebhook,
   useDeleteWebhook,
   useTestWebhook,
+  useTestEmail,
 } from '@/lib/hooks';
 
 export default function NotificationsPage() {
@@ -22,6 +23,7 @@ export default function NotificationsPage() {
   const updateWebhook = useUpdateWebhook();
   const deleteWebhook = useDeleteWebhook();
   const testWebhook = useTestWebhook();
+  const testEmailHook = useTestEmail();
 
   const [showAddWebhook, setShowAddWebhook] = useState(false);
   const [newWebhook, setNewWebhook] = useState({ name: '', url: '', events: [] as string[] });
@@ -44,6 +46,13 @@ export default function NotificationsPage() {
     setTestResult(null);
     const result = await testWebhook.mutateAsync(id);
     setTestResult({ id, ...result });
+    setTimeout(() => setTestResult(null), 5000);
+  };
+
+  const handleTestEmail = async (email: string) => {
+    setTestResult(null);
+    const result = await testEmailHook.mutateAsync(email);
+    setTestResult({ id: email, ...result });
     setTimeout(() => setTestResult(null), 5000);
   };
 
@@ -198,15 +207,36 @@ export default function NotificationsPage() {
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">{email}</span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                    onClick={() => removeEmail(email)}
-                    disabled={updateSettings.isPending}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {testResult?.id === email && (
+                      <span className={`flex items-center gap-1 text-xs ${testResult.success ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {testResult.success ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                        {testResult.message}
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTestEmail(email)}
+                      disabled={testEmailHook.isPending}
+                      title="Send Test Email"
+                    >
+                      {testEmailHook.isPending && testEmailHook.variables === email ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                      onClick={() => removeEmail(email)}
+                      disabled={updateSettings.isPending}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))
             ) : (

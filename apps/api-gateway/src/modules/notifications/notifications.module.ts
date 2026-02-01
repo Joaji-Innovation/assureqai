@@ -8,9 +8,11 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationSettings, NotificationSettingsSchema } from '../../database/schemas/notification-settings.schema';
 import { Webhook, WebhookSchema } from '../../database/schemas/webhook.schema';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
+    EmailModule,
     MongooseModule.forFeature([
       { name: NotificationSettings.name, schema: NotificationSettingsSchema },
       { name: Webhook.name, schema: WebhookSchema },

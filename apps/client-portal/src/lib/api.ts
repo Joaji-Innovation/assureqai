@@ -660,6 +660,12 @@ export const notificationApi = {
 
   testWebhook: (id: string) =>
     request<{ success: boolean; message: string }>(`/api/notifications/webhooks/${id}/test`, { method: 'POST' }),
+
+  testEmail: (email: string) =>
+    request<{ success: boolean; message: string }>('/api/notifications/email/test', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
 };
 
 export default {

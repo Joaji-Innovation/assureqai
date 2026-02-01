@@ -297,3 +297,9 @@ export function useTestWebhook() {
     mutationFn: (id: string) => notificationApi.testWebhook(id),
   });
 }
+
+export function useTestEmail() {
+  return useMutation({
+    mutationFn: (email: string) => notificationApi.testEmail(email),
+  });
+}

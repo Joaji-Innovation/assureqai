@@ -1115,22 +1115,7 @@ function DashboardPageContent() {
                     </TableCell>
                     <TableCell className="align-top py-4 space-y-2">
                       <p className="text-sm">{res.comments}</p>
-                      {res.evidence && (
-                        <div className="space-y-1 mt-1">
-                          {Array.isArray(res.evidence) ? (
-                            res.evidence.map((ev: any, idx: number) => (
-                              <p key={idx} className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
-                                "{ev.text || ev}"
-                                {ev.lineNumber ? <span className="ml-1 text-[10px] not-italic opacity-70">(Line {ev.lineNumber})</span> : null}
-                              </p>
-                            ))
-                          ) : (
-                            <p className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
-                              "{res.evidence}"
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      <ExpandableEvidence evidence={res.evidence} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1176,12 +1161,32 @@ function DashboardPageContent() {
                         <Label>Original Transcription</Label>
                         <ScrollArea className="h-48 mt-2 p-3 border rounded-md">
                           <pre className="text-xs whitespace-pre-wrap">
-                            {audit.auditData.transcriptionInOriginalLanguage}
+                            {audit.auditData.transcriptionInOriginalLanguage ||
+                              audit.auditData.transcript ||
+                              "No transcription available"}
                           </pre>
                         </ScrollArea>
                       </div>
                       <div className="space-y-2">
-                        <Label>English Translation</Label>
+                        <div className="flex items-center gap-2">
+                          <Label>English Translation</Label>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              const text = audit.auditData.englishTranslation;
+                              if (text) {
+                                window.speechSynthesis.cancel();
+                                const utterance = new SpeechSynthesisUtterance(text);
+                                window.speechSynthesis.speak(utterance);
+                              }
+                            }}
+                            title="Read Aloud"
+                          >
+                            <Volume2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                         <ScrollArea className="h-48 mt-2 p-3 border rounded-md">
                           <pre className="text-xs whitespace-pre-wrap">
                             {audit.auditData.englishTranslation ||
@@ -1585,6 +1590,60 @@ interface DashboardTabContentProps {
   } | null;
   isLoadingStats?: boolean;
 }
+
+// Helper component for collapsible evidence
+interface ExpandableEvidenceProps {
+  evidence: any;
+}
+
+const ExpandableEvidence: React.FC<ExpandableEvidenceProps> = ({ evidence }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!evidence) return null;
+
+  // Handle single string case
+  if (!Array.isArray(evidence)) {
+    return (
+      <p className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
+        "{evidence}"
+      </p>
+    );
+  }
+
+  // Handle array case
+  const citations = evidence;
+  if (citations.length === 0) return null;
+
+  // Configuration
+  const INITIAL_COUNT = 2; // Show 2 lines initially
+  const showExpandButton = citations.length > INITIAL_COUNT;
+  const visibleCitations = isExpanded ? citations : citations.slice(0, INITIAL_COUNT);
+  const remainingCount = citations.length - INITIAL_COUNT;
+
+  return (
+    <div className="space-y-1 mt-1">
+      {visibleCitations.map((ev: any, idx: number) => (
+        <p key={idx} className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
+          "{ev.text || ev}"
+          {ev.lineNumber ? <span className="ml-1 text-[10px] not-italic opacity-70">(Line {ev.lineNumber})</span> : null}
+        </p>
+      ))}
+
+      {showExpandButton && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+          className="text-[10px] text-primary hover:underline font-medium ml-2 flex items-center gap-1 focus:outline-none"
+        >
+          {isExpanded ? "Show less" : `+${remainingCount} more citations`}
+        </button>
+      )}
+    </div>
+  );
+};
 
 const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
   auditType,

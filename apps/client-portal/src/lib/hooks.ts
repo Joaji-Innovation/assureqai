@@ -3,7 +3,7 @@
  * Centralized data fetching with caching, refetching, and error handling
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { auditApi, userApi, campaignApi, queueApi, type AuditStats, type LeaderboardEntry, type Audit, type User, type Campaign } from './api';
 
 // Query Keys - centralized for easy invalidation
@@ -87,7 +87,7 @@ export function useAudits(filters: {
   return useQuery({
     queryKey: queryKeys.audits(filters),
     queryFn: () => auditApi.list(filters),
-    placeholderData: { data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } },
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -117,7 +117,7 @@ export function useUsers(page = 1, limit = 10) {
   return useQuery({
     queryKey: queryKeys.users(page, limit),
     queryFn: () => userApi.list(page, limit),
-    placeholderData: { data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } },
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -168,7 +168,7 @@ export function useCampaigns(page = 1, limit = 10) {
   return useQuery({
     queryKey: queryKeys.campaigns(page, limit),
     queryFn: () => campaignApi.list(page, limit),
-    placeholderData: { data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } },
+    placeholderData: keepPreviousData,
   });
 }
 

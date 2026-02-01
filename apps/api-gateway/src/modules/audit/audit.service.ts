@@ -698,8 +698,7 @@ export class AuditService {
       { $match: match },
       {
         $group: {
-          _id: '$agentUserId',
-          agentName: { $first: '$agentName' },
+          _id: { agentUserId: '$agentUserId', agentName: '$agentName' },
           totalAudits: { $sum: 1 },
           avgScore: { $avg: '$overallScore' },
           passCount: { $sum: { $cond: [{ $gte: ['$overallScore', 70] }, 1, 0] } },
@@ -707,8 +706,8 @@ export class AuditService {
       },
       {
         $project: {
-          agentUserId: '$_id',
-          agentName: 1,
+          agentUserId: '$_id.agentUserId',
+          agentName: '$_id.agentName',
           totalAudits: 1,
           avgScore: { $round: ['$avgScore', 2] },
           passRate: {

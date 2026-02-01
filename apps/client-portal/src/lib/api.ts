@@ -281,8 +281,16 @@ export interface Audit {
   additionalTranslationLanguage?: string;
   callSummary?: string;
   auditDurationMs?: number;
+  audioUrl?: string; // Added field
 
   auditResults: AuditResult[];
+
+  metrics?: { // Added metrics object
+    talkToListenRatio?: number;
+    silencePercentage?: number;
+    holdTime?: number;
+    callDuration?: number;
+  };
 
   tokenUsage?: {
     inputTokens: number;

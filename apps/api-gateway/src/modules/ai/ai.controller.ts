@@ -35,6 +35,7 @@ export class AiController {
       agentName?: string;
       callId?: string;
       campaignName?: string;
+      transcriptionLanguage?: string;
     },
     @CurrentUser() user: JwtPayload,
   ) {

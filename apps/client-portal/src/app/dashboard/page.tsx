@@ -190,6 +190,7 @@ import { authApi, qaParameterApi, auditApi, type Audit, type QAParameter, type A
 import { Suspense } from "react";
 import { getAuthHeaders } from "@/lib/authUtils";
 import { exportAuditDataAsXLSX, exportChartWithData, exportDashboardWithAllCharts, type AuditExportData, type ExportSummaryMetrics } from "@/lib/exportUtils";
+import { AuditDetailsModalContent } from "./AuditDetailsModalContent";
 
 // Helper function to convert QAParameter (API) to QAParameter (Frontend)
 function convertQAParameterDocumentToQAParameter(
@@ -250,6 +251,8 @@ function convertAuditDocumentToSavedAuditItem(
       identifiedAgentName: doc.agentName,
       transcriptionInOriginalLanguage: doc.transcript || "",
       englishTranslation: doc.englishTranslation || "",
+      additionalTranslation: doc.additionalTranslation || "",
+      additionalTranslationLanguage: doc.additionalTranslationLanguage || "",
       callSummary: doc.callSummary || `Audit for ${doc.agentName}`,
       auditResults: doc.auditResults.map((result: AuditResult) => ({
         parameter: result.parameterName,
@@ -258,7 +261,7 @@ function convertAuditDocumentToSavedAuditItem(
         comments: result.comments || "",
         type: result.type,
         confidence: result.confidence,
-        evidence: result.evidence?.map(e => e.text).join('\n') || "",
+        evidence: result.evidence || [], // Preserve array for ExpandableEvidence
       })),
       overallScore: doc.overallScore,
       overallConfidence: doc.overallConfidence,
@@ -1010,245 +1013,13 @@ function DashboardPageContent() {
     };
 
     setModalContent(
-      <DialogContent className="max-w-6xl w-[90vw]">
-        <DialogHeader>
-          <DialogTitle>{`Audit Details - ${audit.agentName} (${format(
-            new Date(audit.auditDate),
-            "PPp"
-          )})`}</DialogTitle>
-        </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto pr-4">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <p>
-                <strong>Agent:</strong> {audit.agentName}
-              </p>
-              <p>
-                <strong>Agent ID:</strong> {audit.agentUserId}
-              </p>
-              <p>
-                <strong>Campaign:</strong> {audit.campaignName || "N/A"}
-              </p>
-              <p>
-                <strong>Overall Score:</strong>{" "}
-                <span className="font-bold text-lg">
-                  {audit.overallScore.toFixed(2)}%
-                </span>
-              </p>
-              <p>
-                <strong>Audit Type:</strong>{" "}
-                <Badge
-                  variant={audit.auditType === "ai" ? "default" : "secondary"}
-                >
-                  {audit.auditType.toUpperCase()}
-                </Badge>
-              </p>
-              {currentUser?.role === "Administrator" &&
-                audit.auditType === "ai" && (
-                  <>
-                    <p>
-                      <strong>Duration:</strong>{" "}
-                      {audit.auditData?.auditDurationMs
-                        ? `${(audit.auditData.auditDurationMs / 1000).toFixed(
-                          2
-                        )}s`
-                        : "N/A"}
-                    </p>
-                    <p>
-                      <strong>Tokens:</strong>{" "}
-                      {audit.auditData?.tokenUsage
-                        ? `In: ${audit.auditData.tokenUsage.inputTokens || 0
-                        } / Out: ${audit.auditData.tokenUsage.outputTokens || 0
-                        } / Total: ${audit.auditData.tokenUsage.totalTokens || 0
-                        }`
-                        : "N/A"}
-                    </p>
-                  </>
-                )}
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between mb-2 mt-6">
-              <h4 className="font-semibold text-md">Detailed Scoring</h4>
-              {audit.auditType === "ai" && (
-                <div className="text-sm text-muted-foreground flex gap-4">
-                  <span>
-                    Processing Time:{" "}
-                    <span className="font-medium text-foreground">
-                      {audit.auditData?.auditDurationMs
-                        ? `${(audit.auditData.auditDurationMs / 1000).toFixed(1)}s`
-                        : "N/A"}
-                    </span>
-                  </span>
-                  <span>
-                    Overall Confidence:{" "}
-                    <span className="font-medium text-green-500">
-                      {audit.auditData?.overallConfidence
-                        ? `${Math.round(audit.auditData.overallConfidence * 100)}%`
-                        : "85%"} {/* Fallback to 85% if missing, or calculate from items */}
-                    </span>
-                  </span>
-                </div>
-              )}
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[180px]">Parameter</TableHead>
-                  <TableHead className="text-center w-[80px]">Score</TableHead>
-                  <TableHead className="text-center w-[100px]">Confidence</TableHead>
-                  <TableHead>Comments & Evidence</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {((audit as any).auditResults || audit.auditData?.auditResults || []).map((res: any, i: number) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium align-top py-4">
-                      {res.parameterName || res.parameter || 'Unknown'}
-                    </TableCell>
-                    <TableCell className="text-center font-medium align-top py-4 text-green-500">
-                      {res.score}
-                    </TableCell>
-                    <TableCell className="text-center align-top py-4">
-                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-none">
-                        {res.confidence ? `${Math.round(res.confidence * 100)}%` : "100%"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="align-top py-4 space-y-2">
-                      <p className="text-sm">{res.comments}</p>
-                      <ExpandableEvidence evidence={res.evidence} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {audit.auditType === "ai" && (
-              <>
-                <Separator />
-                <h4 className="font-semibold text-md">
-                  Detailed Analysis
-                </h4>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Call Summary</Label>
-                    <Textarea
-                      readOnly
-                      value={(audit as any).callSummary || audit.auditData?.callSummary || 'No summary available'}
-                      className="h-40 bg-muted/50 resize-none header-none focus-visible:ring-0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Root Cause Analysis</Label>
-                    <Textarea
-                      readOnly
-                      value={
-                        (audit as any).rootCauseAnalysis ||
-                        (audit.auditData as any)?.rootCauseAnalysis ||
-                        "No significant issues requiring RCA identified."
-                      }
-                      className="h-40 bg-muted/50 resize-none header-none focus-visible:ring-0"
-                    />
-                  </div>
-                  <div className="space-y-4 col-span-2">
-                    <h5 className="font-semibold text-sm">Sentiment Analysis</h5>
-                    <div className="grid grid-cols-3 gap-4 p-4 border rounded-md bg-muted/20">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground uppercase font-semibold">Overall</span>
-                        <Badge variant="outline" className={`w-fit capitalized ${(audit.auditData?.sentiment?.overall || 'neutral') === 'positive' ? 'bg-green-500/10 text-green-600 border-green-200' :
-                          (audit.auditData?.sentiment?.overall || 'neutral') === 'negative' ? 'bg-red-500/10 text-red-600 border-red-200' :
-                            'bg-gray-500/10 text-gray-600 border-gray-200'
-                          }`}>
-                          {audit.auditData?.sentiment?.overall || 'Neutral'}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground uppercase font-semibold">Customer Sentiment</span>
-                        <span className={`font-mono text-lg font-medium ${(audit.auditData?.sentiment?.customerScore || 0) > 0 ? 'text-green-600' :
-                          (audit.auditData?.sentiment?.customerScore || 0) < 0 ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                          {((audit.auditData?.sentiment?.customerScore || 0) * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground uppercase font-semibold">Agent Sentiment</span>
-                        <span className={`font-mono text-lg font-medium ${(audit.auditData?.sentiment?.agentScore || 0) > 0 ? 'text-green-600' :
-                          (audit.auditData?.sentiment?.agentScore || 0) < 0 ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                          {((audit.auditData?.sentiment?.agentScore || 0) * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <Collapsible>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Show/Hide Full Transcription
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4 space-y-4">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Original Transcription</Label>
-                        <ScrollArea className="h-48 mt-2 p-3 border rounded-md">
-                          <pre className="text-xs whitespace-pre-wrap">
-                            {audit.auditData.transcriptionInOriginalLanguage ||
-                              audit.auditData.transcript ||
-                              "No transcription available"}
-                          </pre>
-                        </ScrollArea>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label>English Translation</Label>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => {
-                              const text = audit.auditData.englishTranslation;
-                              if (text) {
-                                window.speechSynthesis.cancel();
-                                const utterance = new SpeechSynthesisUtterance(text);
-                                window.speechSynthesis.speak(utterance);
-                              }
-                            }}
-                            title="Read Aloud"
-                          >
-                            <Volume2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <ScrollArea className="h-48 mt-2 p-3 border rounded-md">
-                          <pre className="text-xs whitespace-pre-wrap">
-                            {audit.auditData.englishTranslation ||
-                              "No translation available"}
-                          </pre>
-                        </ScrollArea>
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </>
-            )}
-          </div>
-        </div>
-        <DialogFooter>
-          {currentUser?.role === "Agent" ? (
-            <div className="w-full flex justify-between">
-              <Button variant="destructive" onClick={handleDispute}>
-                Dispute
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Close
-                </Button>
-                <Button onClick={handleAcknowledge}>Acknowledge</Button>
-              </div>
-            </div>
-          ) : (
-            <Button onClick={() => setIsModalOpen(false)}>Close</Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
+      <AuditDetailsModalContent
+        audit={audit}
+        currentUserRole={currentUser?.role}
+        onClose={() => setIsModalOpen(false)}
+        onDispute={handleDispute}
+        onAcknowledge={handleAcknowledge}
+      />
     );
     setIsModalOpen(true);
   };

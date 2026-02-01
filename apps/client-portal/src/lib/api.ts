@@ -277,6 +277,8 @@ export interface Audit {
   // Data fields
   transcript?: string;
   englishTranslation?: string;
+  additionalTranslation?: string;
+  additionalTranslationLanguage?: string;
   callSummary?: string;
   auditDurationMs?: number;
 

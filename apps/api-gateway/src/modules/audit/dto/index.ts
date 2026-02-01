@@ -98,6 +98,16 @@ export class CreateAuditDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  additionalTranslation?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  additionalTranslationLanguage?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
   callSummary?: string;
 
   @ApiPropertyOptional()

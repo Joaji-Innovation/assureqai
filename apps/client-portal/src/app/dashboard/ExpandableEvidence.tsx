@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 
 interface ExpandableEvidenceProps {
@@ -12,9 +14,10 @@ const ExpandableEvidence: React.FC<ExpandableEvidenceProps> = ({ evidence }) => 
   // Handle single string case
   if (!Array.isArray(evidence)) {
     return (
-      <p className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
-        "{evidence}"
-      </p>
+      <div className="text-xs p-2 rounded bg-muted/50 border border-border/50 italic text-muted-foreground mt-2">
+        <span className="text-primary/60 font-medium mr-1">#1:</span>
+        &ldquo;{evidence}&rdquo;
+      </div>
     );
   }
 
@@ -29,18 +32,23 @@ const ExpandableEvidence: React.FC<ExpandableEvidenceProps> = ({ evidence }) => 
   const remainingCount = citations.length - INITIAL_COUNT;
 
   return (
-    <div className="space-y-1 mt-1">
+    <div className="space-y-1 mt-2">
       {visibleCitations.map((ev: any, idx: number) => (
-        <p key={idx} className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
-          "{ev.text || ev}"
-          {ev.lineNumber ? <span className="ml-1 text-[10px] not-italic opacity-70">(Line {ev.lineNumber})</span> : null}
-        </p>
+        <div
+          key={idx}
+          className="text-xs p-2 rounded bg-muted/50 border border-border/50 italic text-muted-foreground"
+        >
+          <span className="text-primary/60 font-medium mr-1">
+            {ev.lineNumber ? `L${ev.lineNumber}:` : `#${idx + 1}:`}
+          </span>
+          &ldquo;{ev.text || ev}&rdquo;
+        </div>
       ))}
 
       {showExpandButton && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-[10px] text-primary hover:underline font-medium ml-2 flex items-center gap-1"
+          className="text-[10px] text-primary hover:underline font-medium flex items-center gap-1"
         >
           {isExpanded ? "Show less" : `+${remainingCount} more citations`}
         </button>
@@ -48,3 +56,5 @@ const ExpandableEvidence: React.FC<ExpandableEvidenceProps> = ({ evidence }) => 
     </div>
   );
 };
+
+export default ExpandableEvidence;

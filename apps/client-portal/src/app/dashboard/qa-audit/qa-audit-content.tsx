@@ -240,7 +240,7 @@ function convertSavedAuditItemToCreateAuditFormatV2(
     campaignName: savedAudit.campaignName, // IMPORTANT: Backend expects this for Campaign Performance chart
     qaParameterSetId: savedAudit.campaignName || "default",
     qaParameterSetName: savedAudit.campaignName || "Unknown Parameter Set",
-    callTranscript: transcript,
+    transcript: transcript, // Match backend schema field name
     englishTranslation: englishTranslation,
     callSummary: savedAudit.auditData?.callSummary || `Audit for ${savedAudit.agentName}`,
     overallScore: savedAudit.overallScore,
@@ -501,6 +501,7 @@ export default function QaAuditContent() {
         parameters: flatParameters,
         // Metadata
         language: qaCallLanguage,
+        transcriptionLanguage: qaTranscriptionLanguage,
         agentName: qaAgentUserId, // Backend expects agentName
         campaignName: qaCampaignName,
       };

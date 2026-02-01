@@ -41,6 +41,12 @@ export class CallAudit {
   englishTranslation?: string;
 
   @Prop()
+  additionalTranslation?: string;
+
+  @Prop()
+  additionalTranslationLanguage?: string;
+
+  @Prop()
   callSummary?: string;
 
   @Prop()

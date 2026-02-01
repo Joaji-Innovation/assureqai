@@ -254,7 +254,8 @@ export class AiService {
     agentName?: string;
     callId?: string;
     campaignName?: string;
-  }): Promise<AuditResult & { transcript: string; transcriptionInOriginalLanguage: string; englishTranslation?: string; callSummary?: string; rootCauseAnalysis?: string; identifiedAgentName?: string; campaignName?: string; agentUserId?: string }> {
+    transcriptionLanguage?: string;
+  }): Promise<AuditResult & { transcript: string; transcriptionInOriginalLanguage: string; englishTranslation?: string; additionalTranslation?: string; additionalTranslationLanguage?: string; callSummary?: string; rootCauseAnalysis?: string; identifiedAgentName?: string; campaignName?: string; agentUserId?: string }> {
     if (!this.apiKey) {
       throw new BadRequestException('AI service not configured. Please set GEMINI_API_KEY.');
     }
@@ -348,7 +349,7 @@ export class AiService {
 
         // Step 1: Transcribe
         this.logger.log('Step 1: Transcribing audio...');
-        const transcriptionResult = await this.transcribeWithGemini(audioBase64, mimeType, request.language);
+        const transcriptionResult = await this.transcribeWithGemini(audioBase64, mimeType, request.language, request.transcriptionLanguage);
 
         this.logger.log(`Transcription complete: ${transcriptionResult.transcript.length} chars, language: ${transcriptionResult.detectedLanguage}`);
 
@@ -371,6 +372,8 @@ export class AiService {
           transcript: transcriptionResult.transcript,
           transcriptionInOriginalLanguage: transcriptionResult.transcript,
           englishTranslation: transcriptionResult.englishTranslation,
+          additionalTranslation: transcriptionResult.additionalTranslation,
+          additionalTranslationLanguage: request.transcriptionLanguage,
           callSummary: transcriptionResult.callSummary || auditResult.callSummary,
           identifiedAgentName: transcriptionResult.identifiedAgentName || 'Unknown',
           campaignName: request.campaignName,
@@ -405,6 +408,7 @@ ${parametersDesc}
 
 **Audit Instructions:**
 1. **Transcription**: Provide accurate transcription with speaker labels (Agent: / Customer:).
+    ${request.transcriptionLanguage ? `   - Also provide a translation in **${request.transcriptionLanguage}** in the "additionalTranslation" field.` : ''}
 2. **Privacy Protection**: MASK ALL customer private details in any text:
    - Phone numbers → [PHONE MASKED]
    - Addresses → [ADDRESS MASKED]  
@@ -435,7 +439,9 @@ ${parametersDesc}
 {
   "identifiedAgentName": "string",
   "transcriptionInOriginalLanguage": "string with speaker labels",
+  "transcriptionInOriginalLanguage": "string with speaker labels",
   "englishTranslation": "string (required, same as original if already English)",
+  ${request.transcriptionLanguage ? `"additionalTranslation": "string (translation in ${request.transcriptionLanguage})",` : ''}
   "callSummary": "string (max 500 chars)",
   "rootCauseAnalysis": "string (if issues found)",
   "auditResults": [
@@ -556,6 +562,8 @@ CRITICAL: Score using EXACT parameter names listed above.`;
         transcript: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
         transcriptionInOriginalLanguage: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
         englishTranslation: output.englishTranslation,
+        additionalTranslation: output.additionalTranslation,
+        additionalTranslationLanguage: request.transcriptionLanguage,
         rootCauseAnalysis: output.rootCauseAnalysis,
         // Add agent identification and campaign info
         identifiedAgentName: output.identifiedAgentName || request.agentName || 'Unknown',
@@ -577,10 +585,12 @@ CRITICAL: Score using EXACT parameter names listed above.`;
   private async transcribeWithGemini(
     audioBase64: string,
     mimeType: string,
-    language?: string
+    language?: string,
+    targetTranslationLanguage?: string
   ): Promise<{
     transcript: string;
     englishTranslation: string;
+    additionalTranslation?: string;
     callSummary: string;
     identifiedAgentName: string;
     detectedLanguage: string;
@@ -612,6 +622,7 @@ CRITICAL: Score using EXACT parameter names listed above.`;
    - IFSC codes → [IFSC MASKED]
 5. Detect the language being spoken
 6. Provide English translation if not already in English
+    ${targetTranslationLanguage ? `7. Provide a translation in **${targetTranslationLanguage}** in the "additionalTranslation" field.` : ''}
 
 **Language hint**: ${language || 'Auto-detect'}
 
@@ -620,7 +631,9 @@ CRITICAL: Score using EXACT parameter names listed above.`;
   "identifiedAgentName": "string (agent's name from greeting - MUST extract if mentioned)",
   "detectedLanguage": "string (e.g., 'Hindi', 'English', 'Spanish')",
   "transcriptionInOriginalLanguage": "string (full transcript with speaker labels)",
+  "transcriptionInOriginalLanguage": "string (full transcript with speaker labels)",
   "englishTranslation": "string (same as transcript if already English)",
+  ${targetTranslationLanguage ? `"additionalTranslation": "string (translation in ${targetTranslationLanguage})",` : ''}
   "callSummary": "string (2-3 sentence summary of the call, max 300 chars)"
 }
 
@@ -641,6 +654,7 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
       return {
         transcript: parsed.transcriptionInOriginalLanguage || parsed.englishTranslation || '',
         englishTranslation: parsed.englishTranslation || parsed.transcriptionInOriginalLanguage || '',
+        additionalTranslation: parsed.additionalTranslation,
         callSummary: parsed.callSummary || '',
         identifiedAgentName: parsed.identifiedAgentName || 'Unknown',
         detectedLanguage: parsed.detectedLanguage || language || 'en',
@@ -653,6 +667,7 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
         return {
           transcript: parsed.transcriptionInOriginalLanguage || parsed.englishTranslation || '',
           englishTranslation: parsed.englishTranslation || '',
+          additionalTranslation: parsed.additionalTranslation,
           callSummary: parsed.callSummary || '',
           identifiedAgentName: parsed.identifiedAgentName || 'Unknown',
           detectedLanguage: parsed.detectedLanguage || language || 'en',

@@ -104,6 +104,7 @@ export interface AuditResult {
     totalTokens: number;
   };
   timing: AuditTiming;  // NEW: timing metrics
+  timeout?: boolean; // NEW: explicilty track timeout success/failure
 }
 
 @Injectable()
@@ -141,24 +142,101 @@ export class AiService {
 
     const startTime = new Date();
 
-    try {
-      // Build the prompt
-      const prompt = this.buildAuditPrompt(request);
+    // Check if parameters need batching (limit prompt size to avoid truncation)
+    const BATCH_SIZE = 5;
+    if (request.parameters.length > BATCH_SIZE) {
+      this.logger.log(`High parameter count (${request.parameters.length}), using batch processing...`);
 
-      // Call Gemini API
-      const response = await this.callGemini(prompt);
+      // Split parameters into chunks
+      const chunks = [];
+      for (let i = 0; i < request.parameters.length; i += BATCH_SIZE) {
+        chunks.push(request.parameters.slice(i, i + BATCH_SIZE));
+      }
 
-      // Parse the response with timing
-      const result = this.parseAuditResponse(response, request.parameters, startTime);
+      let combinedAuditResults: any[] = [];
+      let baseResult: AuditResult | null = null;
 
-      this.logger.log(
-        `Audit completed in ${result.timing.processingDurationMs}ms, score: ${result.overallScore}, confidence: ${result.overallConfidence}%`,
-      );
+      // Process each chunk sequentially
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkParams = chunks[i];
+        const isFirstChunk = i === 0;
 
-      return result;
-    } catch (error) {
-      this.logger.error(`AI audit failed: ${error}`);
-      throw new BadRequestException('AI audit failed');
+        this.logger.log(`Processing batch ${i + 1}/${chunks.length} (${chunkParams.length} params)`);
+
+        // Build prompt for this chunk
+        // For first chunk: ask for full analysis (Summary, Sentiment, etc.) + 1st batch scoring
+        // For subs chunks: ask ONLY for scoring of those specific params (faster, smaller output)
+        const prompt = isFirstChunk
+          ? this.buildAuditPrompt(request, chunkParams)
+          : this.buildPartialAuditPrompt(request.transcript, chunkParams);
+
+        // Call Gemini
+        const response = await this.callGemini(prompt);
+
+        // Parse Result
+        const chunkResult = this.parseAuditResponse(response, chunkParams, startTime); // startTime reused but timing duration accumulates
+
+        if (isFirstChunk) {
+          baseResult = chunkResult; // Keep the rich metadata (sentiment, summary) from first chunk
+        }
+
+        // Accumulate audit results
+        combinedAuditResults = [...combinedAuditResults, ...chunkResult.auditResults];
+      }
+
+      if (!baseResult) throw new Error("Failed to process audit batches");
+
+      // Merge all results into the base result
+      baseResult.auditResults = combinedAuditResults;
+
+      // Recalculate Overall Score based on ALL parameters
+      // Weighted Average: Sum(Score * Weight) / Sum(Weight)
+      let totalWeightedScore = 0;
+      let totalWeight = 0;
+      let hasFatalFailure = false;
+
+      baseResult.auditResults.forEach(r => {
+        totalWeightedScore += (r.score * r.weight);
+        totalWeight += r.weight;
+        if (r.type === 'Fatal' && r.score < 50) hasFatalFailure = true;
+      });
+
+      baseResult.overallScore = totalWeight > 0 ? Math.round(totalWeightedScore / totalWeight) : 0;
+
+      // Apply ZTP
+      if (hasFatalFailure) {
+        this.logger.warn('ZTP Applied (Batch Merged): Fatal parameter scored below 50%');
+        baseResult.overallScore = 0;
+      }
+
+      // Update timing
+      baseResult.timing.processingDurationMs = Date.now() - startTime.getTime();
+      baseResult.timeout = false; // Explicit success
+
+      this.logger.log(`Batch audit completed. Total Params: ${baseResult.auditResults.length}, Score: ${baseResult.overallScore}`);
+      return baseResult;
+
+    } else {
+      // STANDARD FLOW (<= 5 Parameters)
+      try {
+        // Build the prompt
+        const prompt = this.buildAuditPrompt(request, request.parameters); // Explicitly pass all params
+
+        // Call Gemini API
+        const response = await this.callGemini(prompt);
+
+        // Parse the response with timing
+        const result = this.parseAuditResponse(response, request.parameters, startTime);
+
+        this.logger.log(
+          `Audit completed in ${result.timing.processingDurationMs}ms, score: ${result.overallScore}, confidence: ${result.overallConfidence}%`,
+        );
+
+        return result;
+      } catch (error) {
+        this.logger.error(`AI audit failed: ${error}`);
+        throw new BadRequestException('AI audit failed');
+      }
     }
   }
 
@@ -255,14 +333,18 @@ export class AiService {
     const isLargeAudio = audioSizeBytes > 10 * 1024 * 1024;
 
     try {
-      if (isLargeAudio) {
+      // Force two-step approach if audio is large OR if parameter count is high (>5)
+      // This prevents context overload and timeouts for complex audits
+      const isComplexAudit = request.parameters.length > 5;
+
+      if (isLargeAudio || isComplexAudit) {
         // =====================================================
-        // TWO-STEP APPROACH FOR LARGE AUDIO FILES
-        // Step 1: Transcribe audio only (focused, smaller output)
-        // Step 2: Audit transcript (text only, no audio)
+        // TWO-STEP APPROACH
+        // 1. Transcribe (lightweight)
+        // 2. Audit (text-based, batched if needed)
         // =====================================================
 
-        this.logger.log(`Large audio detected (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using two-step approach`);
+        this.logger.log(`Using two-step approach: Large Audio=${isLargeAudio}, Complex Audit=${isComplexAudit} (${request.parameters.length} params)`);
 
         // Step 1: Transcribe
         this.logger.log('Step 1: Transcribing audio...');
@@ -1014,8 +1096,10 @@ Explanation:`;
   /**
    * Build the audit prompt
    */
-  private buildAuditPrompt(request: AuditRequest): string {
-    const parametersJson = JSON.stringify(request.parameters, null, 2);
+  private buildAuditPrompt(request: AuditRequest, targetParams?: AuditRequest['parameters']): string {
+    // Use specific batch of params if provided, otherwise all
+    const paramsToScore = targetParams || request.parameters;
+    const parametersJson = JSON.stringify(paramsToScore, null, 2);
 
     return `You are an expert call center QA auditor and sentiment analyst. Analyze the following call transcript comprehensively.
 
@@ -1028,10 +1112,11 @@ ${request.sopContent || 'Standard call center best practices apply.'}
 ## Call Transcript:
 ${request.transcript}
 
-## Instructions:
-1. Score each parameter from 0-100 based on the transcript
-2. For Fatal parameters, any violation results in 0 score
-3. For ZTP (Zero Tolerance Policy), any violation is critical
+## **Instructions:**
+1. Evaluate ONLY the parameters listed above. Acknowledge existing context but focus scoring here.
+2. Provide score (0-100), detailed comments, and evidence for each.
+3. **Evidence**: You MUST return evidence as an array of objects: \`[{"text": "quote", "lineNumber": 1}]\`.
+4. Be strictly compliant with the JSON format. ZTP (Zero Tolerance Policy), any violation is critical
 4. Provide a brief comment for each parameter
 5. **IMPORTANT: For each parameter, provide a confidence score (0-100) indicating how certain you are about your assessment**
 6. **IMPORTANT: For each parameter, provide evidence - quote 1-3 specific excerpts from the transcript that support your score**
@@ -1097,6 +1182,43 @@ Respond ONLY with valid JSON in this exact format:
     "improvements": ["Reduce hold time", "Offer alternatives sooner"],
     "suggestedActions": ["Review empathy training module", "Practice objection handling"]
   }
+}`;
+  }
+
+  /**
+   * Build a lightweight prompt for subsequent batches (Score Only)
+   */
+  private buildPartialAuditPrompt(transcript: string, targetParams: AuditRequest['parameters']): string {
+    const parametersJson = JSON.stringify(targetParams, null, 2);
+
+    return `You are an expert QA auditor. Review the call transcript and SCORE ONLY the following parameters.
+    
+**Call Transcript:**
+${transcript ? transcript.substring(0, 50000) : ''}... (truncated for safety if extremely long)
+
+**Parameters to Score:**
+${parametersJson}
+
+**Instructions:**
+1. Evaluate ONLY the parameters listed above. Acknowledge existing context but focus scoring here.
+2. Provide score (0-100), detailed comments, and evidence for each.
+3. **Evidence**: You MUST return evidence as an array of objects: \`[{"text": "quote", "lineNumber": 1}]\`.
+4. Be strictly compliant with the JSON format.
+
+**Respond ONLY with valid JSON:**
+{
+  "auditResults": [
+    {
+      "parameterId": "param_id",
+      "parameterName": "Parameter Name",
+      "score": 85,
+      "weight": 10,
+      "type": "Non-Fatal",
+      "comments": "Observed behavior...",
+      "confidence": 90,
+      "evidence": [{"text": "Found quote...", "lineNumber": 1}]
+    }
+  ]
 }`;
   }
 
@@ -1201,7 +1323,9 @@ Respond ONLY with valid JSON in this exact format:
       type: result.type || 'Non-Fatal',
       comments: result.comments || '',
       confidence: result.confidence ?? 80, // Default 80% if not provided
-      evidence: result.evidence || [],     // Empty array if not provided
+      evidence: Array.isArray(result.evidence)
+        ? result.evidence
+        : (result.evidence ? [{ text: result.evidence }] : []), // Normalize string to array
       subResults: result.subResults?.map((sub: any) => ({
         subParameterId: sub.subParameterId || '',
         subParameterName: sub.subParameterName || '',
@@ -1209,7 +1333,9 @@ Respond ONLY with valid JSON in this exact format:
         weight: sub.weight ?? 1,
         comments: sub.comments || '',
         confidence: sub.confidence ?? 80,
-        evidence: sub.evidence || [],
+        evidence: Array.isArray(sub.evidence)
+          ? sub.evidence
+          : (sub.evidence ? [{ text: sub.evidence }] : []),
       })) || [],
     }));
 

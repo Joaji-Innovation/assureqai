@@ -1116,9 +1116,20 @@ function DashboardPageContent() {
                     <TableCell className="align-top py-4 space-y-2">
                       <p className="text-sm">{res.comments}</p>
                       {res.evidence && (
-                        <p className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
-                          "{res.evidence}"
-                        </p>
+                        <div className="space-y-1 mt-1">
+                          {Array.isArray(res.evidence) ? (
+                            res.evidence.map((ev: any, idx: number) => (
+                              <p key={idx} className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
+                                "{ev.text || ev}"
+                                {ev.lineNumber ? <span className="ml-1 text-[10px] not-italic opacity-70">(Line {ev.lineNumber})</span> : null}
+                              </p>
+                            ))
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic border-l-2 border-primary/20 pl-2">
+                              "{res.evidence}"
+                            </p>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

@@ -2028,6 +2028,15 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                       found = true;
                       break;
                     }
+
+                    // NEW: Check if parameter matches sub-parameter exactly (orphan sub-param case)
+                    // This handles cases where data only contains L2 name but we want to group by L1
+                    if (res.parameter === sub.name || res.parameter.trim() === sub.name.trim()) {
+                      mainParamName = group.name;
+                      subParamName = sub.name;
+                      found = true;
+                      break;
+                    }
                   }
                   if (found) break;
                 }
@@ -2503,6 +2512,16 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                     found = true;
                     break;
                   }
+
+                  // NEW: Check if parameter matches sub-parameter exactly
+                  if (res.parameter === sub.name || res.parameter.trim() === sub.name.trim()) {
+                    mainParamName = group.name;
+                    subParamName = sub.name;
+                    // Get type from the sub-parameter definition if available
+                    paramType = sub.type || res.type || "Non-Fatal";
+                    found = true;
+                    break;
+                  }
                 }
                 if (found) break;
               }
@@ -2623,6 +2642,12 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
   } as const;
 
   const isAgentView = currentUser?.role === "Agent";
+
+  // Helper for formatting chart labels to show only L1 parameter
+  const formatChartLabel = (value: any) => {
+    if (!value) return "";
+    return String(value).split(" - ")[0];
+  };
 
   // Skeleton loader for overview cards
   const OverviewCardSkeleton = () => (
@@ -2967,11 +2992,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             interval={0}
                             axisLine={false}
                             tickLine={false}
-                            tickFormatter={(value) => {
-                              if (!value) return "";
-                              // Split by " - " and take the first part (L1 parameter/Group)
-                              return value.split(" - ")[0];
-                            }}
+                            tickFormatter={formatChartLabel}
                           />
                           <Tooltip
                             cursor={{ fill: "hsl(var(--muted)/0.3)" }}
@@ -3042,11 +3063,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             fill="hsl(var(--muted-foreground))"
                             tickLine={false}
                             axisLine={false}
-                            tickFormatter={(value) => {
-                              if (!value) return "";
-                              // Split by " - " and take the first part (L1 parameter/Group)
-                              return value.split(" - ")[0];
-                            }}
+                            tickFormatter={formatChartLabel}
                           />
                           <YAxis
                             yAxisId="left"
@@ -3321,7 +3338,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                       <div className="relative flex items-center justify-center">
                         <div className="h-24 w-24 rounded-full border-8 border-yellow-500/20" />
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
-                          <span className="text-2xl font-bold text-yellow-600">{sentimentData.neutral}%</span>
+                          <span className="text-lg font-bold text-yellow-600">{sentimentData.neutral}%</span>
                         </div>
                         <svg className="absolute inset-0 h-24 w-24 -rotate-90 transform" viewBox="0 0 100 100">
                           <circle
@@ -3343,7 +3360,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                       <div className="relative flex items-center justify-center">
                         <div className="h-24 w-24 rounded-full border-8 border-red-500/20" />
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
-                          <span className="text-2xl font-bold text-red-600">{sentimentData.negative}%</span>
+                          <span className="text-lg font-bold text-red-600">{sentimentData.negative}%</span>
                         </div>
                         <svg className="absolute inset-0 h-24 w-24 -rotate-90 transform" viewBox="0 0 100 100">
                           <circle

@@ -3139,7 +3139,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                     <div className="min-h-[300px]">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-muted/50 hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-background/80 z-10">
+                          <TableRow className="hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-background/80 z-10">
                             <TableHead className="pl-6 font-semibold">Agent</TableHead>
                             <TableHead className="text-right font-semibold">Score</TableHead>
                             <TableHead className="text-right pr-6 font-semibold">Pass/Fail</TableHead>
@@ -3355,14 +3355,6 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                 </CardContent>
               </Card>
 
-              {/* Placeholder for balance, or move Campaign Performance here */}
-              <Card className="shadow-md border-primary/10 hover:shadow-lg transition-shadow duration-300 opacity-0 pointer-events-none">
-                {/* Invisible card to keep grid alignment if needed, or remove grid-cols-2 */}
-              </Card>
-            </motion.div>
-
-            {/* Row 3: Campaign Performance (Full Width) */}
-            <motion.div variants={fadeInUp}>
               <Card ref={campaignPerformanceRef} className="shadow-md border-primary/10 hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="bg-muted/30 pb-4">
                   <div className="flex items-center justify-between">
@@ -3391,10 +3383,10 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <ScrollArea className="h-[200px]">
+                  <ScrollArea className="h-[250px]">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-muted/50 hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-muted/50 z-10">
+                        <TableRow className="hover:bg-muted/50 border-none sticky top-0 backdrop-blur-sm bg-muted/50 z-10">
                           <TableHead className="pl-6 font-semibold">Campaign</TableHead>
                           <TableHead className="text-right font-semibold">QA Score</TableHead>
                           <TableHead className="text-right pr-6 font-semibold">Compliance</TableHead>
@@ -3425,6 +3417,8 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                 </CardContent>
               </Card>
             </motion.div>
+
+
           </>
         )}
 

@@ -32,15 +32,23 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get notification settings' })
   @ApiResponse({ status: 200, description: 'Settings retrieved' })
   async getSettings(@CurrentUser() user: JwtPayload) {
+    console.log(`[NotificationsController] getSettings called for user: ${user?.username} (${user?.role}), projectId: ${user?.projectId}`);
+
     if (!user.projectId) {
+      console.warn('[NotificationsController] No projectId found for user, returning empty defaults');
       return {
+        _id: 'virtual-empty',
+        projectId: 'virtual',
         alertRules: [],
         smtp: { enabled: false },
         pushNotificationsEnabled: true,
         emailNotificationsEnabled: false,
       };
     }
-    return this.notificationsService.getSettings(user.projectId);
+
+    const settings = await this.notificationsService.getSettings(user.projectId);
+    console.log(`[NotificationsController] Retrieved settings for project ${user.projectId}: rules=${settings?.alertRules?.length || 0}`);
+    return settings;
   }
 
   /**

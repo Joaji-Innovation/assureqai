@@ -95,6 +95,17 @@ export default function NotificationsPage() {
 
   const isLoading = settingsLoading || webhooksLoading;
 
+  const loadDefaultRules = () => {
+    const defaultRules = [
+      { type: 'fatal_failure', enabled: true, channels: ['push', 'email'], config: {} },
+      { type: 'threshold_breach', enabled: true, channels: ['push'], config: { threshold: 70 } },
+      { type: 'at_risk', enabled: true, channels: ['email'], config: { consecutiveLow: 3 } },
+      { type: 'compliance', enabled: false, channels: ['push'], config: {} },
+      { type: 'low_score', enabled: true, channels: ['push'], config: { threshold: 60 } },
+    ];
+    updateSettings.mutate({ alertRules: defaultRules as any });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -116,6 +127,7 @@ export default function NotificationsPage() {
           </span>
         )}
       </div>
+      {/* ... previous JSX ... */}
 
       {/* Alert Rules */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
@@ -130,6 +142,7 @@ export default function NotificationsPage() {
             <div className="space-y-3">
               {settings.alertRules.map((rule) => (
                 <div key={rule.type} className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${rule.enabled ? 'border-border' : 'border-border/50 opacity-60'}`}>
+                  {/* ... rule content ... */}
                   <div className="flex items-center gap-4">
                     <button onClick={() => toggleRule(rule.type)} disabled={updateSettings.isPending}>
                       {rule.enabled ? (
@@ -163,7 +176,18 @@ export default function NotificationsPage() {
             <div className="text-center py-8 text-muted-foreground">
               <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No alert rules configured yet.</p>
-              <p className="text-sm">Alert rules will be created automatically when you save settings.</p>
+              <div className="mt-4">
+                <Button onClick={loadDefaultRules} disabled={updateSettings.isPending}>
+                  {updateSettings.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load Default Rules'
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

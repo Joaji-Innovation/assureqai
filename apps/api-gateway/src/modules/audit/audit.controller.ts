@@ -139,15 +139,21 @@ export class AuditController {
   @ApiResponse({ status: 200, description: 'Leaderboard retrieved' })
   async getLeaderboard(
     @Query('projectId') projectId?: string,
-    @Query('limit') limit = 10,
+    @Query('limit') limit: any = 10,
     @CurrentUser() user?: JwtPayload,
   ) {
+    const numericLimit = Number(limit) || 10;
+    console.log(`[AuditController] getLeaderboard called: limit=${numericLimit} (raw: ${limit}), projectId=${projectId}, role=${user?.role}`);
+
+    // If client admin doesn't specify project, default to their own
     const scopedProjectId =
-      user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.CLIENT_ADMIN
+      (user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.CLIENT_ADMIN) && projectId
         ? projectId
         : user?.projectId;
 
-    return this.auditService.getLeaderboard(scopedProjectId, limit);
+    console.log(`[AuditController] getLeaderboard scopedProjectId: ${scopedProjectId}`);
+
+    return this.auditService.getLeaderboard(scopedProjectId, numericLimit);
   }
 
   /**

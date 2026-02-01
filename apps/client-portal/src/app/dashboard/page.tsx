@@ -2967,6 +2967,11 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             interval={0}
                             axisLine={false}
                             tickLine={false}
+                            tickFormatter={(value) => {
+                              if (!value) return "";
+                              // Split by " - " and take the first part (L1 parameter/Group)
+                              return value.split(" - ")[0];
+                            }}
                           />
                           <Tooltip
                             cursor={{ fill: "hsl(var(--muted)/0.3)" }}
@@ -3037,6 +3042,11 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             fill="hsl(var(--muted-foreground))"
                             tickLine={false}
                             axisLine={false}
+                            tickFormatter={(value) => {
+                              if (!value) return "";
+                              // Split by " - " and take the first part (L1 parameter/Group)
+                              return value.split(" - ")[0];
+                            }}
                           />
                           <YAxis
                             yAxisId="left"

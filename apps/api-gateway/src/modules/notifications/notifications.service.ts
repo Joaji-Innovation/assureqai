@@ -100,16 +100,21 @@ export class NotificationsService {
       settings = new this.settingsModel({
         projectId: new Types.ObjectId(projectId),
       });
-      await settings.save();
-    } else if (!settings.alertRules || settings.alertRules.length === 0) {
-      // Seed default rules if missing
+    }
+
+    // Check and populate default rules if missing (for both new and existing settings)
+    if (!settings.alertRules || settings.alertRules.length === 0) {
       settings.alertRules = [
         { type: 'fatal_failure', enabled: true, channels: ['push', 'email'], config: {} },
         { type: 'threshold_breach', enabled: true, channels: ['push'], config: { threshold: 70 } },
         { type: 'at_risk', enabled: true, channels: ['email'], config: { consecutiveLow: 3 } },
         { type: 'compliance', enabled: false, channels: ['push'], config: {} },
         { type: 'low_score', enabled: true, channels: ['push'], config: { threshold: 60 } },
-      ] as any[]; // Cast to any to avoid strict type issues with Mongo types
+      ] as any[];
+      // We need to save if we modified it OR if it's new
+      await settings.save();
+    } else if (settings.isNew) {
+      // If rules existed (unlikely for new) or just ensuring save for new doc
       await settings.save();
     }
 

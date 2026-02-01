@@ -246,7 +246,32 @@ export function useUpdateNotificationSettings() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<NotificationSettings>) => notificationApi.updateSettings(data),
-    onSuccess: () => {
+    onMutate: async (newData) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: notificationKeys.settings() });
+
+      // Snapshot the previous value
+      const previousSettings = queryClient.getQueryData(notificationKeys.settings());
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(notificationKeys.settings(), (old: NotificationSettings) => ({
+        ...old,
+        ...newData,
+      }));
+
+      // Return a context object with the snapshotted value
+      return { previousSettings };
+    },
+    onError: (err, newTodo, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      queryClient.setQueryData(notificationKeys.settings(), context?.previousSettings);
+    },
+    onSuccess: (data) => {
+      // Update with actual server response
+      queryClient.setQueryData(notificationKeys.settings(), data);
+    },
+    onSettled: () => {
+      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: notificationKeys.settings() });
     },
   });

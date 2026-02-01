@@ -440,7 +440,7 @@ export class AuditService {
 
     // Training needs: find the agent with the lowest score on any parameter
     const trainingNeedsList = stats?.trainingNeeds || [];
-    const primaryTrainingNeed = trainingNeedsList.length > 0
+    let primaryTrainingNeed = trainingNeedsList.length > 0
       ? {
         agentName: trainingNeedsList[0].agentName,
         lowestParam: trainingNeedsList[0].param
@@ -448,7 +448,7 @@ export class AuditService {
       : null;
 
     // Build training needs list for modal (bottom 5 agents by score)
-    const trainingNeedsForModal = underperformingAgents.map((agent: any) => {
+    let trainingNeedsForModal = underperformingAgents.map((agent: any) => {
       // Find worst parameter for this agent
       const agentParams = trainingNeedsList.filter((t: any) => t.agentId === agent.agentId);
       const worstParam = agentParams.length > 0 ? agentParams[0] : null;
@@ -550,8 +550,64 @@ export class AuditService {
         type: data.type
       })).sort((a, b) => b.count - a.count); // Sort desc by count
 
+      // Apply Grouping to Training Needs
+      // We need to regroup stats.trainingNeeds using paramToGroupMap
+      const rawTrainingNeeds = stats?.trainingNeeds || [];
+      const agentGroupedParams = new Map<string, { totalScore: number; count: number }>();
+
+      rawTrainingNeeds.forEach((item: any) => {
+        const rawParam = (item.param || "").trim();
+        const groupName = paramToGroupMap.get(rawParam.toLowerCase()) || rawParam;
+        const key = `${item.agentId}__${groupName}`; // Composite key: AgentID + GroupName
+
+        const current = agentGroupedParams.get(key) || { totalScore: 0, count: 0 };
+        current.totalScore += (item.totalScore || (item.avgScore * item.count));
+        current.count += item.count;
+        agentGroupedParams.set(key, current);
+      });
+
+      // Convert back to list format for processing
+      const groupedTrainingNeeds = Array.from(agentGroupedParams.entries()).map(([key, data]) => {
+        const [agentId, param] = key.split("__");
+        // Find agent name from original list (inefficient but safe)
+        const original = rawTrainingNeeds.find((t: any) => t.agentId === agentId);
+        return {
+          agentId,
+          agentName: original?.agentName || "Unknown",
+          param,
+          avgScore: data.count > 0 ? parseFloat((data.totalScore / data.count).toFixed(1)) : 0,
+          count: data.count
+        };
+      }).sort((a, b) => a.avgScore - b.avgScore); // Sort asc by score (lowest first)
+
+      // Update trainingNeedsList variable
+      const trainingNeedsList = groupedTrainingNeeds;
+
+      primaryTrainingNeed = trainingNeedsList.length > 0
+        ? {
+          agentName: trainingNeedsList[0].agentName,
+          lowestParam: trainingNeedsList[0].param
+        }
+        : null;
+
+      // Build training needs list for modal (bottom 5 agents by score)
+      trainingNeedsForModal = underperformingAgents.map((agent: any) => {
+        // Find worst parameter for this agent from GROUPED list
+        const agentParams = trainingNeedsList.filter((t: any) => t.agentId === agent.agentId);
+        // agentParams is already sorted by avgScore asc
+        const worstParam = agentParams.length > 0 ? agentParams[0] : null;
+
+        return {
+          agentName: agent.agentName,
+          agentId: agent.agentId,
+          score: agent.avgScore,
+          lowestParam: worstParam?.param || "N/A",
+          lowestParamScore: worstParam?.avgScore || 0,
+        };
+      });
+
       // Update the variables used for return
-      topIssues = groupedTopIssues; // Override previous topIssues variable
+      topIssues = groupedTopIssues;
 
     } catch (e) {
       this.logger.error(`Failed to process parameter grouping: ${e.message}`, e.stack);

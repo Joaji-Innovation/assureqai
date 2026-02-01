@@ -6,6 +6,7 @@ import { Injectable, NotFoundException, Logger, Inject, forwardRef, BadRequestEx
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CallAudit, CallAuditDocument } from '../../database/schemas/call-audit.schema';
+import { QAParameter, QAParameterDocument } from '../../database/schemas/qa-parameter.schema';
 import { CreateAuditDto, UpdateAuditDto, AuditFiltersDto } from './dto';
 import { PaginatedResult, LIMITS } from '@assureqai/common';
 import { AlertsService } from '../alerts/alerts.service';
@@ -20,6 +21,7 @@ export class AuditService {
 
   constructor(
     @InjectModel(CallAudit.name) private auditModel: Model<CallAuditDocument>,
+    @InjectModel(QAParameter.name) private qaParameterModel: Model<QAParameterDocument>,
     @Inject(forwardRef(() => AlertsService)) private alertsService: AlertsService,
     @Inject(forwardRef(() => CreditsService)) private creditsService: CreditsService,
   ) { }
@@ -254,6 +256,7 @@ export class AuditService {
                 parameter: "$_id",
                 count: 1,
                 avgScore: { $round: [{ $divide: ["$totalScore", "$count"] }, 1] },
+                totalScore: 1, // Needed for regrouping
                 critical: { $gt: ["$criticalCount", 0] },
                 type: 1,
                 _id: 0
@@ -488,16 +491,81 @@ export class AuditService {
       }
     }
 
-    // Process top issues - filter out FATAL/CRITICAL group
-    const topIssues = (stats?.topIssues || []).filter((issue: any) => {
-      const normalizedParam = issue.parameter?.toUpperCase().replace(/\s/g, "") || "";
-      return normalizedParam !== "FATAL/CRITICAL";
-    });
+    // --- Manual Parameter Grouping / Correction Logic ---
+    // Fetch all active QA Parameters to build a map: SubParam -> GroupName
+    // This allows us to rollup "orphaned" sub-parameters into their parent groups for cleaner charts.
+    var topIssues: any[]; // Declare topIssues with var to allow reassignment
+    try {
+      const allParams = await this.qaParameterModel.find({ isActive: true }).lean().exec();
+      const paramToGroupMap = new Map<string, string>();
 
-    // Calculate Pareto data from top issues
+      allParams.forEach((paramSet) => {
+        if (paramSet.parameters && Array.isArray(paramSet.parameters)) {
+          paramSet.parameters.forEach((group: any) => {
+            // Map sub-parameters to group
+            if (group.subParameters && Array.isArray(group.subParameters)) {
+              group.subParameters.forEach((sub: any) => {
+                if (sub.name) paramToGroupMap.set(sub.name.trim().toLowerCase(), group.name);
+              });
+            }
+            // Map group itself (if used directly)
+            if (group.name) paramToGroupMap.set(group.name.trim().toLowerCase(), group.name);
+          });
+        }
+      });
+
+      // Filter and Re-Group Top Issues
+      const rawTopIssues = (stats?.topIssues || []).filter((issue: any) => {
+        const normalizedParam = issue.parameter?.toUpperCase().replace(/\s/g, "") || "";
+        return normalizedParam !== "FATAL/CRITICAL";
+      });
+
+      const groupedIssuesMap = new Map<string, {
+        count: number;
+        totalScore: number;
+        criticalCount: number;
+        type: string;
+      }>();
+
+      rawTopIssues.forEach((issue: any) => {
+        const rawName = (issue.parameter || "").trim();
+        // Lookup group name, fallback to raw name
+        const groupName = paramToGroupMap.get(rawName.toLowerCase()) || rawName;
+
+        const current = groupedIssuesMap.get(groupName) || { count: 0, totalScore: 0, criticalCount: 0, type: issue.type };
+
+        current.count += issue.count;
+        current.totalScore += (issue.totalScore || (issue.avgScore * issue.count)); // Use totalScore if projected, else approximate
+        if (issue.critical) current.criticalCount++;
+        // Maintain type if consistent, else maybe mix? Usually type follows group.
+        groupedIssuesMap.set(groupName, current);
+      });
+
+      // Convert map back to array & sort
+      const groupedTopIssues = Array.from(groupedIssuesMap.entries()).map(([name, data]) => ({
+        parameter: name,
+        count: data.count,
+        avgScore: data.count > 0 ? parseFloat((data.totalScore / data.count).toFixed(1)) : 0,
+        critical: data.criticalCount > 0,
+        type: data.type
+      })).sort((a, b) => b.count - a.count); // Sort desc by count
+
+      // Update the variables used for return
+      topIssues = groupedTopIssues; // Override previous topIssues variable
+
+    } catch (e) {
+      this.logger.error(`Failed to process parameter grouping: ${e.message}`, e.stack);
+      // Fallback to original if error
+      topIssues = (stats?.topIssues || []).filter((issue: any) => {
+        const normalizedParam = issue.parameter?.toUpperCase().replace(/\s/g, "") || "";
+        return normalizedParam !== "FATAL/CRITICAL";
+      });
+    }
+
+    // Calculate Pareto data from (potentially grouped) top issues
     const totalFailures = topIssues.reduce((sum: number, i: any) => sum + i.count, 0);
     let cumulative = 0;
-    const paretoData = topIssues.slice(0, 10).map((issue: any) => {
+    const paretoData = topIssues.slice(0, 15).map((issue: any) => { // Increased slice to 15 to match frontend
       const frequencyPercentage = totalFailures > 0 ? (issue.count / totalFailures) * 100 : 0;
       cumulative += issue.count;
       return {
@@ -543,14 +611,15 @@ export class AuditService {
       // Charts data
       dailyTrend: filledDailyAuditsTrend,
       dailyFatalTrend: filledDailyFatalTrend,
-      topFailingParams: topIssues.slice(0, 5).map((issue: any) => ({
-        parameterName: issue.parameter, // Keep old property name if needed for compatibility, or transition
+      // Use slice(0, 10) for charts as requested
+      topFailingParams: topIssues.slice(0, 10).map((issue: any) => ({
+        parameterName: issue.parameter,
         count: issue.count,
         critical: issue.critical,
         avgScore: issue.avgScore,
         type: issue.type,
       })),
-      topIssues: topIssues.slice(0, 5).map((issue: any) => ({
+      topIssues: topIssues.slice(0, 10).map((issue: any) => ({
         id: issue.parameter,
         reason: issue.parameter,
         count: issue.count,

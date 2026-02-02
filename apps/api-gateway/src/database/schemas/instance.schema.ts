@@ -47,6 +47,9 @@ export class VpsConfig {
 
 // Credit limits sub-schema
 export class CreditLimits {
+  @Prop({ enum: ['prepaid', 'postpaid'], default: 'prepaid' })
+  billingType: 'prepaid' | 'postpaid';
+
   @Prop({ default: 0 })
   totalAudits: number;
 
@@ -58,6 +61,12 @@ export class CreditLimits {
 
   @Prop({ default: 0 })
   usedTokens: number;
+
+  @Prop({ default: 0 })
+  totalApiCalls: number; // Total API calls made
+
+  @Prop()
+  lastResetAt?: Date; // For monthly reset cycles
 }
 
 // Database configuration sub-schema

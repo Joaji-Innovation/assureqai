@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { QueueService } from './queue.service';
 import { QueueWorkerService } from './queue-worker.service';
 import { AiModule } from '../ai/ai.module';
+import { AuditReportModule } from '../audit-report/audit-report.module';
 import { CallAudit, CallAuditSchema } from '../../database/schemas/call-audit.schema';
 import { Campaign, CampaignSchema } from '../../database/schemas/campaign.schema';
 import { QAParameter, QAParameterSchema } from '../../database/schemas/qa-parameter.schema';
@@ -20,6 +21,7 @@ import { QAParameter, QAParameterSchema } from '../../database/schemas/qa-parame
       { name: QAParameter.name, schema: QAParameterSchema },
     ]),
     forwardRef(() => AiModule),
+    AuditReportModule,
   ],
   providers: [QueueService, QueueWorkerService],
   exports: [QueueService, QueueWorkerService],

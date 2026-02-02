@@ -100,4 +100,25 @@ export class InstanceController {
   async removeCustomDomain(@Param('id') id: string) {
     return this.instanceService.removeCustomDomain(id);
   }
+
+  // ===== API Key Management =====
+
+  @Post(':id/regenerate-api-key')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Regenerate API key for instance' })
+  async regenerateApiKey(@Param('id') id: string) {
+    return this.instanceService.regenerateApiKey(id);
+  }
+
+  // ===== Billing Management =====
+
+  @Put(':id/billing-type')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Update billing type (prepaid/postpaid)' })
+  async updateBillingType(
+    @Param('id') id: string,
+    @Body() dto: { billingType: 'prepaid' | 'postpaid' },
+  ) {
+    return this.instanceService.updateBillingType(id, dto.billingType);
+  }
 }

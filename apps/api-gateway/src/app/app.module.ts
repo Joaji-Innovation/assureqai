@@ -38,6 +38,7 @@ import { ProvisioningModule } from '../modules/provisioning/provisioning.module'
 import { BackupModule } from '../modules/backup/backup.module';
 import { CreditsModule } from '../modules/credits/credits.module';
 import { NotificationsModule } from '../modules/notifications/notifications.module';
+import { AuditReportModule } from '../modules/audit-report/audit-report.module';
 
 // Config
 import { WinstonLoggerConfig } from '../config/logger.config';
@@ -109,6 +110,7 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     BackupModule,
     CreditsModule,
     NotificationsModule,
+    AuditReportModule,
   ],
   controllers: [AppController],
   providers: [

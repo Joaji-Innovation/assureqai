@@ -102,7 +102,7 @@ export interface Instance {
   name?: string;
   clientId?: string;
   plan?: string;
-  status: 'running' | 'stopped' | 'provisioning' | 'error';
+  status: 'running' | 'stopped' | 'provisioning' | 'error' | 'active' | 'suspended';
   region?: string;
   version?: string;
   cpu?: number;
@@ -113,6 +113,19 @@ export interface Instance {
     subdomain: string;
     customDomain?: string;
   };
+  apiKey?: string;
+  credits?: {
+    billingType: 'prepaid' | 'postpaid';
+    totalAudits: number;
+    usedAudits: number;
+    totalTokens: number;
+    usedTokens: number;
+    totalApiCalls: number;
+  };
+  limits?: {
+    maxUsers: number;
+    maxStorage: string;
+  };
   createdAt: string;
 }
 
@@ -122,6 +135,9 @@ export const instanceApi = {
   update: (id: string, data: any) => request<Instance>(`/api/admin/instances/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getLogs: (id: string) => request<any[]>(`/api/admin/instances/${id}/logs`),
   getDomains: (id: string) => request<any>(`/api/admin/instances/${id}/domains`),
+  regenerateApiKey: (id: string) => request<{ apiKey: string }>(`/api/admin/instances/${id}/regenerate-api-key`, { method: 'POST' }),
+  updateBillingType: (id: string, billingType: 'prepaid' | 'postpaid') =>
+    request<Instance>(`/api/admin/instances/${id}/billing-type`, { method: 'PUT', body: JSON.stringify({ billingType }) }),
 
   // Simulated methods for actions not yet supported by backend
   start: async (id: string) => { await new Promise(r => setTimeout(r, 1000)); return true; },

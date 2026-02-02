@@ -319,4 +319,25 @@ export class InstanceService {
   private generateApiKey(): string {
     return `aq_${randomBytes(24).toString('hex')}`;
   }
+
+  // Regenerate API key for an instance
+  async regenerateApiKey(id: string): Promise<{ apiKey: string }> {
+    const newApiKey = this.generateApiKey();
+    await this.instanceModel.findByIdAndUpdate(id, { apiKey: newApiKey });
+    return { apiKey: newApiKey };
+  }
+
+  // Update billing type
+  async updateBillingType(id: string, billingType: 'prepaid' | 'postpaid'): Promise<Instance> {
+    return this.update(id, {
+      'credits.billingType': billingType,
+    } as any);
+  }
+
+  // Increment API call counter (called by ApiKeyGuard or middleware)
+  async incrementApiCalls(id: string): Promise<void> {
+    await this.instanceModel.findByIdAndUpdate(id, {
+      $inc: { 'credits.totalApiCalls': 1 },
+    });
+  }
 }

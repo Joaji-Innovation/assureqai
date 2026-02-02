@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { QueueService, QueueJob } from './queue.service';
 import { AiService } from '../ai/ai.service';
+import { UsageReporterService } from '../audit-report/usage-reporter.service';
 import { CallAudit, CallAuditDocument } from '../../database/schemas/call-audit.schema';
 import { Campaign, CampaignDocument } from '../../database/schemas/campaign.schema';
 import { QAParameter, QAParameterDocument } from '../../database/schemas/qa-parameter.schema';
@@ -32,6 +33,7 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
     private configService: ConfigService,
     private queueService: QueueService,
     private aiService: AiService,
+    private usageReporter: UsageReporterService,
     @InjectModel(CallAudit.name) private auditModel: Model<CallAuditDocument>,
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     @InjectModel(QAParameter.name) private qaParameterModel: Model<QAParameterDocument>,
@@ -132,6 +134,23 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
       const duration = Date.now() - startTime;
       this.logger.log(`Job ${job.id} completed in ${duration}ms, score: ${auditResult.overallScore}`);
+
+      // Report usage to admin panel (for isolated instances)
+      this.usageReporter.reportAudit({
+        auditId: audit._id.toString(),
+        agentName: job.agentName,
+        callId: job.callId,
+        auditType: 'bulk',
+        overallScore: auditResult.overallScore,
+        maxPossibleScore: 100,
+        processingDurationMs: duration,
+        inputTokens: auditResult.tokenUsage?.inputTokens || 0,
+        outputTokens: auditResult.tokenUsage?.outputTokens || 0,
+        totalTokens: auditResult.tokenUsage?.totalTokens || 0,
+        parametersCount: qaParameterSet.parameters.length,
+        sentiment: auditResult.sentiment,
+        passStatus: auditResult.overallScore >= 70 ? 'pass' : 'fail',
+      }).catch(() => { }); // Fire and forget
 
       // Check if campaign is complete
       await this.checkCampaignCompletion(job.campaignId);

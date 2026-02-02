@@ -237,10 +237,19 @@ export class UsersService {
   }
 
   /**
-   * Ensure user has a project - auto-create if missing
+   * Ensure user has a project - use existing or create if missing
    */
   private async ensureUserHasProject(user: UserDocument): Promise<ProjectDocument> {
-    // Create a default project for this user
+    // First, check if there's already a project in the database we can use
+    // This handles the case where parameters/data were created before multi-project support
+    const existingProject = await this.projectModel.findOne({ isActive: true }).sort({ createdAt: 1 }).exec();
+
+    if (existingProject) {
+      this.logger.log(`Assigned existing project ${existingProject._id} (${existingProject.name}) to user ${user.username}`);
+      return existingProject;
+    }
+
+    // No existing project found, create a new one
     const project = new this.projectModel({
       name: `${user.username}'s Project`,
       description: `Default project for ${user.fullName || user.username}`,

@@ -16,7 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SopService } from './sop.service';
 import { RequirePermissions, CurrentUser } from '@assureqai/auth';
-import { PERMISSIONS, JwtPayload } from '@assureqai/common';
+import { PERMISSIONS, JwtPayload, ROLES } from '@assureqai/common';
 
 @ApiTags('SOPs')
 @ApiBearerAuth()
@@ -87,7 +87,9 @@ export class SopController {
   @Get()
   @ApiOperation({ summary: 'Get all SOPs' })
   async findAll(@CurrentUser() user: JwtPayload) {
-    return this.sopService.findByProject(user.projectId);
+    // Super admins see all data, others scoped to their project
+    const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
+    return this.sopService.findByProject(projectId);
   }
 
   @Get(':id')

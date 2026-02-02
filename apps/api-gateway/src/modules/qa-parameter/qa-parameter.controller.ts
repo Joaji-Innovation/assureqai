@@ -80,8 +80,9 @@ export class QaParameterController {
   @Get()
   @ApiOperation({ summary: 'Get all QA parameter sets' })
   async findAll(@CurrentUser() user: JwtPayload) {
-    // Scope to user's project
-    return this.qaParameterService.findByProject(user.projectId);
+    // Super admins see all data, others scoped to their project
+    const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
+    return this.qaParameterService.findByProject(projectId);
   }
 
   @Get(':id')

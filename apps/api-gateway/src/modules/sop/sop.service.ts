@@ -36,7 +36,10 @@ export class SopService {
   }
 
   async findByProject(projectId?: string): Promise<Sop[]> {
-    const filter = projectId ? { projectId: new Types.ObjectId(projectId) } : {};
+    // Include orphan SOPs (no projectId) for backward compatibility
+    const filter = projectId
+      ? { $or: [{ projectId: new Types.ObjectId(projectId) }, { projectId: { $exists: false } }, { projectId: null }] }
+      : {};
     return this.sopModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 

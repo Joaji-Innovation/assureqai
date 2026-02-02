@@ -87,13 +87,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         setIsLoadingAuth(false);
       } catch (error: any) {
         console.error('Error fetching user details:', error);
-        // Only redirect on auth errors, not network errors
-        if (error.message.includes('401') || error.message.includes('403')) {
-          router.push('/login');
-        } else {
-          // Keep loading false but don't redirect (maybe show error toast?)
-          setIsLoadingAuth(false);
-        }
+        // If we can't fetch user details, they're not authenticated - redirect to login
+        router.push('/login');
       }
     };
     fetchUserDetails();

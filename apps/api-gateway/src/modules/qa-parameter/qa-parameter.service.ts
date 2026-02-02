@@ -27,7 +27,11 @@ export class QaParameterService {
   }
 
   async findByProject(projectId?: string): Promise<QAParameter[]> {
-    const filter = projectId ? { projectId: new Types.ObjectId(projectId) } : {};
+    // If projectId provided, return parameters for that project OR orphan parameters (no projectId)
+    // This ensures backward compatibility with data created before multi-project support
+    const filter = projectId
+      ? { $or: [{ projectId: new Types.ObjectId(projectId) }, { projectId: { $exists: false } }, { projectId: null }] }
+      : {};
     return this.qaParameterModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 

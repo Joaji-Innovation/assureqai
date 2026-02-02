@@ -9,20 +9,35 @@ import * as nodemailer from 'nodemailer';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter;
+  private isConfigured: boolean = false;
 
   constructor(private configService: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST', 'smtp.sendgrid.net'),
-      port: this.configService.get('SMTP_PORT', 587),
-      secure: false,
-      auth: {
-        user: this.configService.get('SMTP_USER', 'apikey'),
-        pass: this.configService.get('SMTP_PASSWORD', ''),
-      },
-    });
+    const smtpPassword = this.configService.get('SMTP_PASSWORD', '');
+
+    if (!smtpPassword) {
+      this.logger.warn('SMTP_PASSWORD not configured - email sending will be disabled');
+      this.isConfigured = false;
+    } else {
+      this.transporter = nodemailer.createTransport({
+        host: this.configService.get('SMTP_HOST', 'smtp.sendgrid.net'),
+        port: this.configService.get('SMTP_PORT', 587),
+        secure: false,
+        auth: {
+          user: this.configService.get('SMTP_USER', 'apikey'),
+          pass: smtpPassword,
+        },
+      });
+      this.isConfigured = true;
+      this.logger.log(`Email service configured with host: ${this.configService.get('SMTP_HOST', 'smtp.sendgrid.net')}`);
+    }
   }
 
-  async sendEmail(to: string, subject: string, html: string): Promise<{ success: boolean; messageId?: string }> {
+  async sendEmail(to: string, subject: string, html: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (!this.isConfigured) {
+      this.logger.warn('Email not sent - SMTP not configured');
+      return { success: false, error: 'SMTP not configured' };
+    }
+
     try {
       const info = await this.transporter.sendMail({
         from: this.configService.get('SMTP_FROM', 'noreply@assureqai.com'),
@@ -31,11 +46,12 @@ export class EmailService {
         html,
       });
 
-      this.logger.log(`Email sent: ${info.messageId}`);
+      this.logger.log(`Email sent to ${to}: ${info.messageId}`);
       return { success: true, messageId: info.messageId };
-    } catch (error) {
-      this.logger.error('Failed to send email:', error);
-      return { success: false };
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      this.logger.error(`Failed to send email to ${to}: ${errorMessage}`);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -47,7 +63,7 @@ export class EmailService {
     );
     return {
       success: result.success,
-      message: result.success ? 'Test email sent successfully' : 'Failed to send test email',
+      message: result.success ? 'Test email sent successfully' : `Failed to send test email: ${result.error}`,
     };
   }
 

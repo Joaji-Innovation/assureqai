@@ -8,6 +8,7 @@ import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../../database/schemas/user.schema';
+import { Project, ProjectDocument } from '../../database/schemas/project.schema';
 import { CreateUserDto, UpdateUserDto, LoginDto } from './dto';
 import { PaginatedResult, LIMITS, JwtPayload, ROLES } from '@assureqai/common';
 import { Response } from 'express';
@@ -20,8 +21,9 @@ export class UsersService {
 
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * Create a new user
@@ -80,6 +82,12 @@ export class UsersService {
     if ((user.role as any) === 'Administrator') {
       user.role = ROLES.SUPER_ADMIN;
       this.logger.warn(`Migrated legacy user ${user.username} from Administrator to super_admin`);
+    }
+
+    // Auto-create default project if user doesn't have one
+    if (!user.projectId) {
+      const project = await this.ensureUserHasProject(user);
+      user.projectId = project._id;
     }
 
     // Update last login
@@ -226,5 +234,26 @@ export class UsersService {
 
     user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await user.save();
+  }
+
+  /**
+   * Ensure user has a project - auto-create if missing
+   */
+  private async ensureUserHasProject(user: UserDocument): Promise<ProjectDocument> {
+    // Create a default project for this user
+    const project = new this.projectModel({
+      name: `${user.username}'s Project`,
+      description: `Default project for ${user.fullName || user.username}`,
+      isActive: true,
+      settings: {
+        language: 'en',
+        timezone: 'UTC',
+      },
+    });
+
+    const savedProject = await project.save();
+    this.logger.log(`Auto-created default project ${savedProject._id} for user ${user.username}`);
+
+    return savedProject;
   }
 }

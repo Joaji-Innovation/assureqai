@@ -12,6 +12,7 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService, UpdateSettingsDto, CreateWebhookDto, UpdateWebhookDto } from './notifications.service';
@@ -86,7 +87,7 @@ export class NotificationsController {
   ) {
     const projectId = await this.resolveProjectId(user);
     if (!projectId) {
-      return { error: 'No project associated with user' };
+      throw new BadRequestException('No project associated with user. Please log out and log in again.');
     }
     return this.notificationsService.updateSettings(projectId, dto);
   }
@@ -119,7 +120,7 @@ export class NotificationsController {
   ) {
     const projectId = await this.resolveProjectId(user);
     if (!projectId) {
-      return { error: 'No project associated with user' };
+      throw new BadRequestException('No project associated with user. Please log out and log in again.');
     }
     return this.notificationsService.createWebhook(projectId, dto);
   }

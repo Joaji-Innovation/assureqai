@@ -407,11 +407,33 @@ export interface Campaign {
   _id: string;
   name: string;
   description?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
   totalJobs: number;
   completedJobs: number;
   failedJobs: number;
+  qaParameterSetId?: string;
+  projectId?: string;
+  createdBy?: string;
+  startedAt?: string;
+  completedAt?: string;
   createdAt: string;
+  jobs?: {
+    audioUrl: string;
+    agentName?: string;
+    callId?: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    auditId?: string;
+    error?: string;
+  }[];
+}
+
+export interface CreateCampaignPayload {
+  name: string;
+  description?: string;
+  qaParameterSetId: string;
+  projectId?: string;
+  applyRateLimit?: boolean;
+  jobs: Array<{ audioUrl: string; agentName?: string; callId?: string }>;
 }
 
 export const campaignApi = {
@@ -423,11 +445,17 @@ export const campaignApi = {
   getById: (id: string) =>
     request<Campaign>(`/api/campaigns/${id}`),
 
-  create: (data: { name: string; description?: string; jobs: Array<{ audioUrl: string; agentName?: string; callId?: string }> }) =>
+  create: (data: CreateCampaignPayload) =>
     request<Campaign>('/api/campaigns', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  cancel: (id: string) =>
+    request<Campaign>(`/api/campaigns/${id}/cancel`, { method: 'PUT' }),
+
+  delete: (id: string) =>
+    request<void>(`/api/campaigns/${id}`, { method: 'DELETE' }),
 
   getStatus: (id: string) =>
     request<{ status: string; progress: number; completedJobs: number; totalJobs: number }>(`/api/campaigns/${id}/status`),

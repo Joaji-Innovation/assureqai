@@ -1,11 +1,6 @@
-audio_url,agent_name,call_id
-https://storage.example.com/calls/call-001.mp3,John Smith,CALL-2026-001
-https://storage.example.com/calls/call-002.mp3,Sarah Johnson,CALL-2026-002
-https://storage.example.com/calls/call-003.mp3,Mike Williams,CALL-2026-003
-https://storage.example.com/calls/call-004.mp3,Emily Davis,CALL-2026-004
-https://storage.example.com/calls/call-005.mp3,Chris Brown,CALL-2026-005
-https://storage.example.com/calls/call-006.mp3,Amanda Miller,CALL-2026-006
-https://storage.example.com/calls/call-007.mp3,David Wilson,CALL-2026-007
-https://storage.example.com/calls/call-008.mp3,Jessica Taylor,CALL-2026-008
-https://storage.example.com/calls/call-009.mp3,Daniel Anderson,CALL-2026-009
-https://storage.example.com/calls/call-010.mp3,Rachel Thomas,CALL-2026-010
+Full_Name,employee_id,RID-Phone #,(S3) recording_url,call_type,customer_name
+John Doe,EMP001,9876543210,https://example.com/recordings/call1.wav,Support,Customer A
+Jane Smith,EMP002,9876543211,https://example.com/recordings/call2.wav,Connect,Customer B
+Mike Johnson,EMP003,9876543212,https://example.com/recordings/call3.wav,Support,Customer C
+Sarah Williams,EMP004,9876543213,https://example.com/recordings/call4.wav,Connect,Customer D
+Tom Brown,EMP005,9876543214,https://example.com/recordings/call5.wav,Support,Customer E

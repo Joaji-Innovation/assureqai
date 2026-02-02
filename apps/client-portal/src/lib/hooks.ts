@@ -199,7 +199,7 @@ export function useCampaignStatus(id: string) {
 export function useCreateCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; jobs: Array<{ audioUrl: string; agentName?: string; callId?: string }> }) =>
+    mutationFn: (data: { name: string; description?: string; qaParameterSetId: string; projectId?: string; applyRateLimit?: boolean; jobs: Array<{ audioUrl: string; agentName?: string; callId?: string }> }) =>
       campaignApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });

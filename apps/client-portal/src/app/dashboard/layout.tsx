@@ -60,15 +60,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuditsOpen, setIsAuditsOpen] = useState(true);
 
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
         const userData = await authApi.me();
         // Cast to User type or ensure types match
         setCurrentUser(userData as unknown as User);
-      } catch (error) {
+        setIsLoadingAuth(false);
+      } catch (error: any) {
         console.error('Error fetching user details:', error);
-        router.push('/login');
+        // Only redirect on auth errors, not network errors
+        if (error.message.includes('401') || error.message.includes('403')) {
+          router.push('/login');
+        } else {
+          // Keep loading false but don't redirect (maybe show error toast?)
+          setIsLoadingAuth(false);
+        }
       }
     };
     fetchUserDetails();
@@ -219,8 +228,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isAuditGroupActive]);
 
-  if (!isClient) {
-    return null;
+  if (!isClient || isLoadingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent" />
+          <p className="text-sm text-muted-foreground animate-pulse">Verifying credentials...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleLogout = async () => {

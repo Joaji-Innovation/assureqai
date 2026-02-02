@@ -17,12 +17,33 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { NotificationsService, UpdateSettingsDto, CreateWebhookDto, UpdateWebhookDto } from './notifications.service';
 import { CurrentUser, RequirePermissions } from '@assureqai/auth';
 import { JwtPayload, PERMISSIONS, ROLES } from '@assureqai/common';
+import { UsersService } from '../users/users.service';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) { }
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly usersService: UsersService,
+  ) { }
+
+  /**
+   * Helper to resolve project ID if missing in JWT (e.g. for super admins or legacy tokens)
+   */
+  private async resolveProjectId(user: JwtPayload): Promise<string | null> {
+    if (user.projectId) return user.projectId;
+
+    // Try to fetch user from DB
+    try {
+      const dbUser = await this.usersService.findById(user.sub);
+      if (dbUser.projectId) return dbUser.projectId.toString();
+    } catch (e) {
+      console.warn(`[NotificationsController] Failed to resolve project for user ${user.sub}`);
+    }
+
+    return null;
+  }
 
   /**
    * Get notification settings for current project
@@ -32,9 +53,10 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get notification settings' })
   @ApiResponse({ status: 200, description: 'Settings retrieved' })
   async getSettings(@CurrentUser() user: JwtPayload) {
-    console.log(`[NotificationsController] getSettings called for user: ${user?.username} (${user?.role}), projectId: ${user?.projectId}`);
+    const projectId = await this.resolveProjectId(user);
+    console.log(`[NotificationsController] getSettings called for user: ${user?.username} (${user?.role}), projectId: ${projectId}`);
 
-    if (!user.projectId) {
+    if (!projectId) {
       console.warn('[NotificationsController] No projectId found for user, returning empty defaults');
       return {
         _id: 'virtual-empty',
@@ -46,7 +68,7 @@ export class NotificationsController {
       };
     }
 
-    const settings = await this.notificationsService.getSettings(user.projectId);
+    const settings = await this.notificationsService.getSettings(projectId);
     console.log(`[NotificationsController] Retrieved settings for project ${user.projectId}: rules=${settings?.alertRules?.length || 0}`);
     return settings;
   }
@@ -62,10 +84,11 @@ export class NotificationsController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateSettingsDto,
   ) {
-    if (!user.projectId) {
+    const projectId = await this.resolveProjectId(user);
+    if (!projectId) {
       return { error: 'No project associated with user' };
     }
-    return this.notificationsService.updateSettings(user.projectId, dto);
+    return this.notificationsService.updateSettings(projectId, dto);
   }
 
   /**
@@ -76,10 +99,11 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get webhooks' })
   @ApiResponse({ status: 200, description: 'Webhooks retrieved' })
   async getWebhooks(@CurrentUser() user: JwtPayload) {
-    if (!user.projectId) {
+    const projectId = await this.resolveProjectId(user);
+    if (!projectId) {
       return [];
     }
-    return this.notificationsService.getWebhooks(user.projectId);
+    return this.notificationsService.getWebhooks(projectId);
   }
 
   /**
@@ -93,10 +117,11 @@ export class NotificationsController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateWebhookDto,
   ) {
-    if (!user.projectId) {
+    const projectId = await this.resolveProjectId(user);
+    if (!projectId) {
       return { error: 'No project associated with user' };
     }
-    return this.notificationsService.createWebhook(user.projectId, dto);
+    return this.notificationsService.createWebhook(projectId, dto);
   }
 
   /**

@@ -40,9 +40,24 @@ import {
   Bell,
   AlertTriangle,
   Scale,
+  ChevronsUpDown,
+  Sparkles,
+  BadgeCheck,
+  CreditCard,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { useTheme } from 'next-themes';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { authApi } from '@/lib/api';
 
 interface User {
@@ -59,6 +74,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuditsOpen, setIsAuditsOpen] = useState(true);
+  const { theme, setTheme } = useTheme();
 
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
@@ -414,42 +430,85 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border/30 bg-sidebar/10">
-          {currentUser && (
-            <div className={`flex items-center gap-3 p-2 rounded-xl transition-all duration-300 group-data-[collapsible=icon]:justify-center hover:bg-sidebar-accent/50 cursor-pointer overflow-hidden`}>
-              <div className="relative shrink-0">
-                <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary/80 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
-                  {currentUser.fullName ? currentUser.fullName.substring(0, 2).toUpperCase() : 'AQ'}
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-sidebar-background"></div>
-              </div>
-
-              <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden animate-in fade-in slide-in-from-left-2 duration-300">
-                <span className="text-sm font-semibold truncate text-sidebar-foreground">
-                  {currentUser.fullName || 'User'}
-                </span>
-                <span className="text-xs text-sidebar-foreground/60 truncate">
-                  {currentUser.email || currentUser.username}
-                </span>
-              </div>
-
-              <div className="ml-auto group-data-[collapsible=icon]:hidden">
-                <ThemeSwitcher />
-              </div>
-            </div>
-          )}
-
-          <div className="mt-1">
+          <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={handleLogout}
-                tooltip={isMobile ? undefined : 'Log out'}
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors justify-start px-3 py-2.5 rounded-xl font-medium w-full group-data-[collapsible=icon]:justify-center"
-              >
-                <LogOut className="h-5 w-5 mr-3 group-data-[collapsible=icon]:mr-0" />
-                <span className="group-data-[collapsible=icon]:hidden">Log out</span>
-              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    {currentUser && (
+                      <>
+                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/80 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm shrink-0">
+                          {currentUser.fullName ? currentUser.fullName.substring(0, 2).toUpperCase() : 'AQ'}
+                        </div>
+                        <div className="grid flex-1 text-left text-sm leading-tight">
+                          <span className="truncate font-semibold">{currentUser.fullName || 'User'}</span>
+                          <span className="truncate text-xs">{currentUser.email || currentUser.username}</span>
+                        </div>
+                        <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                      </>
+                    )}
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side={isMobile ? "bottom" : "right"}
+                  align="end"
+                  sideOffset={4}
+                >
+                  <DropdownMenuLabel className="p-0 font-normal">
+                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/80 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm shrink-0">
+                        {currentUser?.fullName ? currentUser.fullName.substring(0, 2).toUpperCase() : 'AQ'}
+                      </div>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">{currentUser?.fullName || 'User'}</span>
+                        <span className="truncate text-xs">{currentUser?.email || currentUser?.username}</span>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Upgrade to Pro
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
+                      <BadgeCheck className="mr-2 h-4 w-4" />
+                      Account
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Billing
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/dashboard/notifications')}>
+                      <Bell className="mr-2 h-4 w-4" />
+                      Notifications
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                    {theme === 'dark' ? (
+                      <Sun className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Moon className="mr-2 h-4 w-4" />
+                    )}
+                    Toggle Theme ({theme === 'dark' ? 'Light' : 'Dark'})
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
-          </div>
+          </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
 

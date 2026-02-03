@@ -340,4 +340,27 @@ export class InstanceService {
       $inc: { 'credits.totalApiCalls': 1 },
     });
   }
+
+  // Update instance limits (maxUsers, maxStorage)
+  async updateLimits(id: string, limits: { maxUsers?: number; maxStorage?: string }): Promise<Instance> {
+    const updateData: any = {};
+    if (limits.maxUsers !== undefined) updateData['limits.maxUsers'] = limits.maxUsers;
+    if (limits.maxStorage !== undefined) updateData['limits.maxStorage'] = limits.maxStorage;
+    return this.update(id, updateData);
+  }
+
+  // Update instance credits (totalAudits, totalTokens)
+  async updateCredits(id: string, credits: {
+    totalAudits?: number;
+    totalTokens?: number;
+    usedAudits?: number;
+    usedTokens?: number;
+  }): Promise<Instance> {
+    const updateData: any = {};
+    if (credits.totalAudits !== undefined) updateData['credits.totalAudits'] = credits.totalAudits;
+    if (credits.totalTokens !== undefined) updateData['credits.totalTokens'] = credits.totalTokens;
+    if (credits.usedAudits !== undefined) updateData['credits.usedAudits'] = credits.usedAudits;
+    if (credits.usedTokens !== undefined) updateData['credits.usedTokens'] = credits.usedTokens;
+    return this.update(id, updateData);
+  }
 }

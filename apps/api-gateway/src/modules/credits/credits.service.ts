@@ -6,13 +6,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Credits, CreditsDocument } from '../../database/schemas/credits.schema';
 import { CreditTransaction, CreditTransactionDocument } from '../../database/schemas/credit-transaction.schema';
+import { Instance, InstanceDocument } from '../../database/schemas/instance.schema';
 
 @Injectable()
 export class CreditsService {
   constructor(
     @InjectModel(Credits.name) private creditsModel: Model<CreditsDocument>,
     @InjectModel(CreditTransaction.name) private transactionModel: Model<CreditTransactionDocument>,
-  ) {}
+    @InjectModel(Instance.name) private instanceModel: Model<InstanceDocument>,
+  ) { }
 
   /**
    * Initialize credits for a new instance
@@ -163,6 +165,11 @@ export class CreditsService {
       { new: true }
     ).exec();
 
+    // Sync to Instance collection for admin panel visibility
+    await this.instanceModel.findByIdAndUpdate(instanceId, {
+      $inc: { 'credits.usedAudits': amount },
+    }).exec();
+
     await this.logTransaction(instanceId, {
       type: 'use',
       creditType: 'audit',
@@ -195,6 +202,11 @@ export class CreditsService {
       },
       { new: true }
     ).exec();
+
+    // Sync to Instance collection for admin panel visibility
+    await this.instanceModel.findByIdAndUpdate(instanceId, {
+      $inc: { 'credits.usedTokens': amount },
+    }).exec();
 
     await this.logTransaction(instanceId, {
       type: 'use',
@@ -274,8 +286,8 @@ export class CreditsService {
       ? Math.round((credits.tokenCredits / credits.totalTokenCreditsAllocated) * 100)
       : 0;
 
-    const isTrialExpired = credits.instanceType === 'trial' 
-      && credits.trialExpiresAt 
+    const isTrialExpired = credits.instanceType === 'trial'
+      && credits.trialExpiresAt
       && new Date() > credits.trialExpiresAt;
 
     return {
@@ -302,7 +314,7 @@ export class CreditsService {
    */
   private async checkLowCreditAlert(instanceId: string): Promise<void> {
     const credits = await this.getByInstance(instanceId);
-    
+
     if (credits.lowCreditAlertSent) return;
 
     const auditPercentage = credits.totalAuditCreditsAllocated > 0

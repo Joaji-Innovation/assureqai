@@ -121,4 +121,26 @@ export class InstanceController {
   ) {
     return this.instanceService.updateBillingType(id, dto.billingType);
   }
+
+  // ===== Limits & Credits Management =====
+
+  @Put(':id/limits')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Update instance limits (maxUsers, maxStorage)' })
+  async updateLimits(
+    @Param('id') id: string,
+    @Body() dto: { maxUsers?: number; maxStorage?: string },
+  ) {
+    return this.instanceService.updateLimits(id, dto);
+  }
+
+  @Put(':id/credits')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Update instance credits (totalAudits, totalTokens)' })
+  async updateCredits(
+    @Param('id') id: string,
+    @Body() dto: { totalAudits?: number; totalTokens?: number; usedAudits?: number; usedTokens?: number },
+  ) {
+    return this.instanceService.updateCredits(id, dto);
+  }
 }

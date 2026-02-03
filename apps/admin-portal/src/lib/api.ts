@@ -138,6 +138,10 @@ export const instanceApi = {
   regenerateApiKey: (id: string) => request<{ apiKey: string }>(`/api/admin/instances/${id}/regenerate-api-key`, { method: 'POST' }),
   updateBillingType: (id: string, billingType: 'prepaid' | 'postpaid') =>
     request<Instance>(`/api/admin/instances/${id}/billing-type`, { method: 'PUT', body: JSON.stringify({ billingType }) }),
+  updateLimits: (id: string, limits: { maxUsers?: number; maxStorage?: string }) =>
+    request<Instance>(`/api/admin/instances/${id}/limits`, { method: 'PUT', body: JSON.stringify(limits) }),
+  updateCredits: (id: string, credits: { totalAudits?: number; totalTokens?: number; usedAudits?: number; usedTokens?: number }) =>
+    request<Instance>(`/api/admin/instances/${id}/credits`, { method: 'PUT', body: JSON.stringify(credits) }),
 
   // Simulated methods for actions not yet supported by backend
   start: async (id: string) => { await new Promise(r => setTimeout(r, 1000)); return true; },
@@ -183,6 +187,43 @@ export const creditsApi = {
     request<void>(`/api/admin/credits/${instanceId}/token`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// Ticket interface and API
+export interface Ticket {
+  _id: string;
+  ticketNumber: string;
+  subject: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  createdBy: string;
+  createdByName: string;
+  assignedTo?: string;
+  assignedToName?: string;
+  projectId?: string;
+  messages: any[];
+  createdAt: string;
+  resolvedAt?: string;
+  closedAt?: string;
+}
+
+export const ticketApi = {
+  list: (filters?: { status?: string; priority?: string; search?: string }) =>
+    request<Ticket[]>('/api/tickets', { params: filters as any }),
+  getById: (id: string) =>
+    request<Ticket>(`/api/tickets/${id}`),
+  getStats: () =>
+    request<any>('/api/tickets/stats'),
+  update: (id: string, data: any) =>
+    request<Ticket>(`/api/tickets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  assign: (id: string, assignedTo: string, assignedToName: string) =>
+    request<Ticket>(`/api/tickets/${id}/assign`, { method: 'PUT', body: JSON.stringify({ assignedTo, assignedToName }) }),
+  updateStatus: (id: string, status: string) =>
+    request<Ticket>(`/api/tickets/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  addMessage: (id: string, content: string, isInternal: boolean = false) =>
+    request<Ticket>(`/api/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ content, isInternal }) }),
+};
+
 export default {
   auth: authApi,
   audit: auditApi,
@@ -192,4 +233,6 @@ export default {
   user: userApi,
   backup: backupApi,
   credits: creditsApi,
+  ticket: ticketApi,
 };
+

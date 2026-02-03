@@ -696,6 +696,36 @@ export const notificationApi = {
     }),
 };
 
+// Ticket API
+export interface Ticket {
+  _id: string;
+  ticketNumber: string;
+  subject: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  createdBy: string;
+  createdByName: string;
+  assignedTo?: string;
+  assignedToName?: string;
+  messages: any[];
+  createdAt: string;
+}
+
+export const ticketApi = {
+  list: (filters?: { status?: string; search?: string }) =>
+    request<Ticket[]>('/api/tickets', { params: filters as any }),
+  getById: (id: string) =>
+    request<Ticket>(`/api/tickets/${id}`),
+  getStats: () =>
+    request<any>('/api/tickets/stats'),
+  create: (data: { subject: string; description: string; category?: string; priority?: string }) =>
+    request<Ticket>('/api/tickets', { method: 'POST', body: JSON.stringify(data) }),
+  addMessage: (id: string, content: string, isInternal: boolean = false) =>
+    request<Ticket>(`/api/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ content, isInternal }) }),
+};
+
 export default {
   auth: authApi,
   audit: auditApi,
@@ -707,4 +737,6 @@ export default {
   sop: sopApi,
   alert: alertApi,
   notification: notificationApi,
+  ticket: ticketApi,
 };
+

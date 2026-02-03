@@ -205,7 +205,11 @@ export default function InstancesPage() {
                     Start
                   </button>
                 ) : null}
-                <button className="p-2 rounded-lg border border-border hover:bg-muted transition-colors">
+                <button
+                  onClick={() => window.location.href = `/dashboard/instances/${instance._id}`}
+                  className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+                  title="Configure Instance"
+                >
                   <Settings className="h-4 w-4" />
                 </button>
               </div>

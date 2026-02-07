@@ -36,7 +36,7 @@ export const Navbar = () => {
       >
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 mr-8">
+          <Link href="https://assureqai.com" className="flex items-center gap-2 mr-8">
             <AssureQaiLogo
               showIcon={true}
               showLogo={true}

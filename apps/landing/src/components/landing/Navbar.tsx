@@ -37,19 +37,19 @@ export const Navbar = () => {
                 transition={{ duration: 0.6, ease: "circOut" }}
                 className={cn(
                     "fixed top-4 left-0 right-0 mx-auto z-50 w-[95%] max-w-5xl rounded-full transition-all duration-300",
-                    scrolled 
-                        ? "bg-white/60 dark:bg-black/60 backdrop-blur-xl border border-neutral-200 dark:border-white/10 shadow-[0_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_-10px_rgba(255,255,255,0.1)] py-2 px-4" 
+                    scrolled
+                        ? "bg-white/60 dark:bg-black/60 backdrop-blur-xl border border-neutral-200 dark:border-white/10 shadow-[0_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_-10px_rgba(255,255,255,0.1)] py-2 px-4"
                         : "bg-transparent py-4 px-2"
                 )}
             >
                 <div className="flex items-center justify-between">
-                    
+
                     {/* Official Logo Integration */}
                     <Link href="/" className="flex items-center gap-2 mr-8">
-                        <AssureQaiLogo 
-                            showIcon={true} 
-                            showLogo={true} 
-                            width={120} 
+                        <AssureQaiLogo
+                            showIcon={true}
+                            showLogo={true}
+                            width={120}
                             className="h-8 w-auto"
                         />
                     </Link>
@@ -57,8 +57,8 @@ export const Navbar = () => {
                     {/* Desktop Links with Spotlight */}
                     <div className="hidden md:flex items-center gap-1 bg-neutral-100 dark:bg-white/5 rounded-full px-2 py-1.5 border border-neutral-200 dark:border-white/5">
                         {NAV_LINKS.map((link, index) => (
-                            <Link 
-                                key={link.name} 
+                            <Link
+                                key={link.name}
                                 href={link.href}
                                 onMouseEnter={() => setHoveredIndex(index)}
                                 onMouseLeave={() => setHoveredIndex(null)}
@@ -84,7 +84,7 @@ export const Navbar = () => {
                     {/* Right Actions */}
                     <div className="hidden md:flex items-center gap-4 ml-8">
                         <ThemeSwitcher variant="ghost" className="text-neutral-600 dark:text-white hover:bg-neutral-100 dark:hover:bg-white/10" />
-                        <Link href={process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL || "http://localhost:3001"} className="text-sm font-medium text-neutral-600 dark:text-muted-foreground hover:text-neutral-900 dark:hover:text-white transition-colors">
+                        <Link href="https://app.assureqai.com/login" className="text-sm font-medium text-neutral-600 dark:text-muted-foreground hover:text-neutral-900 dark:hover:text-white transition-colors">
                             Log in
                         </Link>
                         <Link href="/book-demo">
@@ -97,7 +97,7 @@ export const Navbar = () => {
                     {/* Mobile Toggle */}
                     <div className="flex items-center gap-4 md:hidden">
                         <ThemeSwitcher variant="ghost" className="text-neutral-600 dark:text-white hover:bg-neutral-100 dark:hover:bg-white/10" />
-                        <button 
+                        <button
                             className="text-neutral-900 dark:text-white p-2"
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         >
@@ -118,8 +118,8 @@ export const Navbar = () => {
                         className="fixed inset-x-4 top-20 z-40 bg-white/95 dark:bg-black/90 backdrop-blur-2xl border border-neutral-200 dark:border-white/10 rounded-3xl p-6 flex flex-col gap-4 md:hidden shadow-2xl"
                     >
                         {NAV_LINKS.map((link) => (
-                            <Link 
-                                key={link.name} 
+                            <Link
+                                key={link.name}
                                 href={link.href}
                                 className="text-lg font-medium text-neutral-600 dark:text-white/80 hover:text-neutral-900 dark:hover:text-white py-3 border-b border-neutral-100 dark:border-white/5"
                                 onClick={() => setMobileMenuOpen(false)}
@@ -128,7 +128,7 @@ export const Navbar = () => {
                             </Link>
                         ))}
                         <div className="flex flex-col gap-4 mt-4">
-                            <Link href={process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL || "http://localhost:3001"} className="text-center py-3 text-neutral-600 dark:text-white/80 font-medium">Log in</Link>
+                            <Link href="https://app.assureqai.com/login" className="text-center py-3 text-neutral-600 dark:text-white/80 font-medium">Log in</Link>
                             <Link href="/book-demo">
                                 <Button className="w-full h-12 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-lg">Book Demo</Button>
                             </Link>

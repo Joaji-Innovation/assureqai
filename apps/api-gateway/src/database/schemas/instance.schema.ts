@@ -107,8 +107,8 @@ export class Instance {
   @Prop({ enum: ['trial', 'standard', 'enterprise'], default: 'trial' })
   plan: 'trial' | 'standard' | 'enterprise';
 
-  @Prop({ enum: ['provisioning', 'active', 'suspended', 'terminated'], default: 'provisioning' })
-  status: 'provisioning' | 'active' | 'suspended' | 'terminated';
+  @Prop({ enum: ['provisioning', 'active', 'running', 'stopped', 'suspended', 'terminated', 'error'], default: 'provisioning' })
+  status: 'provisioning' | 'active' | 'running' | 'stopped' | 'suspended' | 'terminated' | 'error';
 
   @Prop({ type: VpsConfig })
   vps?: VpsConfig;

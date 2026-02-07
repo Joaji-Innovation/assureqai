@@ -364,6 +364,21 @@ export class InstanceService {
     return this.update(id, updateData);
   }
 
+  // Update instance usage metrics (called by agent)
+  async updateUsage(id: string, usage: {
+    cpu: number;
+    memory: number;
+    storage: string;
+    activeUsers: number;
+  }): Promise<Instance> {
+    return this.update(id, {
+      usage: {
+        ...usage,
+        lastReportedAt: new Date()
+      }
+    } as any);
+  }
+
   // ===== Instance Lifecycle Actions =====
 
   // Start instance containers

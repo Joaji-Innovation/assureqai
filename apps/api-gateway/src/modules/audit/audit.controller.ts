@@ -70,7 +70,7 @@ export class AuditController {
       const result = await this.auditService.create({
         ...processedDto,
         projectId: processedDto.projectId || user.projectId,
-      });
+      }, (user as any).instanceId);
       console.log('[AuditController] Audit created successfully, id:', (result as any)._id);
       return result;
     } catch (error) {

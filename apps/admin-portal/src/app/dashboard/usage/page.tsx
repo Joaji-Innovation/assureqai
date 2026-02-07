@@ -15,8 +15,14 @@ interface UsageData {
   audits: { current: number; limit: number | 'unlimited' };
   storage: { current: number; limit: number };
   apiCalls: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: 'up' | 'down' | 'stable' | null;
 }
+
+const PLAN_LIMITS = {
+  trial: { storage: 1, users: 5 },
+  standard: { storage: 10, users: 50 },
+  enterprise: { storage: 100, users: 1000 }
+};
 
 export default function UsagePage() {
   const [usageData, setUsageData] = useState<UsageData[]>([]);
@@ -34,28 +40,36 @@ export default function UsagePage() {
   const fetchUsage = async () => {
     try {
       const instances = await api.instance.findAll();
-      const mappedData: UsageData[] = instances.map((inst: Instance) => ({
-        instanceId: inst._id,
-        clientId: inst.clientId || '',
-        clientName: inst.name || 'Unknown',
-        plan: (inst.plan as any) || 'trial',
-        billingType: inst.credits?.billingType || 'prepaid',
-        apiKey: inst.apiKey,
-        users: {
-          current: Math.floor(Math.random() * 20), // Simulated current usage
-          limit: inst.limits?.maxUsers || (inst.plan === 'enterprise' ? 'unlimited' : 50)
-        },
-        audits: {
-          current: inst.credits?.usedAudits || 0,
-          limit: inst.credits?.totalAudits || 'unlimited'
-        },
-        storage: {
-          current: Math.floor(Math.random() * 5), // Simulated storage usage
-          limit: parseInt(inst.limits?.maxStorage || '10')
-        },
-        apiCalls: inst.credits?.totalApiCalls || 0,
-        trend: 'stable' // Hardcoded for now
-      }));
+      const mappedData: UsageData[] = instances.map((inst: Instance) => {
+        const plan = (inst.plan as 'trial' | 'standard' | 'enterprise') || 'trial';
+        const defaultLimits = PLAN_LIMITS[plan] || PLAN_LIMITS.trial;
+
+        const storageCurrent = inst.usage?.storage ? parseInt(inst.usage.storage) : 0;
+        const storageLimit = inst.limits?.maxStorage ? parseInt(inst.limits.maxStorage) : defaultLimits.storage;
+
+        return {
+          instanceId: inst._id,
+          clientId: inst.clientId || '',
+          clientName: inst.name || inst.companyName || 'Unknown',
+          plan: plan,
+          billingType: inst.credits?.billingType || 'prepaid',
+          apiKey: inst.apiKey,
+          users: {
+            current: inst.usage?.activeUsers ?? 0,
+            limit: inst.limits?.maxUsers || (plan === 'enterprise' ? 'unlimited' : defaultLimits.users)
+          },
+          audits: {
+            current: inst.credits?.usedAudits || 0,
+            limit: inst.credits?.totalAudits || 'unlimited'
+          },
+          storage: {
+            current: Math.round(storageCurrent / (1024 * 1024 * 1024)), // Convert bytes to GB
+            limit: storageLimit
+          },
+          apiCalls: inst.credits?.totalApiCalls || 0,
+          trend: null // No historical data available yet
+        };
+      });
       setUsageData(mappedData);
     } catch (error) {
       console.error('Failed to fetch usage', error);
@@ -96,7 +110,7 @@ export default function UsagePage() {
       : 'bg-emerald-500/10 text-emerald-500';
   };
 
-  const getTrendIcon = (trend: string) => {
+  const getTrendIcon = (trend: string | null) => {
     switch (trend) {
       case 'up': return <TrendingUp className="h-4 w-4 text-emerald-500" />;
       case 'down': return <TrendingDown className="h-4 w-4 text-red-500" />;

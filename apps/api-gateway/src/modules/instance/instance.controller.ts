@@ -144,6 +144,16 @@ export class InstanceController {
     return this.instanceService.updateCredits(id, dto);
   }
 
+  @Post(':id/usage')
+  // @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES) // Agent might need specific auth
+  @ApiOperation({ summary: 'Update instance usage metrics' })
+  async updateUsage(
+    @Param('id') id: string,
+    @Body() dto: { cpu: number; memory: number; storage: string; activeUsers: number },
+  ) {
+    return this.instanceService.updateUsage(id, dto);
+  }
+
   // ===== Instance Actions (Start/Stop/Restart) =====
 
   @Post(':id/start')

@@ -296,12 +296,21 @@ export default function ClientsPage() {
                   </td>
                   <td className="text-right py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
-                      <button className="p-1.5 rounded hover:bg-muted transition-colors" title="View">
+                      <Link
+                        href={`https://${client.domain}`}
+                        target="_blank"
+                        className="p-1.5 rounded hover:bg-muted transition-colors inline-flex items-center justify-center"
+                        title="View Site"
+                      >
                         <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Settings">
+                      </Link>
+                      <Link
+                        href={client.instanceId ? `/dashboard/instances/${client.instanceId}` : '#'}
+                        className={`p-1.5 rounded hover:bg-muted transition-colors inline-flex items-center justify-center ${!client.instanceId && 'opacity-50 pointer-events-none'}`}
+                        title="Settings"
+                      >
                         <Settings className="h-4 w-4 text-muted-foreground" />
-                      </button>
+                      </Link>
                       <button
                         onClick={() => handleDeleteClient(client.id, client.name)}
                         disabled={actionLoading === client.id}

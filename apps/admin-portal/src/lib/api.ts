@@ -101,6 +101,7 @@ export interface Instance {
   _id: string;
   name?: string;
   clientId?: string;
+  companyName?: string;
   plan?: string;
   status: 'running' | 'stopped' | 'provisioning' | 'error' | 'active' | 'suspended';
   region?: string;
@@ -125,6 +126,13 @@ export interface Instance {
   limits?: {
     maxUsers: number;
     maxStorage: string;
+  };
+  usage?: {
+    cpu: number;
+    memory: number;
+    storage: string;
+    activeUsers: number;
+    lastReportedAt: string;
   };
   createdAt: string;
 }
@@ -298,12 +306,20 @@ export const settingsApi = {
   update: (data: any) => request<any>('/api/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
+export const healthApi = {
+  check: () => request<{ status: string; info: any; error: any; details: any }>('/api/health'),
+};
+
 export default {
   auth: authApi,
   audit: auditApi,
   alerts: alertsApi,
   admin: adminApi,
-  instance: instanceApi,
+  instance: {
+    ...instanceApi,
+    updateUsage: (id: string, usage: { cpu: number; memory: number; storage: string; activeUsers: number }) =>
+      request<Instance>(`/api/admin/instances/${id}/usage`, { method: 'POST', body: JSON.stringify(usage) }),
+  },
   user: userApi,
   backup: backupApi,
   credits: creditsApi,
@@ -311,5 +327,6 @@ export default {
   template: templateApi,
   announcement: announcementApi,
   settings: settingsApi,
+  health: healthApi,
 };
 

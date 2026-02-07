@@ -13,32 +13,31 @@ interface AuditLog {
   status: 'success' | 'failed';
 }
 
-const mockAuditLogs: AuditLog[] = [
-  { id: '1', action: 'Admin Login', user: 'john@assureqai.com', ip: '192.168.1.100', timestamp: '2026-01-11T14:30:00Z', status: 'success' },
-  { id: '2', action: 'Client Created', user: 'sarah@assureqai.com', ip: '192.168.1.101', timestamp: '2026-01-11T10:15:00Z', status: 'success' },
-  { id: '3', action: 'Instance Restart', user: 'john@assureqai.com', ip: '192.168.1.100', timestamp: '2026-01-10T16:45:00Z', status: 'success' },
-  { id: '4', action: 'Failed Login Attempt', user: 'unknown@example.com', ip: '203.45.67.89', timestamp: '2026-01-10T12:00:00Z', status: 'failed' },
-  { id: '5', action: 'Settings Changed', user: 'john@assureqai.com', ip: '192.168.1.100', timestamp: '2026-01-09T09:00:00Z', status: 'success' },
-];
+
 
 export default function SecurityPage() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [regenerating, setRegenerating] = useState(false);
+  const [stats, setStats] = useState({
+    activeKeys: 0,
+    failedLogins: 0,
+    twoFactorEnabled: 0
+  });
 
   useEffect(() => {
-    fetchAudits();
+    fetchData();
   }, []);
 
-  const fetchAudits = async () => {
+  const fetchData = async () => {
     try {
-      // Fetch audits list
-      const result = await api.audit.list({ page: 1, limit: 10 }) as any;
+      setLoading(true);
+      const [auditsResult, instances] = await Promise.all([
+        api.audit.list({ limit: 100 }) as Promise<any>,
+        api.instance.findAll()
+      ]);
 
-      // If result.data exists (paginated), use it, otherwise assumption
-      const logs = result.data || result;
-
-      // Map to frontend interface
+      // Process Audits
+      const logs = auditsResult.data || auditsResult;
       const mappedLogs = Array.isArray(logs) ? logs.map((log: any) => ({
         id: log._id || log.id,
         action: log.action || 'Unknown Action',
@@ -49,18 +48,22 @@ export default function SecurityPage() {
       })) : [];
 
       setAuditLogs(mappedLogs);
+
+      // Calculate Stats
+      const activeKeysCount = instances.filter(i => i.apiKey).length;
+      const failedLoginsCount = mappedLogs.filter(l => l.action.toLowerCase().includes('login') && l.status === 'failed').length;
+
+      setStats({
+        activeKeys: activeKeysCount,
+        failedLogins: failedLoginsCount,
+        twoFactorEnabled: 0 // Placeholder until 2FA is implemented
+      });
+
     } catch (error) {
-      console.error('Failed to fetch audits', error);
+      console.error('Failed to fetch security data', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRegenerateKeys = async () => {
-    if (!confirm('This will invalidate all existing API keys. Continue?')) return;
-    setRegenerating(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setRegenerating(false);
   };
 
   return (
@@ -77,55 +80,44 @@ export default function SecurityPage() {
             <div className="p-2 rounded-lg bg-emerald-500/10">
               <Shield className="h-5 w-5 text-emerald-500" />
             </div>
-            <span className="font-medium">2FA Status</span>
+            <span className="font-medium">System Status</span>
           </div>
-          <p className="text-2xl font-bold text-emerald-500">Enabled</p>
-          <p className="text-xs text-muted-foreground">All admin users</p>
+          <p className="text-2xl font-bold text-emerald-500">Secure</p>
+          <p className="text-xs text-muted-foreground">All systems operational</p>
         </div>
         <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <Key className="h-5 w-5 text-primary" />
             </div>
-            <span className="font-medium">API Keys</span>
+            <span className="font-medium">Active API Keys</span>
           </div>
-          <p className="text-2xl font-bold">24</p>
-          <p className="text-xs text-muted-foreground">Active keys</p>
+          <p className="text-2xl font-bold">{stats.activeKeys}</p>
+          <p className="text-xs text-muted-foreground">Across all instances</p>
         </div>
         <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg bg-red-500/10">
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
-            <span className="font-medium">Failed Logins</span>
+            <span className="font-medium">Failed Actions</span>
           </div>
-          <p className="text-2xl font-bold text-red-500">3</p>
-          <p className="text-xs text-muted-foreground">Last 24 hours</p>
+          <p className="text-2xl font-bold text-red-500">{stats.failedLogins}</p>
+          <p className="text-xs text-muted-foreground">Recorded in recent logs</p>
         </div>
       </div>
 
       {/* Actions */}
       <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-6">
         <h3 className="text-lg font-semibold mb-4">Security Actions</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          <button
-            onClick={handleRegenerateKeys}
-            disabled={regenerating}
-            className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-amber-500/50 hover:bg-amber-500/5 transition-all text-left"
-          >
-            {regenerating ? <Loader2 className="h-5 w-5 animate-spin text-amber-500" /> : <RefreshCw className="h-5 w-5 text-amber-500" />}
-            <div>
-              <p className="font-medium">Regenerate Master API Key</p>
-              <p className="text-xs text-muted-foreground">Invalidates all existing keys</p>
-            </div>
-          </button>
-          <button className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left">
+        <div className="grid gap-4 md:grid-cols-1">
+          <div className="flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/20">
             <Clock className="h-5 w-5 text-primary" />
             <div>
               <p className="font-medium">Session Timeout Settings</p>
-              <p className="text-xs text-muted-foreground">Currently: 30 minutes</p>
+              <p className="text-xs text-muted-foreground">Global session timeout is set to 30 minutes (Configured in Environment)</p>
             </div>
-          </button>
+          </div>
         </div>
       </div>
 

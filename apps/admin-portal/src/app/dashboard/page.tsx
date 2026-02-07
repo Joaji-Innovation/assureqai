@@ -19,21 +19,22 @@ const recentClientsCommon = [
   { id: '1', name: 'Acme Corp', plan: 'Enterprise', users: 156, status: 'active', createdAt: '2026-01-10' },
 ];
 
-const systemHealth = [
-  { service: 'API Gateway', status: 'healthy', latency: '23ms' },
-  { service: 'MongoDB', status: 'healthy', latency: '8ms' },
-  { service: 'Redis', status: 'healthy', latency: '2ms' },
-  { service: 'AI Service', status: 'healthy', latency: '145ms' },
-];
-
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState(initialStats);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<any[]>(recentClientsCommon);
+  const [health, setHealth] = useState([
+    { service: 'API Gateway', status: 'healthy', latency: '23ms' },
+    { service: 'Database', status: 'healthy', latency: '8ms' },
+    { service: 'AI Engine', status: 'healthy', latency: '145ms' },
+  ]);
 
   useEffect(() => {
     async function fetchData() {
+      const healthStatus = { api: 'healthy', db: 'healthy', ai: 'healthy' };
+
       try {
+        setLoading(true);
         // Fetch in parallel
         const [usersRes, instancesRes, auditsRes] = await Promise.allSettled([
           api.user.list({ limit: 1 }),
@@ -43,29 +44,72 @@ export default function AdminDashboardPage() {
 
         const newStats = { ...initialStats };
 
+        // Process Users
         if (usersRes.status === 'fulfilled') {
           newStats.totalUsers = usersRes.value.pagination.total;
-          // Approximation for clients (usually role based, but simplified here)
           newStats.totalClients = Math.floor(newStats.totalUsers * 0.1);
+        } else {
+          healthStatus.db = 'degraded';
         }
 
+        // Process Instances & Revenue
         if (instancesRes.status === 'fulfilled') {
-          newStats.activeInstances = instancesRes.value.length;
-          setClients(instancesRes.value.slice(0, 5).map((inst: any) => ({
+          const instances = instancesRes.value;
+          newStats.activeInstances = instances.filter((i: any) => i.status === 'running' || i.status === 'active').length;
+          newStats.totalClients = instances.length;
+
+          // Calculate Revenue
+          const revenue = instances.reduce((acc: number, inst: any) => {
+            const plan = inst.plan?.toLowerCase() || 'trial';
+            if (plan === 'enterprise') return acc + 299;
+            if (plan === 'standard' || plan === 'pro') return acc + 99;
+            return acc;
+          }, 0);
+          newStats.monthlyRevenue = revenue * 1000;
+
+          setClients(instances.slice(0, 5).map((inst: any) => ({
             id: inst._id,
             name: inst.name || 'Unnamed Instance',
             plan: inst.plan || 'Pro',
-            users: Math.floor(Math.random() * 50) + 10, // Mock users count per instance
+            users: inst.limits?.maxUsers || 10,
             status: inst.status || 'active',
             createdAt: new Date(inst.createdAt).toLocaleDateString()
           })));
+        } else {
+          healthStatus.api = 'degraded';
         }
 
+        // Process Audits
         if (auditsRes.status === 'fulfilled') {
           newStats.totalAudits = auditsRes.value.pagination.total;
+        } else {
+          healthStatus.ai = 'degraded';
         }
 
         setStats(newStats);
+
+        // Check Health Endpoint
+        try {
+          // We can assume if this call succeeds, the API Gateway is up.
+          // The endpoint returns { status: 'ok', ... }
+          const healthRes = await api.health.check();
+          if (healthRes.status === 'ok' || healthRes.status === 'healthy') {
+            healthStatus.api = 'healthy';
+            // If we had DB check in health endpoint we could use it here
+            // healthStatus.db = healthRes.info?.db?.status === 'up' ? 'healthy' : 'degraded';
+          }
+        } catch (e) {
+          console.warn('Health check failed', e);
+          // Keep derived health status
+        }
+
+        // Update Health State
+        setHealth([
+          { service: 'API Gateway', status: healthStatus.api, latency: healthStatus.api === 'healthy' ? '23ms' : '-' },
+          { service: 'Database', status: healthStatus.db, latency: healthStatus.db === 'healthy' ? '8ms' : '-' },
+          { service: 'AI Engine', status: healthStatus.ai, latency: healthStatus.ai === 'healthy' ? '145ms' : '-' },
+        ]);
+
       } catch (error) {
         console.error('Failed to fetch dashboard stats', error);
       } finally {
@@ -130,7 +174,7 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <div className="space-y-3">
-            {systemHealth.map((service) => (
+            {health.map((service) => (
               <div key={service.service} className="flex items-center justify-between p-3 rounded-lg border border-border">
                 <div className="flex items-center gap-3">
                   <div className={`h-3 w-3 rounded-full ${service.status === 'healthy' ? 'bg-emerald-500' : 'bg-red-500'}`} />

@@ -142,6 +142,15 @@ export class Instance {
 
   @Prop()
   deployedVersion?: string;
+
+  @Prop({ type: Object })
+  usage?: {
+    cpu: number; // Percentage 0-100
+    memory: number; // Bytes
+    storage: string; // Used bytes as string or human readable
+    activeUsers: number;
+    lastReportedAt: Date;
+  };
 }
 
 export const InstanceSchema = SchemaFactory.createForClass(Instance);

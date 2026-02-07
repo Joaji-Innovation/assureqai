@@ -18,10 +18,11 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { FileText, Megaphone, HardDrive, Terminal, Coins } from 'lucide-react';
+import { FileText, Megaphone, HardDrive, Terminal, Coins, MessageSquare } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/leads', label: 'Leads', icon: MessageSquare },
   { href: '/dashboard/clients', label: 'Clients', icon: Building2 },
   { href: '/dashboard/instances', label: 'Instances', icon: Server },
   { href: '/dashboard/domains', label: 'Domains', icon: Globe },

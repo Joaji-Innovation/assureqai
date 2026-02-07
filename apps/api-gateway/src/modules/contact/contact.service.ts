@@ -1,17 +1,27 @@
-/**
- * Contact Service
- */
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { EmailService } from '../email/email.service';
+import { Lead, LeadDocument } from '../../database/schemas/lead.schema';
 
 @Injectable()
 export class ContactService {
   private readonly logger = new Logger(ContactService.name);
 
-  constructor(private readonly emailService: EmailService) { }
+  constructor(
+    @InjectModel(Lead.name) private leadModel: Model<LeadDocument>,
+    private readonly emailService: EmailService
+  ) { }
 
   async submitContact(dto: { name: string; email: string; company?: string; message: string }) {
     this.logger.log(`Contact form submission from ${dto.email}`);
+
+    // Save to DB
+    await this.leadModel.create({
+      ...dto,
+      type: 'contact',
+      status: 'new'
+    });
 
     // Send notification email to sales
     await this.emailService.sendEmail(
@@ -33,6 +43,13 @@ export class ContactService {
   async requestDemo(dto: { name: string; email: string; company: string; phone?: string; message?: string }) {
     this.logger.log(`Demo request from ${dto.email}`);
 
+    // Save to DB
+    await this.leadModel.create({
+      ...dto,
+      type: 'demo',
+      status: 'new'
+    });
+
     await this.emailService.sendEmail(
       'sales@assureqai.com',
       `Demo Request: ${dto.company}`,
@@ -47,5 +64,10 @@ export class ContactService {
     );
 
     return { success: true, message: 'Demo request received. Our team will contact you soon.' };
+  }
+
+  // Admin: Get all leads
+  async findAll(): Promise<Lead[]> {
+    return this.leadModel.find().sort({ createdAt: -1 }).exec();
   }
 }

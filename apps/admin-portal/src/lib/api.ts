@@ -310,10 +310,29 @@ export const healthApi = {
   check: () => request<{ status: string; info: any; error: any; details: any }>('/api/health'),
 };
 
+// Lead interface and API
+export interface Lead {
+  _id: string;
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+  type: 'contact' | 'demo';
+  message?: string;
+  status: 'new' | 'contacted' | 'qualified' | 'lost' | 'converted';
+  notes?: string;
+  createdAt: string;
+}
+
+export const contactApi = {
+  getLeads: () => request<Lead[]>('/api/contact/leads'),
+};
+
 export default {
   auth: authApi,
   audit: auditApi,
   alerts: alertsApi,
+  contact: contactApi,
   admin: adminApi,
   instance: {
     ...instanceApi,

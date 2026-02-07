@@ -397,7 +397,7 @@ export class InstanceService {
       });
 
       if (result.success) {
-        await this.update(id, { status: 'running' });
+        await this.update(id, { status: 'running' } as any);
         return { success: true };
       } else {
         return { success: false, error: result.error || 'Failed to start containers' };
@@ -424,7 +424,7 @@ export class InstanceService {
       });
 
       if (result.success) {
-        await this.update(id, { status: 'stopped' });
+        await this.update(id, { status: 'stopped' } as any);
         return { success: true };
       } else {
         return { success: false, error: result.error || 'Failed to stop containers' };
@@ -451,7 +451,7 @@ export class InstanceService {
       });
 
       if (result.success) {
-        await this.update(id, { status: 'running' });
+        await this.update(id, { status: 'running' } as any);
         return { success: true };
       } else {
         return { success: false, error: result.error || 'Failed to restart containers' };

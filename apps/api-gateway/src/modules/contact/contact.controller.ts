@@ -5,7 +5,10 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ContactService } from './contact.service';
 
+import { Public } from '@assureqai/auth';
+
 @ApiTags('Contact')
+@Public()
 @Controller('contact')
 export class ContactController {
   constructor(private readonly contactService: ContactService) { }

@@ -15,25 +15,22 @@ if (!SOURCE_URI || !DEST_URI) {
   process.exit(1);
 }
 
-const SOURCE_DB_NAME = 'test';
-const DEST_DB_NAME = 'main';
-
 async function migrate() {
   let sourceClient = null;
   let destClient = null;
 
   try {
-    console.log(`Connecting to Source DB (${SOURCE_DB_NAME})...`);
+    console.log(`Connecting to Source DB (assureqai)...`);
     sourceClient = new MongoClient(SOURCE_URI);
     await sourceClient.connect();
-    const sourceDb = sourceClient.db(SOURCE_DB_NAME);
-    console.log('Connected to Source.');
+    const sourceDb = sourceClient.db('assureqai');
+    console.log(`Connected to Source DB: ${sourceDb.databaseName}`);
 
-    console.log(`Connecting to Destination DB (${DEST_DB_NAME})...`);
+    console.log(`Connecting to Destination DB (main)...`);
     destClient = new MongoClient(DEST_URI);
     await destClient.connect();
-    const destDb = destClient.db(DEST_DB_NAME);
-    console.log('Connected to Destination.');
+    const destDb = destClient.db('main');
+    console.log(`Connected to Destination DB: ${destDb.databaseName}`);
 
     // Get list of collections
     const collections = await sourceDb.listCollections().toArray();

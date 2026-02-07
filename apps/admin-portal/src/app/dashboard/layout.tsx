@@ -41,12 +41,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     // Basic Client-side Auth Guard
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     if (!token) {
       router.push('/login');
+    } else {
+      setIsChecking(false);
     }
   }, [router, pathname]);
 
@@ -54,6 +57,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') localStorage.removeItem('authToken');
     router.push('/login');
   };
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground animate-pulse">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">

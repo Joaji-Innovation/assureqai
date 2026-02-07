@@ -8,7 +8,7 @@ import { ContactService } from './contact.service';
 @ApiTags('Contact')
 @Controller('contact')
 export class ContactController {
-  constructor(private readonly contactService: ContactService) {}
+  constructor(private readonly contactService: ContactService) { }
 
   @Post()
   @ApiOperation({ summary: 'Submit contact form' })
@@ -21,7 +21,7 @@ export class ContactController {
   @Post('demo')
   @ApiOperation({ summary: 'Request demo' })
   async requestDemo(
-    @Body() dto: { name: string; email: string; company: string; phone?: string },
+    @Body() dto: { name: string; email: string; company: string; phone?: string; message?: string },
   ) {
     return this.contactService.requestDemo(dto);
   }

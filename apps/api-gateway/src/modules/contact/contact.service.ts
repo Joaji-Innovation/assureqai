@@ -8,7 +8,7 @@ import { EmailService } from '../email/email.service';
 export class ContactService {
   private readonly logger = new Logger(ContactService.name);
 
-  constructor(private readonly emailService: EmailService) {}
+  constructor(private readonly emailService: EmailService) { }
 
   async submitContact(dto: { name: string; email: string; company?: string; message: string }) {
     this.logger.log(`Contact form submission from ${dto.email}`);
@@ -30,7 +30,7 @@ export class ContactService {
     return { success: true, message: 'Thank you for contacting us. We will respond shortly.' };
   }
 
-  async requestDemo(dto: { name: string; email: string; company: string; phone?: string }) {
+  async requestDemo(dto: { name: string; email: string; company: string; phone?: string; message?: string }) {
     this.logger.log(`Demo request from ${dto.email}`);
 
     await this.emailService.sendEmail(
@@ -42,6 +42,7 @@ export class ContactService {
         <p><strong>Email:</strong> ${dto.email}</p>
         <p><strong>Company:</strong> ${dto.company}</p>
         <p><strong>Phone:</strong> ${dto.phone || 'N/A'}</p>
+        <p><strong>Message:</strong> ${dto.message || 'N/A'}</p>
       `
     );
 

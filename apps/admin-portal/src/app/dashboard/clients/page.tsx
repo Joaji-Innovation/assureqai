@@ -28,6 +28,7 @@ export default function ClientsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', slug: '', plan: 'starter', adminEmail: '' });
   const [creating, setCreating] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchClients();
@@ -84,6 +85,28 @@ export default function ClientsPage() {
       alert('Failed to create client. Check console for details.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDeleteClient = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete client "${name}"? This will delete the associated instance and cannot be undone.`)) {
+      return;
+    }
+
+    // Determine instance ID (in this mock view it's the same as client ID or mapped)
+    // In real app, we might need to lookup instance ID differently if they differ
+    const client = clients.find(c => c.id === id);
+    if (!client || !client.instanceId) return;
+
+    setActionLoading(id);
+    try {
+      await instanceApi.delete(client.instanceId);
+      setClients(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Failed to delete client', error);
+      alert('Failed to delete client');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -278,6 +301,14 @@ export default function ClientsPage() {
                       </button>
                       <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Settings">
                         <Settings className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClient(client.id, client.name)}
+                        disabled={actionLoading === client.id}
+                        className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                        title="Delete"
+                      >
+                        {actionLoading === client.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                       </button>
                     </div>
                   </td>

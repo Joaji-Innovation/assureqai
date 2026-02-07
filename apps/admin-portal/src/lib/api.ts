@@ -179,6 +179,7 @@ export const userApi = {
   list: (filters: { page?: number; limit?: number; role?: string }) =>
     request<{ data: User[], pagination: { total: number } }>('/api/users', { params: filters as any }),
   create: (data: any) => request<User>('/api/users', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => request<User>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => request<void>(`/api/users/${id}`, { method: 'DELETE' }),
 };
 

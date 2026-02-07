@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Plus, Shield, X, Loader2, Trash2, Mail } from 'lucide-react';
+import { Users, Search, Plus, Shield, X, Loader2, Trash2, Mail, Pencil } from 'lucide-react';
 import { userApi, User } from '@/lib/api';
 
 export default function AdminUsersPage() {
@@ -11,6 +11,7 @@ export default function AdminUsersPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'support', password: '' });
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -36,32 +37,50 @@ export default function AdminUsersPage() {
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddUser = async (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdding(true);
 
     try {
-      // Basic password generation or prompt could be added here. 
-      // For simplicity, using a default or user provided one.
-      const password = newUser.password || Math.random().toString(36).slice(-8);
-
-      await userApi.create({
-        username: newUser.email.split('@')[0],
-        email: newUser.email,
-        fullName: newUser.name,
-        role: newUser.role,
-        password: password
-      });
+      if (editingId) {
+        await userApi.update(editingId, {
+          fullName: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          ...(newUser.password ? { password: newUser.password } : {})
+        });
+      } else {
+        const password = newUser.password || Math.random().toString(36).slice(-8);
+        await userApi.create({
+          username: newUser.email.split('@')[0],
+          email: newUser.email,
+          fullName: newUser.name,
+          role: newUser.role,
+          password: password
+        });
+      }
 
       await fetchUsers(); // Refresh list
       setNewUser({ name: '', email: '', role: 'support', password: '' });
       setShowAddForm(false);
+      setEditingId(null);
     } catch (error) {
-      console.error('Failed to create user', error);
-      alert('Failed to create user');
+      console.error('Failed to save user', error);
+      alert('Failed to save user');
     } finally {
       setAdding(false);
     }
+  };
+
+  const handleEditUser = (user: User) => {
+    setNewUser({
+      name: user.fullName || '',
+      email: user.email,
+      role: user.role,
+      password: ''
+    });
+    setEditingId(user._id);
+    setShowAddForm(true);
   };
 
   const handleDeleteUser = async (id: string) => {
@@ -92,7 +111,15 @@ export default function AdminUsersPage() {
           <p className="text-muted-foreground">Manage platform administrators</p>
         </div>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              setShowAddForm(false);
+              setEditingId(null);
+              setNewUser({ name: '', email: '', role: 'support', password: '' });
+            } else {
+              setShowAddForm(true);
+            }
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
           {showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -103,8 +130,8 @@ export default function AdminUsersPage() {
       {/* Add User Form */}
       {showAddForm && (
         <div className="bg-card/50 backdrop-blur rounded-xl border border-primary/50 p-6">
-          <h3 className="text-lg font-semibold mb-4">New Admin User</h3>
-          <form onSubmit={handleAddUser} className="grid gap-4 md:grid-cols-3">
+          <h3 className="text-lg font-semibold mb-4">{editingId ? 'Edit Admin User' : 'New Admin User'}</h3>
+          <form onSubmit={handleSaveUser} className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="text-sm font-medium">Name *</label>
               <input
@@ -157,7 +184,7 @@ export default function AdminUsersPage() {
               >
                 {adding && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Mail className="h-4 w-4" />
-                Create User
+                {editingId ? 'Update User' : 'Create User'}
               </button>
             </div>
           </form>
@@ -208,8 +235,16 @@ export default function AdminUsersPage() {
                     {user.isActive ? 'Active' : 'Inactive'}
                   </span>
                   <button
+                    onClick={() => handleEditUser(user)}
+                    className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                    title="Edit User"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => handleDeleteUser(user._id)}
                     className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                    title="Delete User"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

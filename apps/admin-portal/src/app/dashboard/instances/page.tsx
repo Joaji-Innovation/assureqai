@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Server, Search, Play, Square, RefreshCw, Settings, ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Server, Search, Play, Square, RefreshCw, Settings, ExternalLink, Loader2, AlertTriangle, CheckCircle, Trash2, Plus } from 'lucide-react';
 import { instanceApi, Instance } from '@/lib/api';
 
 export default function InstancesPage() {
@@ -56,6 +56,23 @@ export default function InstancesPage() {
     }
   };
 
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete instance "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setActionLoading(id);
+    try {
+      await instanceApi.delete(id);
+      setInstances(prev => prev.filter(inst => inst._id !== id));
+    } catch (error) {
+      console.error('Failed to delete instance', error);
+      alert('Failed to delete instance');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'running': return 'bg-emerald-500/10 text-emerald-500';
@@ -84,10 +101,17 @@ export default function InstancesPage() {
         </div>
         <div className="flex items-center gap-2">
           {!loading && (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground mr-4">
               {instances.filter(i => i.status === 'running').length} / {instances.length} running
             </span>
           )}
+          <button
+            onClick={() => window.location.href = '/dashboard/instances/new'}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Create Instance
+          </button>
         </div>
       </div>
 
@@ -211,6 +235,14 @@ export default function InstancesPage() {
                   title="Configure Instance"
                 >
                   <Settings className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(instance._id, instance.name || 'Unnamed Instance')}
+                  disabled={actionLoading === instance._id}
+                  className="p-2 rounded-lg border border-border hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-colors"
+                  title="Delete Instance"
+                >
+                  {actionLoading === instance._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 </button>
               </div>
             </div>

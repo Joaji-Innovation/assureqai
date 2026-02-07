@@ -134,6 +134,7 @@ export const instanceApi = {
   findById: (id: string) => request<Instance>(`/api/admin/instances/${id}`),
   create: (data: any) => request<Instance>('/api/admin/instances', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: any) => request<Instance>(`/api/admin/instances/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => request<void>(`/api/admin/instances/${id}`, { method: 'DELETE' }),
   getLogs: (id: string) => request<any[]>(`/api/admin/instances/${id}/logs`),
   getDomains: (id: string) => request<any>(`/api/admin/instances/${id}/domains`),
   regenerateApiKey: (id: string) => request<{ apiKey: string }>(`/api/admin/instances/${id}/regenerate-api-key`, { method: 'POST' }),

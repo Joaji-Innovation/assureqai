@@ -146,7 +146,7 @@ export default function InstancesPage() {
                 {instance.domain?.subdomain && (
                   <p className="text-xs text-primary flex items-center gap-1">
                     <ExternalLink className="h-3 w-3" />
-                    {instance.domain.customDomain || `${instance.domain.subdomain}.assureqai.app`}
+                    {instance.domain.customDomain || `${instance.domain.subdomain}.assureqai.com`}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">Version: {instance.version || 'v2.4.0'}</p>

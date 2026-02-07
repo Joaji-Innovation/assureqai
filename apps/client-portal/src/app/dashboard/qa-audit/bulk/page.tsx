@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, ChangeEvent, useMemo } from 'react';
+import { useState, useCallback, useEffect, ChangeEvent, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import Papa from 'papaparse';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +15,9 @@ import {
   Eye,
   Trash2,
   XCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileAudio,
+  Music
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +56,10 @@ export default function BulkAuditPage() {
   const [availableQaParameterSets, setAvailableQaParameterSets] = useState<QAParameter[]>([]);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'csv' | 'direct'>('csv');
+  const [audioFiles, setAudioFiles] = useState<File[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   // React Query hooks
   const { data: campaignsData, isLoading: isLoadingCampaigns, refetch: refetchCampaigns } = useCampaigns(1, 50);
@@ -163,9 +169,71 @@ export default function BulkAuditPage() {
     }
   };
 
+  // Handle direct audio files
+  const handleAudioFiles = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const validAudioFiles: File[] = [];
+    const invalidFiles: string[] = [];
+
+    Array.from(files).forEach(file => {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (['mp3', 'wav', 'webm', 'm4a', 'ogg', 'flac', 'aac'].includes(ext || '')) {
+        validAudioFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    });
+
+    if (invalidFiles.length > 0) {
+      toast({
+        title: 'Some files skipped',
+        description: `${invalidFiles.length} file(s) are not valid audio formats`,
+        variant: 'destructive',
+      });
+    }
+
+    setAudioFiles(prev => [...prev, ...validAudioFiles]);
+    toast({
+      title: 'Files added',
+      description: `${validAudioFiles.length} audio file(s) added`,
+    });
+  };
+
+  const handleAudioDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const fakeEvent = {
+        target: { files: e.dataTransfer.files }
+      } as unknown as ChangeEvent<HTMLInputElement>;
+      handleAudioFiles(fakeEvent);
+    }
+  };
+
+  const removeAudioFile = (index: number) => {
+    setAudioFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const startCampaign = async () => {
-    if (!rows.length) {
-      toast({ title: 'Upload a CSV first', variant: 'destructive' });
+    const hasData = uploadMode === 'csv' ? rows.length > 0 : audioFiles.length > 0;
+
+    if (!hasData) {
+      toast({
+        title: uploadMode === 'csv' ? 'Upload a CSV first' : 'Upload audio files first',
+        variant: 'destructive'
+      });
       return;
     }
     if (!selectedQaParameterSetId) {
@@ -174,21 +242,55 @@ export default function BulkAuditPage() {
     }
 
     try {
-      await createCampaignMutation.mutateAsync({
-        name: campaignName,
-        qaParameterSetId: selectedQaParameterSetId,
-        jobs: rows.map(row => ({
-          audioUrl: row.audioUrl,
-          agentName: row.agentName,
-          callId: row.callId,
-        })),
-      });
+      setIsUploadingFiles(true);
 
-      toast({
-        title: 'Campaign started',
-        description: `${rows.length} jobs queued for processing`,
-      });
-      setRows([]);
+      if (uploadMode === 'direct') {
+        // For direct upload, we need to upload files first and get URLs
+        // Create a FormData with all audio files
+        const formData = new FormData();
+        audioFiles.forEach((file, index) => {
+          formData.append('files', file);
+        });
+        formData.append('campaignName', campaignName);
+        formData.append('qaParameterSetId', selectedQaParameterSetId);
+
+        // Use the bulk upload endpoint
+        const response = await fetch('/api/campaigns/bulk-upload', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload files');
+        }
+
+        toast({
+          title: 'Campaign started',
+          description: `${audioFiles.length} files uploaded and queued for processing`,
+        });
+        setAudioFiles([]);
+      } else {
+        // CSV mode - existing behavior
+        await createCampaignMutation.mutateAsync({
+          name: campaignName,
+          qaParameterSetId: selectedQaParameterSetId,
+          jobs: rows.map(row => ({
+            audioUrl: row.audioUrl,
+            agentName: row.agentName,
+            callId: row.callId,
+          })),
+        });
+
+        toast({
+          title: 'Campaign started',
+          description: `${rows.length} jobs queued for processing`,
+        });
+        setRows([]);
+      }
+
       refetchCampaigns();
     } catch (err: any) {
       toast({
@@ -196,6 +298,8 @@ export default function BulkAuditPage() {
         description: err.message || 'Unknown error',
         variant: 'destructive',
       });
+    } finally {
+      setIsUploadingFiles(false);
     }
   };
 
@@ -214,7 +318,7 @@ export default function BulkAuditPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Bulk AI Audit</h2>
-          <p className="text-muted-foreground">Process multiple recordings at once using CSV upload</p>
+          <p className="text-muted-foreground">Process multiple recordings at once using CSV or direct audio upload</p>
         </div>
         {campaigns.length > 0 && (
           <div className="text-sm text-muted-foreground">
@@ -265,43 +369,157 @@ export default function BulkAuditPage() {
             </div>
           </div>
 
-          {/* CSV Upload Zone */}
-          <div
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-              }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('csv-upload')?.click()}
-          >
-            <input
-              id="csv-upload"
-              type="file"
-              accept=".csv"
-              onChange={handleFile}
-              className="hidden"
-            />
-            <UploadCloud className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-            <p className="text-lg font-medium mb-1">Upload CSV File</p>
-            <p className="text-sm text-muted-foreground mb-3">
-              Drag & drop or click to select a CSV file with recording URLs
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <Button type="button" variant="outline" size="sm">
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Select CSV
-              </Button>
-              <a
-                href="/samples/bulk-audit-sample.csv"
-                download
-                onClick={(e) => e.stopPropagation()}
-                className="text-sm text-primary hover:underline"
-              >
-                Download sample CSV
-              </a>
-            </div>
+          {/* Upload Mode Selector */}
+          <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
+            <Button
+              variant={uploadMode === 'csv' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setUploadMode('csv')}
+              className="gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              CSV Upload
+            </Button>
+            <Button
+              variant={uploadMode === 'direct' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setUploadMode('direct')}
+              className="gap-2"
+            >
+              <FileAudio className="h-4 w-4" />
+              Direct Upload
+            </Button>
           </div>
+
+          {/* CSV Upload Zone */}
+          {uploadMode === 'csv' && (
+            <div
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('csv-upload')?.click()}
+            >
+              <input
+                id="csv-upload"
+                type="file"
+                accept=".csv"
+                onChange={handleFile}
+                className="hidden"
+              />
+              <UploadCloud className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-lg font-medium mb-1">Upload CSV File</p>
+              <p className="text-sm text-muted-foreground mb-3">
+                Drag & drop or click to select a CSV file with recording URLs
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <Button type="button" variant="outline" size="sm">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Select CSV
+                </Button>
+                <a
+                  href="/samples/bulk-audit-sample.csv"
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Download sample CSV
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Direct Audio Upload Zone */}
+          {uploadMode === 'direct' && (
+            <div className="space-y-4">
+              <div
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleAudioDrop}
+                onClick={() => audioInputRef.current?.click()}
+              >
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/*,.mp3,.wav,.webm,.m4a,.ogg,.flac,.aac"
+                  multiple
+                  onChange={handleAudioFiles}
+                  className="hidden"
+                />
+                <Music className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-lg font-medium mb-1">Upload Audio Files</p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Drag & drop or click to select audio files (MP3, WAV, M4A, etc.)
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  No file limit - upload as many recordings as you need
+                </p>
+                <Button type="button" variant="outline" size="sm">
+                  <FileAudio className="mr-2 h-4 w-4" />
+                  Select Audio Files
+                </Button>
+              </div>
+
+              {/* Audio Files List */}
+              {audioFiles.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">{audioFiles.length} file(s) selected</div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAudioFiles([])}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      Clear All
+                    </Button>
+                  </div>
+                  <div className="rounded-md border max-h-64 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>File Name</TableHead>
+                          <TableHead>Size</TableHead>
+                          <TableHead className="w-16"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {audioFiles.map((file, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <FileAudio className="h-4 w-4 text-muted-foreground" />
+                                {file.name}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatFileSize(file.size)}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeAudioFile(idx)}
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Preview Table */}
           {parsedPreview.length > 0 && (
@@ -338,18 +556,20 @@ export default function BulkAuditPage() {
           {/* Start Button */}
           <div className="flex items-center justify-between pt-2">
             <div className="text-sm text-muted-foreground">
-              {rows.length ? `${rows.length} rows ready to process` : 'No rows loaded'}
+              {uploadMode === 'csv'
+                ? (rows.length ? `${rows.length} rows ready to process` : 'No rows loaded')
+                : (audioFiles.length ? `${audioFiles.length} audio file(s) ready to process` : 'No files selected')}
             </div>
             <Button
               onClick={startCampaign}
-              disabled={createCampaignMutation.isPending || !rows.length || !selectedQaParameterSetId}
+              disabled={isUploadingFiles || createCampaignMutation.isPending || (uploadMode === 'csv' ? !rows.length : !audioFiles.length) || !selectedQaParameterSetId}
             >
-              {createCampaignMutation.isPending ? (
+              {(isUploadingFiles || createCampaignMutation.isPending) ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <PlayCircle className="mr-2 h-4 w-4" />
               )}
-              Start Campaign
+              {isUploadingFiles ? 'Uploading...' : 'Start Campaign'}
             </Button>
           </div>
         </CardContent>
@@ -372,7 +592,7 @@ export default function BulkAuditPage() {
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-8 w-8 mx-auto mb-4" />
               <p>No campaigns yet</p>
-              <p className="text-sm">Upload a CSV and start your first campaign</p>
+              <p className="text-sm">Upload files and start your first campaign</p>
             </div>
           ) : (
             <div className="rounded-md border overflow-hidden">
@@ -394,10 +614,10 @@ export default function BulkAuditPage() {
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${c.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' :
-                            c.status === 'processing' || c.status === 'in_progress' ? 'bg-primary/10 text-primary' :
-                              c.status === 'failed' ? 'bg-red-500/10 text-red-500' :
-                                c.status === 'cancelled' ? 'bg-amber-500/10 text-amber-500' :
-                                  'bg-muted text-muted-foreground'
+                          c.status === 'processing' || c.status === 'in_progress' ? 'bg-primary/10 text-primary' :
+                            c.status === 'failed' ? 'bg-red-500/10 text-red-500' :
+                              c.status === 'cancelled' ? 'bg-amber-500/10 text-amber-500' :
+                                'bg-muted text-muted-foreground'
                           }`}>
                           {statusLabel(c.status)}
                         </span>

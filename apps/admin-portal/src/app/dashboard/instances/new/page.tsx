@@ -150,7 +150,7 @@ export default function NewInstancePage() {
                     placeholder="acme"
                   />
                   <span className="px-3 py-2 bg-muted border border-border border-l-0 rounded-r-lg text-muted-foreground text-sm">
-                    .assureqai.app
+                    .assureqai.com
                   </span>
                 </div>
               </div>

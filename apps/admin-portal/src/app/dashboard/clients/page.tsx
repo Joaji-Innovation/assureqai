@@ -46,7 +46,7 @@ export default function ClientsPage() {
         users: 0, // Mock for now
         auditsThisMonth: 0, // Mock for now
         instanceId: inst._id,
-        domain: inst.domain?.customDomain || `${inst.domain?.subdomain}.assureqai.app`,
+        domain: inst.domain?.customDomain || `${inst.domain?.subdomain}.assureqai.com`,
         createdAt: new Date(inst.createdAt).toISOString().split('T')[0],
       }));
       setClients(mappedClients);

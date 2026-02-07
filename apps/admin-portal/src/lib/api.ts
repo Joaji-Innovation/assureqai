@@ -131,6 +131,7 @@ export interface Instance {
 
 export const instanceApi = {
   findAll: () => request<Instance[]>('/api/admin/instances'),
+  findById: (id: string) => request<Instance>(`/api/admin/instances/${id}`),
   create: (data: any) => request<Instance>('/api/admin/instances', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: any) => request<Instance>(`/api/admin/instances/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getLogs: (id: string) => request<any[]>(`/api/admin/instances/${id}/logs`),
@@ -143,10 +144,20 @@ export const instanceApi = {
   updateCredits: (id: string, credits: { totalAudits?: number; totalTokens?: number; usedAudits?: number; usedTokens?: number }) =>
     request<Instance>(`/api/admin/instances/${id}/credits`, { method: 'PUT', body: JSON.stringify(credits) }),
 
-  // Simulated methods for actions not yet supported by backend
-  start: async (id: string) => { await new Promise(r => setTimeout(r, 1000)); return true; },
-  stop: async (id: string) => { await new Promise(r => setTimeout(r, 1000)); return true; },
-  restart: async (id: string) => { await new Promise(r => setTimeout(r, 1000)); return true; },
+  // Domain management
+  addCustomDomain: (id: string, domain: string) =>
+    request<Instance>(`/api/admin/instances/${id}/domains/custom`, { method: 'POST', body: JSON.stringify({ domain }) }),
+  verifyDomain: (id: string) =>
+    request<{ verified: boolean; error?: string }>(`/api/admin/instances/${id}/domains/verify`, { method: 'POST' }),
+  removeDomain: (id: string) =>
+    request<Instance>(`/api/admin/instances/${id}/domains/custom`, { method: 'DELETE' }),
+  updateSubdomain: (id: string, subdomain: string) =>
+    request<Instance>(`/api/admin/instances/${id}/domains/subdomain`, { method: 'PUT', body: JSON.stringify({ subdomain }) }),
+
+  // Instance actions (will trigger via provisioning/SSH)
+  start: (id: string) => request<{ success: boolean }>(`/api/admin/instances/${id}/start`, { method: 'POST' }),
+  stop: (id: string) => request<{ success: boolean }>(`/api/admin/instances/${id}/stop`, { method: 'POST' }),
+  restart: (id: string) => request<{ success: boolean }>(`/api/admin/instances/${id}/restart`, { method: 'POST' }),
 };
 
 export const auditApi = {
@@ -176,8 +187,12 @@ export const adminApi = {
 
 export const backupApi = {
   getByInstance: (instanceId: string) => request<any[]>(`/api/admin/backups/instance/${instanceId}`),
-  restore: (id: string) => request<void>(`/api/admin/backups/${id}/restore`, { method: 'POST' }),
+  create: (instanceId: string) => request<any>(`/api/admin/backups/instance/${instanceId}`, { method: 'POST' }),
+  restore: (id: string) => request<{ success: boolean; error?: string }>(`/api/admin/backups/${id}/restore`, { method: 'POST' }),
   delete: (id: string) => request<void>(`/api/admin/backups/${id}`, { method: 'DELETE' }),
+  getStats: (instanceId?: string) =>
+    request<any>(instanceId ? `/api/admin/backups/stats/${instanceId}` : '/api/admin/backups/stats'),
+  getById: (id: string) => request<any>(`/api/admin/backups/${id}`),
 };
 
 export const creditsApi = {
@@ -185,6 +200,58 @@ export const creditsApi = {
     request<void>(`/api/admin/credits/${instanceId}/audit`, { method: 'POST', body: JSON.stringify(data) }),
   addTokenCredits: (instanceId: string, data: { amount: number; reason: string }) =>
     request<void>(`/api/admin/credits/${instanceId}/token`, { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// Template interfaces and API
+export interface Template {
+  _id: string;
+  name: string;
+  type: 'sop' | 'parameters';
+  industry: string;
+  description?: string;
+  content?: any;
+  isDefault?: boolean;
+  createdAt: string;
+}
+
+export const templateApi = {
+  list: (filters?: { type?: string; industry?: string }) =>
+    request<Template[]>('/api/admin/templates', { params: filters as any }),
+  getById: (id: string) => request<Template>(`/api/admin/templates/${id}`),
+  create: (data: Partial<Template>) =>
+    request<Template>('/api/admin/templates', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<Template>) =>
+    request<Template>(`/api/admin/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => request<void>(`/api/admin/templates/${id}`, { method: 'DELETE' }),
+  getIndustries: () => request<string[]>('/api/admin/templates/industries'),
+  clone: (id: string) => request<Template>(`/api/admin/templates/${id}/clone`, { method: 'POST' }),
+};
+
+// Announcement interfaces and API
+export interface Announcement {
+  _id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'maintenance' | 'update';
+  audience: 'all' | 'admins' | 'specific';
+  isActive: boolean;
+  scheduledAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export const announcementApi = {
+  list: (all?: boolean) =>
+    request<Announcement[]>('/api/announcements', { params: { all: all ? 'true' : undefined } }),
+  getById: (id: string) => request<Announcement>(`/api/announcements/${id}`),
+  create: (data: Partial<Announcement>) =>
+    request<Announcement>('/api/announcements', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<Announcement>) =>
+    request<Announcement>(`/api/announcements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => request<void>(`/api/announcements/${id}`, { method: 'DELETE' }),
+  deactivate: (id: string) =>
+    request<Announcement>(`/api/announcements/${id}/deactivate`, { method: 'PUT' }),
 };
 
 // Ticket interface and API
@@ -234,5 +301,7 @@ export default {
   backup: backupApi,
   credits: creditsApi,
   ticket: ticketApi,
+  template: templateApi,
+  announcement: announcementApi,
 };
 

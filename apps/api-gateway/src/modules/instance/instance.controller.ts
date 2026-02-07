@@ -143,4 +143,27 @@ export class InstanceController {
   ) {
     return this.instanceService.updateCredits(id, dto);
   }
+
+  // ===== Instance Actions (Start/Stop/Restart) =====
+
+  @Post(':id/start')
+  @RequirePermissions(PERMISSIONS.SSH_ACCESS)
+  @ApiOperation({ summary: 'Start instance containers' })
+  async startInstance(@Param('id') id: string) {
+    return this.instanceService.startInstance(id);
+  }
+
+  @Post(':id/stop')
+  @RequirePermissions(PERMISSIONS.SSH_ACCESS)
+  @ApiOperation({ summary: 'Stop instance containers' })
+  async stopInstance(@Param('id') id: string) {
+    return this.instanceService.stopInstance(id);
+  }
+
+  @Post(':id/restart')
+  @RequirePermissions(PERMISSIONS.SSH_ACCESS)
+  @ApiOperation({ summary: 'Restart instance containers' })
+  async restartInstance(@Param('id') id: string) {
+    return this.instanceService.restartInstance(id);
+  }
 }

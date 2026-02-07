@@ -1,40 +1,41 @@
 'use client';
 
-import { useState } from 'react';
-import { FileText, Search, Plus, Trash2, Edit, X, Loader2, Filter, Copy } from 'lucide-react';
-
-interface Template {
-  id: string;
-  name: string;
-  type: 'sop' | 'parameter';
-  industry: string;
-  description?: string;
-  isDefault: boolean;
-  createdAt: string;
-}
-
-const mockTemplates: Template[] = [
-  { id: '1', name: 'Insurance Claims SOP', type: 'sop', industry: 'Insurance', description: 'Standard SOP for insurance claims call handling', isDefault: true, createdAt: '2025-12-01' },
-  { id: '2', name: 'Banking KYC Parameters', type: 'parameter', industry: 'Banking', description: 'QA parameters for KYC compliance calls', isDefault: true, createdAt: '2025-12-01' },
-  { id: '3', name: 'Telecom Support SOP', type: 'sop', industry: 'Telecom', description: 'Standard SOP for telecom customer support', isDefault: true, createdAt: '2025-12-01' },
-  { id: '4', name: 'Healthcare Compliance Parameters', type: 'parameter', industry: 'Healthcare', description: 'HIPAA-compliant QA parameters', isDefault: true, createdAt: '2025-12-01' },
-  { id: '5', name: 'Retail Sales SOP', type: 'sop', industry: 'Retail', description: 'Sales call quality standards', isDefault: false, createdAt: '2026-01-05' },
-];
+import { useState, useEffect } from 'react';
+import { FileText, Search, Plus, Trash2, Edit, X, Loader2, Copy } from 'lucide-react';
+import { templateApi, Template } from '@/lib/api';
 
 const industries = ['Insurance', 'Banking', 'Telecom', 'Healthcare', 'Retail', 'E-commerce', 'Travel', 'Custom'];
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState(mockTemplates);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [industryFilter, setIndustryFilter] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [newTemplate, setNewTemplate] = useState({ name: '', type: 'sop', industry: 'Custom', description: '' });
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      setLoading(true);
+      const data = await templateApi.list();
+      setTemplates(data);
+    } catch (error) {
+      console.error('Failed to fetch templates:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTemplates = templates.filter(t => {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         t.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      t.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === 'all' || t.type === typeFilter;
     const matchesIndustry = industryFilter === 'all' || t.industry === industryFilter;
     return matchesSearch && matchesType && matchesIndustry;
@@ -43,24 +44,56 @@ export default function TemplatesPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdding(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setTemplates(prev => [...prev, {
-      id: Date.now().toString(),
-      ...newTemplate,
-      type: newTemplate.type as 'sop' | 'parameter',
-      isDefault: false,
-      createdAt: new Date().toISOString().split('T')[0],
-    }]);
-    setNewTemplate({ name: '', type: 'sop', industry: 'Custom', description: '' });
-    setShowAddForm(false);
-    setAdding(false);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this template?')) {
-      setTemplates(prev => prev.filter(t => t.id !== id));
+    try {
+      const created = await templateApi.create({
+        name: newTemplate.name,
+        type: newTemplate.type as 'sop' | 'parameters',
+        industry: newTemplate.industry,
+        description: newTemplate.description,
+      });
+      setTemplates(prev => [...prev, created]);
+      setNewTemplate({ name: '', type: 'sop', industry: 'Custom', description: '' });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to create template:', error);
+      alert('Failed to create template');
+    } finally {
+      setAdding(false);
     }
   };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this template?')) return;
+
+    setDeleting(id);
+    try {
+      await templateApi.delete(id);
+      setTemplates(prev => prev.filter(t => t._id !== id));
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      alert('Failed to delete template');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleClone = async (id: string) => {
+    try {
+      const cloned = await templateApi.clone(id);
+      setTemplates(prev => [...prev, cloned]);
+    } catch (error) {
+      console.error('Failed to clone template:', error);
+      alert('Failed to clone template');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -103,7 +136,7 @@ export default function TemplatesPage() {
                   className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="sop">SOP Template</option>
-                  <option value="parameter">Parameter Template</option>
+                  <option value="parameters">Parameter Template</option>
                 </select>
               </div>
               <div>
@@ -160,7 +193,7 @@ export default function TemplatesPage() {
         >
           <option value="all">All Types</option>
           <option value="sop">SOP</option>
-          <option value="parameter">Parameter</option>
+          <option value="parameters">Parameter</option>
         </select>
         <select
           value={industryFilter}
@@ -175,49 +208,69 @@ export default function TemplatesPage() {
       </div>
 
       {/* Templates Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTemplates.map((template) => (
-          <div key={template.id} className="bg-card/50 backdrop-blur rounded-xl border border-border p-5 hover:border-primary/50 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${template.type === 'sop' ? 'bg-blue-500/10' : 'bg-amber-500/10'}`}>
-                  <FileText className={`h-5 w-5 ${template.type === 'sop' ? 'text-blue-500' : 'text-amber-500'}`} />
+      {filteredTemplates.length === 0 ? (
+        <div className="text-center py-12 bg-card/50 rounded-xl border border-border">
+          <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No templates found</h3>
+          <p className="text-muted-foreground">
+            {searchQuery || typeFilter !== 'all' || industryFilter !== 'all'
+              ? 'Try adjusting your filters'
+              : 'Create your first template to get started'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredTemplates.map((template) => (
+            <div key={template._id} className="bg-card/50 backdrop-blur rounded-xl border border-border p-5 hover:border-primary/50 transition-colors">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${template.type === 'sop' ? 'bg-blue-500/10' : 'bg-amber-500/10'}`}>
+                    <FileText className={`h-5 w-5 ${template.type === 'sop' ? 'text-blue-500' : 'text-amber-500'}`} />
+                  </div>
+                  <div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${template.type === 'sop' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                      {template.type.toUpperCase()}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${template.type === 'sop' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                    {template.type.toUpperCase()}
-                  </span>
-                </div>
+                {template.isDefault && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">Default</span>
+                )}
               </div>
-              {template.isDefault && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">Default</span>
+
+              <h3 className="font-semibold mb-1">{template.name}</h3>
+              <p className="text-xs text-muted-foreground mb-2">{template.industry}</p>
+              {template.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{template.description}</p>
               )}
-            </div>
 
-            <h3 className="font-semibold mb-1">{template.name}</h3>
-            <p className="text-xs text-muted-foreground mb-2">{template.industry}</p>
-            {template.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{template.description}</p>
-            )}
-
-            <div className="flex items-center gap-2">
-              <button className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors">
-                <Copy className="h-4 w-4" />
-                Clone
-              </button>
-              <button className="p-2 rounded-lg hover:bg-muted transition-colors">
-                <Edit className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => handleDelete(template.id)}
-                className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleClone(template._id)}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
+                >
+                  <Copy className="h-4 w-4" />
+                  Clone
+                </button>
+                <button className="p-2 rounded-lg hover:bg-muted transition-colors">
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(template._id)}
+                  disabled={deleting === template._id}
+                  className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                >
+                  {deleting === template._id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

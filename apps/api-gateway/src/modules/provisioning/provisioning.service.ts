@@ -24,8 +24,8 @@ export interface DeployResult {
 @Injectable()
 export class ProvisioningService {
   private readonly logger = new Logger(ProvisioningService.name);
-  
-  constructor(private configService: ConfigService) {}
+
+  constructor(private configService: ConfigService) { }
 
   /**
    * Deploy a new client instance to remote VPS
@@ -43,7 +43,7 @@ export class ProvisioningService {
 
     try {
       logs.push(`[${new Date().toISOString()}] Starting deployment to ${config.host}`);
-      
+
       // Connect via SSH
       await ssh.connect({
         host: config.host,
@@ -117,7 +117,7 @@ EOF`);
     } catch (error) {
       logs.push(`[${new Date().toISOString()}] ERROR: ${error.message}`);
       ssh.dispose();
-      
+
       return {
         success: false,
         logs,
@@ -164,7 +164,7 @@ EOF`);
     } catch (error) {
       logs.push(`[${new Date().toISOString()}] ERROR: ${error.message}`);
       ssh.dispose();
-      
+
       return {
         success: false,
         logs,
@@ -222,6 +222,35 @@ EOF`);
 
       await ssh.execCommand('cd /opt/assureqai && docker-compose stop');
       logs.push(`[${new Date().toISOString()}] Containers stopped`);
+
+      ssh.dispose();
+
+      return { success: true, logs, duration: Date.now() - startTime };
+    } catch (error) {
+      ssh.dispose();
+      return { success: false, logs, duration: Date.now() - startTime, error: error.message };
+    }
+  }
+
+  /**
+   * Start instance containers
+   */
+  async start(config: DeployConfig): Promise<DeployResult> {
+    const startTime = Date.now();
+    const logs: string[] = [];
+    const ssh = new NodeSSH();
+
+    try {
+      await ssh.connect({
+        host: config.host,
+        port: config.port || 22,
+        username: config.username,
+        privateKey: config.privateKey,
+        password: config.password,
+      });
+
+      await ssh.execCommand('cd /opt/assureqai && docker-compose up -d');
+      logs.push(`[${new Date().toISOString()}] Containers started`);
 
       ssh.dispose();
 

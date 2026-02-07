@@ -41,11 +41,10 @@ import {
   AlertTriangle,
   Scale,
   ChevronsUpDown,
-  Sparkles,
   BadgeCheck,
-  CreditCard,
   Sun,
   Moon,
+  Ticket,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from 'next-themes';
@@ -206,6 +205,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       icon: Bell,
       type: 'link',
       roles: ['super_admin', 'client_admin', 'manager'],
+    },
+    {
+      href: '/dashboard/support',
+      label: 'Support Tickets',
+      tabName: 'support',
+      icon: Ticket,
+      type: 'link',
+      roles: ['super_admin', 'client_admin', 'manager', 'qa_analyst', 'auditor', 'agent'],
     },
   ];
 
@@ -466,24 +473,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Upgrade to Pro
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
                     <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                       <BadgeCheck className="mr-2 h-4 w-4" />
                       Account
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Billing
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push('/dashboard/notifications')}>
-                      <Bell className="mr-2 h-4 w-4" />
-                      Notifications
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />

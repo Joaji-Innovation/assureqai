@@ -106,7 +106,7 @@ export class InstanceService {
         instanceId: instance.clientId,
         mongoUri: 'mongodb://mongo:27017/assureqai', // Internal URI for the container
         apiKey: instance.apiKey,
-        domain: instance.domain.customDomain || `${instance.domain.subdomain}.assureqai.app`
+        domain: instance.domain.customDomain || `${instance.domain.subdomain}.assureqai.com`
       });
 
       if (result.success) {
@@ -362,5 +362,88 @@ export class InstanceService {
     if (credits.usedAudits !== undefined) updateData['credits.usedAudits'] = credits.usedAudits;
     if (credits.usedTokens !== undefined) updateData['credits.usedTokens'] = credits.usedTokens;
     return this.update(id, updateData);
+  }
+
+  // ===== Instance Lifecycle Actions =====
+
+  // Start instance containers
+  async startInstance(id: string): Promise<{ success: boolean; error?: string }> {
+    const instance = await this.findById(id);
+
+    if (!instance.vps?.host) {
+      return { success: false, error: 'No VPS configuration found' };
+    }
+
+    try {
+      const result = await this.provisioningService.start({
+        host: instance.vps.host,
+        username: instance.vps.sshUser,
+        port: instance.vps.sshPort || 22,
+      });
+
+      if (result.success) {
+        await this.update(id, { status: 'running' });
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Failed to start containers' };
+      }
+    } catch (error) {
+      console.error('Start instance error:', error);
+      return { success: false, error: 'Failed to connect to instance' };
+    }
+  }
+
+  // Stop instance containers
+  async stopInstance(id: string): Promise<{ success: boolean; error?: string }> {
+    const instance = await this.findById(id);
+
+    if (!instance.vps?.host) {
+      return { success: false, error: 'No VPS configuration found' };
+    }
+
+    try {
+      const result = await this.provisioningService.stop({
+        host: instance.vps.host,
+        username: instance.vps.sshUser,
+        port: instance.vps.sshPort || 22,
+      });
+
+      if (result.success) {
+        await this.update(id, { status: 'stopped' });
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Failed to stop containers' };
+      }
+    } catch (error) {
+      console.error('Stop instance error:', error);
+      return { success: false, error: 'Failed to connect to instance' };
+    }
+  }
+
+  // Restart instance containers
+  async restartInstance(id: string): Promise<{ success: boolean; error?: string }> {
+    const instance = await this.findById(id);
+
+    if (!instance.vps?.host) {
+      return { success: false, error: 'No VPS configuration found' };
+    }
+
+    try {
+      const result = await this.provisioningService.restart({
+        host: instance.vps.host,
+        username: instance.vps.sshUser,
+        port: instance.vps.sshPort || 22,
+      });
+
+      if (result.success) {
+        await this.update(id, { status: 'running' });
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Failed to restart containers' };
+      }
+    } catch (error) {
+      console.error('Restart instance error:', error);
+      return { success: false, error: 'Failed to connect to instance' };
+    }
   }
 }

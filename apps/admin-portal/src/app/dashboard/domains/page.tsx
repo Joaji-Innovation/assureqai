@@ -50,7 +50,7 @@ export default function DomainsPage() {
         if (inst.domain?.subdomain) {
           mappedDomains.push({
             id: `${inst._id}-sub`,
-            domain: `${inst.domain.subdomain}.assureqai.app`,
+            domain: `${inst.domain.subdomain}.assureqai.com`,
             clientId: inst._id,
             clientName: inst.name || 'Unnamed Client',
             status: 'active', // Subdomains are always active if instance exists
@@ -94,21 +94,13 @@ export default function DomainsPage() {
 
     setAdding(true);
     try {
-      // We assume we might have an endpoint or we just simulate for now as 'addCustomDomain' wasn't strictly exposed in api.ts yet clearly
-      // Re-checking api.ts, I didn't add `addCustomDomain`. I will just simulate success + refresh for now or use update.
-      // Actually I'll use instanceApi.update to set custom domain if I can, or just mock it to not break the user flow.
-
-      // Simulating API call since specific endpoint adding custom domain might need more work in api.ts
-      // In a real scenario: await instanceApi.addCustomDomain(newDomain.instanceId, newDomain.domain);
-
-      await new Promise(r => setTimeout(r, 1000));
-      alert('Custom domain added (simulated). Verification required.');
-
+      await instanceApi.addCustomDomain(newDomain.instanceId, newDomain.domain);
       await fetchData();
       setNewDomain({ domain: '', instanceId: '' });
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to add domain', error);
+      alert('Failed to add custom domain');
     } finally {
       setAdding(false);
     }
@@ -119,22 +111,30 @@ export default function DomainsPage() {
     const instanceId = id.split('-')[0];
     setVerifying(id);
     try {
-      // await instanceApi.verifyDomain(instanceId);
-      await new Promise(r => setTimeout(r, 1500));
-      alert('Domain verification simulated: Success');
-      // Optimistic update
-      setDomains(prev => prev.map(d => d.id === id ? { ...d, status: 'active', sslStatus: 'valid' } : d));
+      const result = await instanceApi.verifyDomain(instanceId);
+      if (result.verified) {
+        setDomains(prev => prev.map(d => d.id === id ? { ...d, status: 'active', sslStatus: 'valid' } : d));
+      } else {
+        alert(result.error || 'Domain verification failed. Please check DNS settings.');
+      }
     } catch (error) {
       console.error('Verification failed', error);
+      alert('Failed to verify domain');
     } finally {
       setVerifying(null);
     }
   };
 
   const handleDeleteDomain = async (id: string) => {
-    if (confirm('Are you sure you want to remove this custom domain?')) {
-      // Logic to remove custom domain from instance
+    if (!confirm('Are you sure you want to remove this custom domain?')) return;
+
+    const instanceId = id.split('-')[0];
+    try {
+      await instanceApi.removeDomain(instanceId);
       setDomains(prev => prev.filter(d => d.id !== id));
+    } catch (error) {
+      console.error('Failed to remove domain', error);
+      alert('Failed to remove custom domain');
     }
   };
 
@@ -207,7 +207,7 @@ export default function DomainsPage() {
               <h4 className="text-sm font-medium mb-2">DNS Configuration Required</h4>
               <p className="text-xs text-muted-foreground mb-2">Add the following CNAME record to your DNS:</p>
               <code className="block p-2 bg-background rounded text-xs font-mono">
-                {newDomain.domain || 'your-domain.com'} CNAME proxy.assureqai.app
+                {newDomain.domain || 'your-domain.com'} CNAME proxy.assureqai.com
               </code>
             </div>
             <button

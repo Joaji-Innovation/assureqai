@@ -1,33 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Megaphone, Search, Plus, Trash2, Edit, X, Loader2, Clock, Users, AlertTriangle, Info, Wrench, Sparkles } from 'lucide-react';
-
-interface Announcement {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'maintenance' | 'update';
-  audience: 'all' | 'admins' | 'specific';
-  isActive: boolean;
-  scheduledAt?: string;
-  expiresAt?: string;
-  createdAt: string;
-}
-
-const mockAnnouncements: Announcement[] = [
-  { id: '1', title: 'Platform Update v2.5', message: 'We are releasing new features including improved AI accuracy and faster processing.', type: 'update', audience: 'all', isActive: true, createdAt: '2026-01-17' },
-  { id: '2', title: 'Scheduled Maintenance', message: 'The platform will be under maintenance on Jan 20 from 2-4 AM UTC.', type: 'maintenance', audience: 'all', isActive: true, scheduledAt: '2026-01-20T02:00:00Z', createdAt: '2026-01-15' },
-  { id: '3', title: 'API Rate Limit Changes', message: 'Starting Feb 1, API rate limits will be adjusted for better performance.', type: 'warning', audience: 'admins', isActive: true, createdAt: '2026-01-10' },
-  { id: '4', title: 'Holiday Support Hours', message: 'Support hours will be reduced during the holiday period.', type: 'info', audience: 'all', isActive: false, expiresAt: '2026-01-02', createdAt: '2025-12-20' },
-];
+import { announcementApi, Announcement } from '@/lib/api';
 
 export default function AnnouncementsPage() {
-  const [announcements, setAnnouncements] = useState(mockAnnouncements);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: 'info', audience: 'all' });
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      setLoading(true);
+      const data = await announcementApi.list(true); // Get all, including inactive
+      setAnnouncements(data);
+    } catch (error) {
+      console.error('Failed to fetch announcements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredAnnouncements = announcements.filter(a =>
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,29 +38,55 @@ export default function AnnouncementsPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdding(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setAnnouncements(prev => [...prev, {
-      id: Date.now().toString(),
-      ...newAnnouncement,
-      type: newAnnouncement.type as any,
-      audience: newAnnouncement.audience as any,
-      isActive: true,
-      createdAt: new Date().toISOString().split('T')[0],
-    }]);
-    setNewAnnouncement({ title: '', message: '', type: 'info', audience: 'all' });
-    setShowAddForm(false);
-    setAdding(false);
+    try {
+      const created = await announcementApi.create({
+        title: newAnnouncement.title,
+        message: newAnnouncement.message,
+        type: newAnnouncement.type as Announcement['type'],
+        audience: newAnnouncement.audience as Announcement['audience'],
+        isActive: true,
+      });
+      setAnnouncements(prev => [...prev, created]);
+      setNewAnnouncement({ title: '', message: '', type: 'info', audience: 'all' });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to create announcement:', error);
+      alert('Failed to create announcement');
+    } finally {
+      setAdding(false);
+    }
   };
 
-  const handleToggle = (id: string) => {
-    setAnnouncements(prev => prev.map(a => 
-      a.id === id ? { ...a, isActive: !a.isActive } : a
-    ));
+  const handleToggle = async (id: string, isActive: boolean) => {
+    setToggling(id);
+    try {
+      if (isActive) {
+        await announcementApi.deactivate(id);
+        setAnnouncements(prev => prev.map(a => a._id === id ? { ...a, isActive: false } : a));
+      } else {
+        await announcementApi.update(id, { isActive: true });
+        setAnnouncements(prev => prev.map(a => a._id === id ? { ...a, isActive: true } : a));
+      }
+    } catch (error) {
+      console.error('Failed to toggle announcement:', error);
+      alert('Failed to update announcement');
+    } finally {
+      setToggling(null);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this announcement?')) {
-      setAnnouncements(prev => prev.filter(a => a.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this announcement?')) return;
+
+    setDeleting(id);
+    try {
+      await announcementApi.delete(id);
+      setAnnouncements(prev => prev.filter(a => a._id !== id));
+    } catch (error) {
+      console.error('Failed to delete announcement:', error);
+      alert('Failed to delete announcement');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -82,6 +109,14 @@ export default function AnnouncementsPage() {
       default: return 'bg-muted text-muted-foreground';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -177,55 +212,75 @@ export default function AnnouncementsPage() {
       </div>
 
       {/* Announcements List */}
-      <div className="space-y-4">
-        {filteredAnnouncements.map((announcement) => (
-          <div key={announcement.id} className={`bg-card/50 backdrop-blur rounded-xl border p-5 transition-colors ${announcement.isActive ? 'border-border hover:border-primary/50' : 'border-border/50 opacity-60'}`}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${getTypeColor(announcement.type)}`}>
-                  {getTypeIcon(announcement.type)}
-                </div>
-                <div>
-                  <h3 className="font-semibold">{announcement.title}</h3>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className={`px-2 py-0.5 rounded-full ${getTypeColor(announcement.type)}`}>
-                      {announcement.type}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {announcement.audience}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {announcement.createdAt}
-                    </span>
+      {filteredAnnouncements.length === 0 ? (
+        <div className="text-center py-12 bg-card/50 rounded-xl border border-border">
+          <Megaphone className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No announcements found</h3>
+          <p className="text-muted-foreground">
+            {searchQuery ? 'Try adjusting your search' : 'Create your first announcement'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredAnnouncements.map((announcement) => (
+            <div key={announcement._id} className={`bg-card/50 backdrop-blur rounded-xl border p-5 transition-colors ${announcement.isActive ? 'border-border hover:border-primary/50' : 'border-border/50 opacity-60'}`}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${getTypeColor(announcement.type)}`}>
+                    {getTypeIcon(announcement.type)}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{announcement.title}</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className={`px-2 py-0.5 rounded-full ${getTypeColor(announcement.type)}`}>
+                        {announcement.type}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {announcement.audience}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(announcement.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleToggle(announcement._id, announcement.isActive)}
+                    disabled={toggling === announcement._id}
+                    className={`px-3 py-1 text-xs rounded-lg transition-colors disabled:opacity-50 ${announcement.isActive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    {toggling === announcement._id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      announcement.isActive ? 'Active' : 'Inactive'
+                    )}
+                  </button>
+                </div>
               </div>
+              <p className="text-sm text-muted-foreground mb-4">{announcement.message}</p>
               <div className="flex items-center gap-2">
+                <button className="p-2 rounded-lg hover:bg-muted transition-colors">
+                  <Edit className="h-4 w-4" />
+                </button>
                 <button
-                  onClick={() => handleToggle(announcement.id)}
-                  className={`px-3 py-1 text-xs rounded-lg transition-colors ${announcement.isActive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}`}
+                  onClick={() => handleDelete(announcement._id)}
+                  disabled={deleting === announcement._id}
+                  className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
                 >
-                  {announcement.isActive ? 'Active' : 'Inactive'}
+                  {deleting === announcement._id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">{announcement.message}</p>
-            <div className="flex items-center gap-2">
-              <button className="p-2 rounded-lg hover:bg-muted transition-colors">
-                <Edit className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => handleDelete(announcement.id)}
-                className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

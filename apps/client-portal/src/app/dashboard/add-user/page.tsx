@@ -13,7 +13,7 @@ export default function AddUserPage() {
   const deleteUserMutation = useDeleteUser();
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', password: '', fullName: '', email: '', role: 'Agent' });
+  const [newUser, setNewUser] = useState({ username: '', password: '', fullName: '', email: '', role: 'agent' });
 
   // Get users from API
   const users: User[] = userData?.data || [];
@@ -23,7 +23,7 @@ export default function AddUserPage() {
     try {
       await createUserMutation.mutateAsync(newUser);
       setShowAddForm(false);
-      setNewUser({ username: '', password: '', fullName: '', email: '', role: 'Agent' });
+      setNewUser({ username: '', password: '', fullName: '', email: '', role: 'agent' });
     } catch (err) {
       // Error handled by React Query
     }
@@ -35,7 +35,14 @@ export default function AddUserPage() {
     }
   }
 
-  const roles = ['Administrator', 'Manager', 'QA Analyst', 'Auditor', 'Agent'];
+  // Role options with display name and backend value
+  const roleOptions = [
+    { label: 'Client Admin', value: 'client_admin' },
+    { label: 'Manager', value: 'manager' },
+    { label: 'QA Analyst', value: 'qa_analyst' },
+    { label: 'Auditor', value: 'auditor' },
+    { label: 'Agent', value: 'agent' },
+  ];
 
   if (isLoading) {
     return (
@@ -131,9 +138,11 @@ export default function AddUserPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Full Name</label>
+                <label className="text-sm font-medium">Full Name *</label>
                 <input
                   type="text"
+                  required
+                  minLength={2}
                   value={newUser.fullName}
                   onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
                   className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -141,9 +150,10 @@ export default function AddUserPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Email</label>
+                <label className="text-sm font-medium">Email *</label>
                 <input
                   type="email"
+                  required
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -157,8 +167,8 @@ export default function AddUserPage() {
                   onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                   className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  {roles.map((role) => (
-                    <option key={role} value={role}>{role}</option>
+                  {roleOptions.map((role) => (
+                    <option key={role.value} value={role.value}>{role.label}</option>
                   ))}
                 </select>
               </div>

@@ -28,7 +28,7 @@ COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application
-COPY --from=builder /app/dist/apps/api-gateway ./dist
+COPY --from=builder /app/dist/apps/api-gateway ./dist/apps/api-gateway
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -44,4 +44,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Start the application
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/apps/api-gateway/main.js"]

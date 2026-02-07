@@ -1,13 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Save, Loader2, Database, Mail, Shield, Bell, Globe } from 'lucide-react';
+
+import { settingsApi } from '@/lib/api';
+
+interface PlatformSettings {
+  platformName: string;
+  supportEmail: string;
+  defaultPlan: string;
+  trialDays: number;
+  enableSignups: boolean;
+  requireEmailVerification: boolean;
+  maxAuditsPerMinute: number;
+  defaultAuditLanguage: string;
+  retentionDays: number;
+  backupEnabled: boolean;
+  backupSchedule: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+}
 
 export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<PlatformSettings>({
     platformName: 'AssureQai',
     supportEmail: 'support@assureqai.com',
     defaultPlan: 'starter',
@@ -19,18 +39,48 @@ export default function SettingsPage() {
     retentionDays: 365,
     backupEnabled: true,
     backupSchedule: 'daily',
-    smtpHost: 'smtp.sendgrid.net',
+    smtpHost: '',
     smtpPort: 587,
-    smtpUser: 'apikey',
+    smtpUser: '',
   });
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const data = await settingsApi.get();
+      // Merge with default/existing state to prevent nulls if API returns partial data
+      if (data) setSettings(prev => ({ ...prev, ...(data as Partial<PlatformSettings>) }));
+    } catch (error) {
+      console.error('Failed to fetch settings', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await settingsApi.update(settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Failed to save settings', error);
+      alert('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">

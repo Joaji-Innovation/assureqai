@@ -40,6 +40,7 @@ import { CreditsModule } from '../modules/credits/credits.module';
 import { NotificationsModule } from '../modules/notifications/notifications.module';
 import { AuditReportModule } from '../modules/audit-report/audit-report.module';
 import { TicketModule } from '../modules/ticket/ticket.module';
+import { SettingsModule } from '../modules/settings/settings.module';
 
 // Config
 import { WinstonLoggerConfig } from '../config/logger.config';
@@ -113,6 +114,7 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     NotificationsModule,
     AuditReportModule,
     TicketModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

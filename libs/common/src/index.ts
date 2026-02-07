@@ -11,3 +11,6 @@ export * from './interfaces';
 
 // DTOs
 export * from './dto';
+
+// Schemas
+export * from './schemas/settings.schema';

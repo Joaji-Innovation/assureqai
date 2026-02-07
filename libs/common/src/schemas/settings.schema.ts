@@ -6,46 +6,46 @@ export type SettingsDocument = Settings & Document;
 @Schema({ timestamps: true })
 export class Settings {
   @Prop({ default: 'AssureQai' })
-  platformName: string;
+  platformName!: string;
 
   @Prop({ default: 'support@assureqai.com' })
-  supportEmail: string;
+  supportEmail!: string;
 
   @Prop({ default: 'starter', enum: ['starter', 'pro', 'enterprise'] })
-  defaultPlan: string;
+  defaultPlan!: string;
 
   @Prop({ default: 14 })
-  trialDays: number;
+  trialDays!: number;
 
   @Prop({ default: true })
-  enableSignups: boolean;
+  enableSignups!: boolean;
 
   @Prop({ default: true })
-  requireEmailVerification: boolean;
+  requireEmailVerification!: boolean;
 
   @Prop({ default: 10 })
-  maxAuditsPerMinute: number;
+  maxAuditsPerMinute!: number;
 
   @Prop({ default: 'auto' })
-  defaultAuditLanguage: string;
+  defaultAuditLanguage!: string;
 
   @Prop({ default: 365 })
-  retentionDays: number;
+  retentionDays!: number;
 
   @Prop({ default: true })
-  backupEnabled: boolean;
+  backupEnabled!: boolean;
 
   @Prop({ default: 'daily', enum: ['hourly', 'daily', 'weekly'] })
-  backupSchedule: string;
+  backupSchedule!: string;
 
   @Prop({ default: 'smtp.example.com' })
-  smtpHost: string;
+  smtpHost!: string;
 
   @Prop({ default: 587 })
-  smtpPort: number;
+  smtpPort!: number;
 
   @Prop({ default: 'apikey' })
-  smtpUser: string;
+  smtpUser!: string;
 
   @Prop({ select: false }) // Hide password by default
   smtpPassword?: string;

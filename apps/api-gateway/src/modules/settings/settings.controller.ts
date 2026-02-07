@@ -1,8 +1,6 @@
 import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
-import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
-import { RolesGuard } from '../../guards/roles.guard';
-import { Roles } from '@app/common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard, Roles } from '@assureqai/auth';
 
 @Controller('admin/settings')
 @UseGuards(JwtAuthGuard, RolesGuard)

@@ -293,6 +293,11 @@ export const ticketApi = {
     request<Ticket>(`/api/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ content, isInternal }) }),
 };
 
+export const settingsApi = {
+  get: () => request<any>('/api/admin/settings'),
+  update: (data: any) => request<any>('/api/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
 export default {
   auth: authApi,
   audit: auditApi,
@@ -305,5 +310,6 @@ export default {
   ticket: ticketApi,
   template: templateApi,
   announcement: announcementApi,
+  settings: settingsApi,
 };
 

@@ -127,27 +127,32 @@ export class CampaignController {
     }
     const file = files[0];
 
-    // Save file
-    const uploadDir = join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    try {
+      // Save file
+      const uploadDir = join(process.cwd(), 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Sanitize
+      const originalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filename = `${Date.now()}-${originalName}`;
+      const filepath = join(uploadDir, filename);
+
+      fs.writeFileSync(filepath, file.buffer);
+
+      const audioUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${filename}`;
+
+      // Add job
+      return await this.campaignService.addJob(id, {
+        audioUrl,
+        agentName: 'Unknown',
+        callId: originalName,
+      });
+    } catch (error) {
+      console.error('File upload failed:', error);
+      throw new BadRequestException(`File upload failed: ${error.message}`);
     }
-
-    // Sanitize
-    const originalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${Date.now()}-${originalName}`;
-    const filepath = join(uploadDir, filename);
-
-    fs.writeFileSync(filepath, file.buffer);
-
-    const audioUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${filename}`;
-
-    // Add job
-    return this.campaignService.addJob(id, {
-      audioUrl,
-      agentName: 'Unknown',
-      callId: originalName,
-    });
   }
 
   /**

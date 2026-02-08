@@ -217,6 +217,9 @@ export class CampaignService {
       status: 'pending',
     };
 
+    if (!campaign.jobs) {
+      campaign.jobs = [];
+    }
     campaign.jobs.push(newJob as any);
     campaign.totalJobs += 1;
 

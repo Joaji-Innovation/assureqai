@@ -39,8 +39,20 @@ export default function CampaignDetailsPage() {
   const params = useParams();
   const campaignId = params.id as string;
   const { toast } = useToast();
-
   const { data: campaign, isLoading, error, refetch } = useCampaign(campaignId);
+
+  // State for config
+  const [showSettings, setShowSettings] = useState(false);
+  const [rpm, setRpm] = useState(10);
+  const [failureThreshold, setFailureThreshold] = useState(20);
+
+  // Update local state when campaign loads
+  useEffect(() => {
+    if (campaign?.config) {
+      setRpm(campaign.config.rpm || 10);
+      setFailureThreshold(campaign.config.failureThreshold || 20);
+    }
+  }, [campaign]);
 
   if (isLoading) {
     return (
@@ -131,18 +143,7 @@ export default function CampaignDetailsPage() {
     }
   };
 
-  // State for config
-  const [showSettings, setShowSettings] = useState(false);
-  const [rpm, setRpm] = useState(10);
-  const [failureThreshold, setFailureThreshold] = useState(20);
 
-  // Update local state when campaign loads
-  useEffect(() => {
-    if (campaign?.config) {
-      setRpm(campaign.config.rpm || 10);
-      setFailureThreshold(campaign.config.failureThreshold || 20);
-    }
-  }, [campaign]);
 
   const handleSaveConfig = async () => {
     try {

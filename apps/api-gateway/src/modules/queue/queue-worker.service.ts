@@ -107,6 +107,21 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
    */
   private async processJob(job: QueueJob): Promise<void> {
     const startTime = Date.now();
+
+    // Check campaign status first
+    const campaign = await this.campaignModel.findById(job.campaignId).exec();
+    if (!campaign) {
+      this.logger.error(`Campaign ${job.campaignId} not found for job ${job.id}`);
+      return;
+    }
+
+    if (campaign.status === 'paused') {
+      this.logger.log(`Campaign ${job.campaignId} is paused. Re-queuing job ${job.id}`);
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Delay to avoid busy loop
+      await this.queueService.returnJob(job);
+      return;
+    }
+
     this.logger.log(`Processing job ${job.id} (attempt ${job.attempts + 1})`);
 
     try {

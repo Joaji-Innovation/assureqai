@@ -12,8 +12,13 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
-  FileText
+  FileText,
+  PlayCircle,
+  PauseCircle,
+  RotateCw,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { campaignApi } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -29,6 +34,7 @@ import { useCampaign } from '@/lib/hooks';
 export default function CampaignDetailsPage() {
   const params = useParams();
   const campaignId = params.id as string;
+  const { toast } = useToast();
 
   const { data: campaign, isLoading, error, refetch } = useCampaign(campaignId);
 
@@ -71,8 +77,40 @@ export default function CampaignDetailsPage() {
         return <XCircle className="h-4 w-4 text-red-500" />;
       case 'processing':
         return <Loader2 className="h-4 w-4 text-primary animate-spin" />;
+      case 'paused':
+        return <PauseCircle className="h-4 w-4 text-amber-500" />;
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const handlePause = async () => {
+    try {
+      await campaignApi.pause(campaignId);
+      toast({ title: 'Campaign paused' });
+      refetch();
+    } catch (e: any) {
+      toast({ title: 'Failed to pause', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const handleResume = async () => {
+    try {
+      await campaignApi.resume(campaignId);
+      toast({ title: 'Campaign resumed' });
+      refetch();
+    } catch (e: any) {
+      toast({ title: 'Failed to resume', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const handleRetry = async () => {
+    try {
+      await campaignApi.retry(campaignId);
+      toast({ title: 'Retrying failed jobs' });
+      refetch();
+    } catch (e: any) {
+      toast({ title: 'Failed to retry', description: e.message, variant: 'destructive' });
     }
   };
 
@@ -105,11 +143,32 @@ export default function CampaignDetailsPage() {
             <p className="text-muted-foreground">Campaign Details</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+      </div>
+      <div className="flex items-center gap-2">
+        {(campaign.status === 'processing' || campaign.status === 'pending') && (
+          <Button variant="outline" size="sm" onClick={handlePause}>
+            <PauseCircle className="mr-2 h-4 w-4" />
+            Pause
+          </Button>
+        )}
+        {campaign.status === 'paused' && (
+          <Button variant="outline" size="sm" onClick={handleResume}>
+            <PlayCircle className="mr-2 h-4 w-4" />
+            Resume
+          </Button>
+        )}
+        {campaign.failedJobs > 0 && (
+          <Button variant="outline" size="sm" onClick={handleRetry}>
+            <RotateCw className="mr-2 h-4 w-4" />
+            Retry Failed
+          </Button>
+        )}
+        <div className="flex items-center gap-2 ml-2">
           {getStatusIcon(campaign.status)}
           <span className="capitalize font-medium">{campaign.status.replace(/_/g, ' ')}</span>
         </div>
       </div>
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -200,6 +259,6 @@ export default function CampaignDetailsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

@@ -190,6 +190,113 @@ export class CampaignService {
   }
 
   /**
+   * Pause campaign
+   */
+  async pause(id: string): Promise<Campaign> {
+    const campaign = await this.campaignModel.findByIdAndUpdate(
+      id,
+      { status: 'paused' },
+      { new: true },
+    ).exec();
+
+    if (!campaign) {
+      throw new NotFoundException(`Campaign with ID ${id} not found`);
+    }
+    return campaign;
+  }
+
+  /**
+   * Resume campaign
+   */
+  async resume(id: string): Promise<Campaign> {
+    const campaign = await this.campaignModel.findById(id).exec();
+    if (!campaign) {
+      throw new NotFoundException(`Campaign with ID ${id} not found`);
+    }
+
+    if (campaign.status === 'paused') {
+      campaign.status = 'processing';
+      await campaign.save();
+    }
+    return campaign;
+  }
+
+  /**
+   * Retry failed jobs
+   */
+  async retry(id: string): Promise<Campaign> {
+    // Logic delegated to queue worker, but we update status here if needed
+    // Actually, the controller calls queueWorkerService.retryFailedJobs directly usually,
+    // or we call it here. Let's assume we inject QueueWorkerService or handle it here via QueueService.
+    // Wait, QueueWorkerService is where retry logic resides in the proposed plan.
+    // But CampaignService is usually the entry point.
+    // Let's implement a simple status update here and let the controller call the worker.
+    // OR better: Inject QueueWorkerService here? Circular dependency risk.
+    // Let's keep it simple: Controller calls Service.retry, Service updates status and re-queues?
+    // The existing code has `retryFailedJobs` in `QueueWorkerService`.
+    // We will stick to the plan: `CampaignService` just exposes the method if needed or Controller calls Worker directly.
+    // Actually, better to have `CampaignService` manage the high level concept.
+    // But `QueueWorkerService` imports `CampaignService` (via model? no, via Model injection).
+    // `QueueWorkerService` is in `queue` module. `CampaignService` is in `campaign` module.
+    // `QueueModule` imports `CampaignModule`? Or vice versa?
+    // Usually `QueueWorker` is a consumer.
+    // Let's look at `CampaignController` imports.
+    // It imports `CampaignService`.
+    // I need to be careful about circular deps.
+    // Plan says: `CampaignService.retry(id)` calls `queueWorkerService.retryFailedJobs(id)`.
+    // Checking imports... `CampaignService` imports `QueueService`.
+    // It does NOT import `QueueWorkerService`.
+    // To avoid circular dependency, I should perhaps move `retryFailedJobs` to `CampaignService` completely?
+    // But `retryFailedJobs` needs `QueueService`. `CampaignService` has `QueueService`.
+    // Yes! references to `QueueWorkerService` in plan might have been slightly off regarding *location* of logic.
+    // `QueueWorkerService` has `retryFailedJobs` implemented in the file I viewed (`queue-worker.service.ts`).
+    // It uses `campaignModel` and `queueService`.
+    // Ideally `CampaignService` should use `QueueWorkerService`.
+    // If `QueueWorkerService` is not exported or injectable in `CampaignService`, we have a problem.
+    // Let's check `QueueModule`.
+    // Assuming for now I can't easily inject `QueueWorkerService` into `CampaignService` without checking module structure.
+    // I will just implement the status update in `resume` (done) and `pause` (done).
+    // For `retry`, I will implement logic here in `CampaignService` re-using `QueueService`, similar to `QueueWorkerService.retryFailedJobs`.
+    // OR, since `QueueWorkerService` ALREADY HAS `retryFailedJobs` (I saw it in the file `queue-worker.service.ts` at the bottom!),
+    // I should just use that.
+    // But `CampaignController` only injects `CampaignService`.
+    // I will add `retry` to `CampaignService` by copying the logic or trying to inject `QueueWorkerService`.
+    // Copying logic is safer to avoid circular deps if they exist.
+    // Logic: Find campaign, find failed jobs, add to queue, update status.
+    const campaign = await this.campaignModel.findById(id).exec();
+    if (!campaign) throw new NotFoundException('Campaign not found');
+
+    let retriedCount = 0;
+    for (let i = 0; i < campaign.jobs.length; i++) {
+      const job = campaign.jobs[i];
+      if (job.status === 'failed') {
+        // Re-queue
+        if (this.queueService.isAvailable()) {
+          await this.queueService.addJobs([{
+            campaignId: id,
+            audioUrl: job.audioUrl,
+            agentName: job.agentName,
+            callId: job.callId,
+            parameterId: campaign.qaParameterSetId.toString()
+          }]);
+        }
+        // Reset status
+        campaign.jobs[i].status = 'pending';
+        (campaign.jobs[i] as any).error = undefined;
+        retriedCount++;
+      }
+    }
+
+    if (retriedCount > 0) {
+      campaign.failedJobs -= retriedCount;
+      campaign.status = 'processing';
+      await campaign.save();
+      this.logger.log(`Retried ${retriedCount} jobs for campaign ${id}`);
+    }
+    return campaign;
+  }
+
+  /**
    * Delete campaign
    */
   async delete(id: string): Promise<void> {

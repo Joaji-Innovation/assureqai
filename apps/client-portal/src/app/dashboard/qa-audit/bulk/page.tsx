@@ -631,8 +631,9 @@ export default function BulkAuditPage() {
                         <span className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${c.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' :
                           c.status === 'processing' || c.status === 'in_progress' ? 'bg-primary/10 text-primary' :
                             c.status === 'failed' ? 'bg-red-500/10 text-red-500' :
-                              c.status === 'cancelled' ? 'bg-amber-500/10 text-amber-500' :
-                                'bg-muted text-muted-foreground'
+                              c.status === 'cancelled' ? 'bg-gray-500/10 text-gray-500' :
+                                c.status === 'paused' ? 'bg-amber-500/10 text-amber-500' :
+                                  'bg-muted text-muted-foreground'
                           }`}>
                           {statusLabel(c.status)}
                         </span>

@@ -218,6 +218,39 @@ export class CampaignController {
   }
 
   /**
+   * Pause campaign
+   */
+  @Put(':id/pause')
+  @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
+  @ApiOperation({ summary: 'Pause a campaign' })
+  @ApiResponse({ status: 200, description: 'Campaign paused' })
+  async pause(@Param('id') id: string) {
+    return this.campaignService.pause(id);
+  }
+
+  /**
+   * Resume campaign
+   */
+  @Put(':id/resume')
+  @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
+  @ApiOperation({ summary: 'Resume a campaign' })
+  @ApiResponse({ status: 200, description: 'Campaign resumed' })
+  async resume(@Param('id') id: string) {
+    return this.campaignService.resume(id);
+  }
+
+  /**
+   * Retry failed jobs
+   */
+  @Post(':id/retry')
+  @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
+  @ApiOperation({ summary: 'Retry failed jobs in a campaign' })
+  @ApiResponse({ status: 200, description: 'Failed jobs retried' })
+  async retry(@Param('id') id: string) {
+    return this.campaignService.retry(id);
+  }
+
+  /**
    * Delete campaign
    */
   @Delete(':id')

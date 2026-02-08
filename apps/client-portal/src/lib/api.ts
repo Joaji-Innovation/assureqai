@@ -412,7 +412,7 @@ export interface Campaign {
   _id: string;
   name: string;
   description?: string;
-  status: 'pending' | 'processing' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+  status: 'pending' | 'processing' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | 'paused';
   totalJobs: number;
   completedJobs: number;
   failedJobs: number;
@@ -473,6 +473,15 @@ export const campaignApi = {
       body: formData,
     });
   },
+
+  pause: (id: string) =>
+    request<Campaign>(`/api/campaigns/${id}/pause`, { method: 'PUT' }),
+
+  resume: (id: string) =>
+    request<Campaign>(`/api/campaigns/${id}/resume`, { method: 'PUT' }),
+
+  retry: (id: string) =>
+    request<Campaign>(`/api/campaigns/${id}/retry`, { method: 'POST' }),
 };
 
 // User APIs - interface defined above

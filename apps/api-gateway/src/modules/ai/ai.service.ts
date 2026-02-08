@@ -798,6 +798,9 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
    * Upload audio to Google File API for large files
    * Returns the file URI for referencing in API calls
    */
+  // ... existing upload code ...
+
+
   private async uploadToFileApi(audioBase64: string, mimeType: string): Promise<string> {
     const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${this.apiKey}`;
 

@@ -40,7 +40,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useCampaigns, useCreateCampaign } from '@/lib/hooks';
-import { qaParameterApi, type QAParameter, type Campaign } from '@/lib/api';
+import { qaParameterApi, campaignApi, type QAParameter, type Campaign } from '@/lib/api';
 
 interface ParsedRow {
   audioUrl: string;
@@ -226,6 +226,9 @@ export default function BulkAuditPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Progress state
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+
   const startCampaign = async () => {
     const hasData = uploadMode === 'csv' ? rows.length > 0 : audioFiles.length > 0;
 
@@ -245,33 +248,41 @@ export default function BulkAuditPage() {
       setIsUploadingFiles(true);
 
       if (uploadMode === 'direct') {
-        // For direct upload, we need to upload files first and get URLs
-        // Create a FormData with all audio files
-        const formData = new FormData();
-        audioFiles.forEach((file, index) => {
-          formData.append('files', file);
-        });
-        formData.append('campaignName', campaignName);
-        formData.append('qaParameterSetId', selectedQaParameterSetId);
+        // 1. Create a Campaign container first
+        setUploadProgress({ current: 0, total: audioFiles.length });
 
-        // Use the bulk upload endpoint
-        const response = await fetch('/api/campaigns/bulk-upload', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
+        const newCampaign = await createCampaignMutation.mutateAsync({
+          name: campaignName,
+          qaParameterSetId: selectedQaParameterSetId,
+          jobs: [], // Start with empty jobs
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to upload files');
+        // 2. Upload files individually
+        let uploadedCount = 0;
+        let failedCount = 0;
+
+        for (const file of audioFiles) {
+          try {
+            await campaignApi.uploadFile(newCampaign._id, file);
+            uploadedCount++;
+          } catch (err) {
+            console.error(`Failed to upload ${file.name}`, err);
+            failedCount++;
+            toast({
+              title: `Failed to upload ${file.name}`,
+              description: 'Continuing with remaining files...',
+              variant: 'destructive'
+            });
+          }
+          setUploadProgress(prev => ({ ...prev, current: uploadedCount + failedCount }));
         }
 
         toast({
           title: 'Campaign started',
-          description: `${audioFiles.length} files uploaded and queued for processing`,
+          description: `${uploadedCount} files uploaded and queued (${failedCount} failed)`,
         });
         setAudioFiles([]);
+        setUploadProgress({ current: 0, total: 0 });
       } else {
         // CSV mode - existing behavior
         await createCampaignMutation.mutateAsync({
@@ -569,7 +580,11 @@ export default function BulkAuditPage() {
               ) : (
                 <PlayCircle className="mr-2 h-4 w-4" />
               )}
-              {isUploadingFiles ? 'Uploading...' : 'Start Campaign'}
+              {isUploadingFiles
+                ? (uploadMode === 'direct' && uploadProgress.total > 0
+                  ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
+                  : 'Uploading...')
+                : 'Start Campaign'}
             </Button>
           </div>
         </CardContent>

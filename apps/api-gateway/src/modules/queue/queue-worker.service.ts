@@ -6,6 +6,9 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import * as fs from 'fs';
+import { join } from 'path';
+
 import { QueueService, QueueJob } from './queue.service';
 import { AiService } from '../ai/ai.service';
 import { UsageReporterService } from '../audit-report/usage-reporter.service';
@@ -135,6 +138,9 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
       const duration = Date.now() - startTime;
       this.logger.log(`Job ${job.id} completed in ${duration}ms, score: ${auditResult.overallScore}`);
 
+      // Cleanup audio file
+      await this.deleteAudioFile(job.audioUrl);
+
       // Report usage to admin panel (for isolated instances)
       this.usageReporter.reportAudit({
         auditId: audit._id.toString(),
@@ -175,6 +181,26 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
         await this.updateCampaignJobStatus(job.campaignId, job, 'failed', undefined, errorMessage);
         await this.checkCampaignCompletion(job.campaignId);
       }
+    }
+  }
+
+  /**
+   * Delete audio file from local storage
+   */
+  private async deleteAudioFile(audioUrl: string): Promise<void> {
+    try {
+      // Extract filename from URL (assumes /api/uploads/filename format)
+      const filename = audioUrl.split('/uploads/').pop();
+      if (!filename) return;
+
+      const filepath = join(process.cwd(), 'uploads', filename);
+
+      if (fs.existsSync(filepath)) {
+        await fs.promises.unlink(filepath);
+        this.logger.log(`Deleted audio file: ${filename}`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to delete audio file ${audioUrl}: ${error}`);
     }
   }
 

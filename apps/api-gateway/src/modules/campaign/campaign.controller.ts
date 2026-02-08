@@ -11,18 +11,144 @@ import {
   Body,
   Param,
   Query,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto';
 import { Roles, RequirePermissions, CurrentUser } from '@assureqai/auth';
 import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
+import { join } from 'path';
+import * as fs from 'fs';
 
 @ApiTags('Campaigns')
 @ApiBearerAuth()
 @Controller('campaigns')
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(private readonly campaignService: CampaignService) { }
+
+  /**
+   * Bulk upload audio files for campaign
+   */
+  @Post('bulk-upload')
+  @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
+  @ApiOperation({ summary: 'Bulk upload audio files for campaign' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        campaignName: { type: 'string' },
+        qaParameterSetId: { type: 'string' },
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files'))
+  async bulkUpload(
+    @UploadedFiles() files: Array<any>,
+    @Body() body: { campaignName: string; qaParameterSetId: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files uploaded');
+    }
+
+    const jobs = [];
+    const uploadDir = join(process.cwd(), 'uploads');
+
+    // Ensure upload dir exists
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    for (const file of files) {
+      // sanitize filename
+      const originalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filename = `${Date.now()}-${originalName}`;
+      const filepath = join(uploadDir, filename);
+
+      fs.writeFileSync(filepath, file.buffer);
+
+      const audioUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${filename}`;
+
+      jobs.push({
+        audioUrl,
+        agentName: 'Unknown Agent',
+        callId: originalName,
+      });
+    }
+
+    return this.campaignService.create(
+      {
+        name: body.campaignName,
+        qaParameterSetId: body.qaParameterSetId,
+        projectId: user.projectId,
+        jobs,
+      },
+      user.sub,
+    );
+  }
+
+  /**
+   * Upload single audio file and add to campaign
+   */
+  @Post(':id/upload')
+  @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
+  @ApiOperation({ summary: 'Upload single audio file and add to campaign' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('file', 1))
+  async uploadFile(
+    @Param('id') id: string,
+    @UploadedFiles() files: Array<any>,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No file uploaded');
+    }
+    const file = files[0];
+
+    // Save file
+    const uploadDir = join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Sanitize
+    const originalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filename = `${Date.now()}-${originalName}`;
+    const filepath = join(uploadDir, filename);
+
+    fs.writeFileSync(filepath, file.buffer);
+
+    const audioUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${filename}`;
+
+    // Add job
+    return this.campaignService.addJob(id, {
+      audioUrl,
+      agentName: 'Unknown',
+      callId: originalName,
+    });
+  }
 
   /**
    * Create a new bulk audit campaign

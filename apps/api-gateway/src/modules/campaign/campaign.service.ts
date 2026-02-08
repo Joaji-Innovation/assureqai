@@ -17,7 +17,7 @@ export class CampaignService {
   constructor(
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     private queueService: QueueService,
-  ) {}
+  ) { }
 
   /**
    * Create a new campaign and queue jobs
@@ -161,7 +161,7 @@ export class CampaignService {
    */
   async complete(campaignId: string, stats?: Campaign['stats']): Promise<void> {
     const campaign = await this.findById(campaignId);
-    
+
     const allCompleted = campaign.completedJobs + campaign.failedJobs >= campaign.totalJobs;
     if (allCompleted) {
       await this.campaignModel.findByIdAndUpdate(campaignId, {
@@ -197,5 +197,55 @@ export class CampaignService {
     if (!result) {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
     }
+  }
+  /**
+   * Add a single job to an existing campaign and queue it immediately
+   */
+  async addJob(
+    campaignId: string,
+    job: { audioUrl: string; agentName?: string; callId?: string },
+  ): Promise<Campaign> {
+    const campaign = await this.campaignModel.findById(campaignId);
+    if (!campaign) {
+      throw new NotFoundException(`Campaign with ID ${campaignId} not found`);
+    }
+
+    const newJob = {
+      audioUrl: job.audioUrl,
+      agentName: job.agentName,
+      callId: job.callId,
+      status: 'pending',
+    };
+
+    campaign.jobs.push(newJob as any);
+    campaign.totalJobs += 1;
+
+    // If campaign was completed/failed, set back to processing? 
+    // Usually we add jobs to a new/pending/processing campaign.
+    if (campaign.status === 'completed' || campaign.status === 'failed') {
+      campaign.status = 'processing';
+    }
+
+    await campaign.save();
+
+    // Queue job
+    if (this.queueService.isAvailable()) {
+      try {
+        await this.queueService.addJobs([
+          {
+            campaignId: campaign._id.toString(),
+            audioUrl: job.audioUrl,
+            agentName: job.agentName,
+            callId: job.callId,
+            parameterId: campaign.qaParameterSetId.toString(),
+          },
+        ]);
+        this.logger.log(`Added and queued job for campaign ${campaignId}`);
+      } catch (error) {
+        this.logger.error(`Failed to queue job: ${error}`);
+      }
+    }
+
+    return campaign;
   }
 }

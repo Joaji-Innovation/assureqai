@@ -459,6 +459,15 @@ export const campaignApi = {
 
   getStatus: (id: string) =>
     request<{ status: string; progress: number; completedJobs: number; totalJobs: number }>(`/api/campaigns/${id}/status`),
+
+  uploadFile: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<any>(`/api/campaigns/${id}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };
 
 // User APIs - interface defined above

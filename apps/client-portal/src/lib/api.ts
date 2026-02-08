@@ -38,13 +38,18 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
     }
   }
 
+  // Prepare headers
+  const headers = { ...fetchOptions.headers } as Record<string, string>;
+
+  // Only set Content-Type to application/json if body is NOT FormData
+  if (!(fetchOptions.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const res = await fetch(url, {
     ...fetchOptions,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...fetchOptions.headers,
-    },
+    headers,
   });
 
   if (!res.ok) {

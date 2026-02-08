@@ -413,6 +413,13 @@ export interface Campaign {
   name: string;
   description?: string;
   status: 'pending' | 'processing' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | 'paused';
+  config: {
+    rpm: number;
+    failureThreshold: number;
+  };
+  usage: {
+    lastJobStartedAt?: string;
+  };
   totalJobs: number;
   completedJobs: number;
   failedJobs: number;
@@ -482,6 +489,9 @@ export const campaignApi = {
 
   retry: (id: string) =>
     request<Campaign>(`/api/campaigns/${id}/retry`, { method: 'POST' }),
+
+  updateConfig: (id: string, config: { rpm: number; failureThreshold: number }) =>
+    request<Campaign>(`/api/campaigns/${id}/config`, { method: 'POST', body: JSON.stringify(config) }),
 };
 
 // User APIs - interface defined above

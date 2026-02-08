@@ -16,7 +16,9 @@ import {
   PlayCircle,
   PauseCircle,
   RotateCw,
+  Settings,
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { campaignApi } from '@/lib/api';
 import {
@@ -29,6 +31,8 @@ import {
 } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import { useCampaign } from '@/lib/hooks';
 
 export default function CampaignDetailsPage() {
@@ -127,6 +131,30 @@ export default function CampaignDetailsPage() {
     }
   };
 
+  // State for config
+  const [showSettings, setShowSettings] = useState(false);
+  const [rpm, setRpm] = useState(10);
+  const [failureThreshold, setFailureThreshold] = useState(20);
+
+  // Update local state when campaign loads
+  useEffect(() => {
+    if (campaign?.config) {
+      setRpm(campaign.config.rpm || 10);
+      setFailureThreshold(campaign.config.failureThreshold || 20);
+    }
+  }, [campaign]);
+
+  const handleSaveConfig = async () => {
+    try {
+      await campaignApi.updateConfig(campaignId, { rpm, failureThreshold });
+      toast({ title: 'Settings updated', description: 'Queue configuration saved' });
+      setShowSettings(false);
+      refetch();
+    } catch (e: any) {
+      toast({ title: 'Failed to update settings', description: e.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -140,10 +168,74 @@ export default function CampaignDetailsPage() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold tracking-tight">{campaign.name}</h2>
-            <p className="text-muted-foreground">Campaign Details</p>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <p>Campaign Details</p>
+              <span>•</span>
+              <Badge variant="outline" className="text-xs font-normal">
+                Auto-Retry Active
+              </Badge>
+            </div>
           </div>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
+            <Settings className="mr-2 h-4 w-4" />
+            Queue Settings
+          </Button>
+        </div>
       </div>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <Card className="bg-muted/50">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Queue Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Speed (Audits per Minute)</Label>
+                  <span className="text-xs text-muted-foreground">{rpm} RPM</span>
+                </div>
+                <Slider
+                  min={1}
+                  max={60}
+                  step={1}
+                  value={[rpm]}
+                  onValueChange={(vals) => setRpm(vals[0])}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Controls how fast jobs are processed. Lower this if you hit API rate limits.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Pause on Failure %</Label>
+                  <span className="text-xs text-muted-foreground">{failureThreshold}%</span>
+                </div>
+                <Slider
+                  min={5}
+                  max={100}
+                  step={5}
+                  value={[failureThreshold]}
+                  onValueChange={(vals) => setFailureThreshold(vals[0])}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Auto-pause campaign if failure rate exceeds this threshold.
+                </p>
+              </div>
+
+              <Button onClick={handleSaveConfig} disabled={isLoading}>
+                Save Changes
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center gap-2">
         {(campaign.status === 'processing' || campaign.status === 'pending') && (
           <Button variant="outline" size="sm" onClick={handlePause}>
@@ -166,8 +258,12 @@ export default function CampaignDetailsPage() {
         <div className="flex items-center gap-2 ml-2">
           {getStatusIcon(campaign.status)}
           <span className="capitalize font-medium">{campaign.status.replace(/_/g, ' ')}</span>
+          {campaign.status === 'paused' && campaign.failedJobs > 0 && (
+            <span className="text-xs text-red-500 ml-1">(High failure rate detected)</span>
+          )}
         </div>
       </div>
+
 
 
       {/* Stats Cards */}

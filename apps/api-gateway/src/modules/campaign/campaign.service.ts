@@ -222,6 +222,30 @@ export class CampaignService {
   }
 
   /**
+   * Update campaign configuration (RPM, Failure Threshold)
+   */
+  async updateConfig(id: string, config: { rpm: number; failureThreshold: number }): Promise<Campaign> {
+    const campaign = await this.campaignModel.findByIdAndUpdate(
+      id,
+      { config },
+      { new: true },
+    ).exec();
+
+    if (!campaign) {
+      throw new NotFoundException(`Campaign with ID ${id} not found`);
+    }
+
+    return campaign;
+  }
+
+  /**
+   * Update campaign usage statistics (internal)
+   */
+  async updateUsage(id: string, usage: { lastJobStartedAt: Date }): Promise<void> {
+    await this.campaignModel.findByIdAndUpdate(id, { usage }).exec();
+  }
+
+  /**
    * Retry failed jobs
    */
   async retry(id: string): Promise<Campaign> {

@@ -250,6 +250,21 @@ export class CampaignController {
     return this.campaignService.retry(id);
   }
 
+
+  /**
+   * Update campaign configuration
+   */
+  @Post(':id/config')
+  @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
+  @ApiOperation({ summary: 'Update campaign configuration' })
+  @ApiResponse({ status: 200, description: 'Configuration updated' })
+  async updateConfig(
+    @Param('id') id: string,
+    @Body() config: { rpm: number; failureThreshold: number },
+  ) {
+    return this.campaignService.updateConfig(id, config);
+  }
+
   /**
    * Delete campaign
    */

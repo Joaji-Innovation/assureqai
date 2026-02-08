@@ -117,10 +117,29 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
     if (campaign.status === 'paused') {
       this.logger.log(`Campaign ${job.campaignId} is paused. Re-queuing job ${job.id}`);
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Delay to avoid busy loop
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await this.queueService.returnJob(job);
       return;
     }
+
+    // Rate Limiting Logic (RPM)
+    const rpm = campaign.config?.rpm || 10; // Default 10 RPM
+    const minIntervalMs = 60000 / rpm;
+    const lastStarted = campaign.usage?.lastJobStartedAt ? new Date(campaign.usage.lastJobStartedAt).getTime() : 0;
+    const timeSinceLast = Date.now() - lastStarted;
+
+    if (timeSinceLast < minIntervalMs) {
+      const waitTime = minIntervalMs - timeSinceLast;
+      this.logger.debug(`Rate limit hit for campaign ${job.campaignId}. Re-queuing job ${job.id} (wait ${waitTime}ms)`);
+      await new Promise((resolve) => setTimeout(resolve, Math.min(waitTime, 2000))); // Wait briefly
+      await this.queueService.returnJob(job); // Put back to queue
+      return;
+    }
+
+    // Update last usage time
+    await this.campaignModel.findByIdAndUpdate(job.campaignId, {
+      'usage.lastJobStartedAt': new Date()
+    }).exec();
 
     this.logger.log(`Processing job ${job.id} (attempt ${job.attempts + 1})`);
 
@@ -180,20 +199,29 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
       const errorMessage = error?.message || 'Unknown error';
       this.logger.warn(`Job ${job.id} failed (attempt ${job.attempts + 1}): ${errorMessage}`);
 
-      // Calculate retry delay with exponential backoff
       const retryDelay = this.calculateRetryDelay(job.attempts);
 
       if (job.attempts + 1 < LIMITS.MAX_RETRIES) {
-        // Schedule retry with exponential backoff
         this.logger.log(`Scheduling retry for job ${job.id} in ${retryDelay}ms`);
-
         setTimeout(async () => {
           await this.queueService.returnJob(job);
         }, retryDelay);
       } else {
-        // Max retries exceeded - mark as failed
         this.logger.error(`Job ${job.id} failed permanently after ${job.attempts + 1} attempts`);
         await this.updateCampaignJobStatus(job.campaignId, job, 'failed', undefined, errorMessage);
+
+        // Check Failure Threshold
+        const campaign = await this.campaignModel.findById(job.campaignId).exec();
+        if (campaign) {
+          const failedRate = ((campaign.failedJobs + 1) / campaign.totalJobs) * 100; // approximation since we just inc failed
+          const threshold = campaign.config?.failureThreshold || 20;
+
+          if (campaign.totalJobs > 5 && failedRate > threshold) {
+            this.logger.warn(`Campaign ${job.campaignId} paused due to high failure rate (${failedRate.toFixed(1)}% > ${threshold}%)`);
+            await this.campaignModel.findByIdAndUpdate(job.campaignId, { status: 'paused' }).exec();
+          }
+        }
+
         await this.checkCampaignCompletion(job.campaignId);
       }
     }

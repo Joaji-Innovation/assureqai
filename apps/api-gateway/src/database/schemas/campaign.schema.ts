@@ -79,6 +79,25 @@ export class Campaign {
     totalTokens: number;
     avgDurationMs: number;
   };
+
+  // Configuration for Queue Control
+  @Prop({
+    type: Object,
+    default: { rpm: 10, failureThreshold: 20 },
+  })
+  config: {
+    rpm: number;             // Rate limit: Audits per minute
+    failureThreshold: number; // Pause if failure % > this
+  };
+
+  // Internal usage tracking for rate limiting
+  @Prop({
+    type: Object,
+    default: {},
+  })
+  usage: {
+    lastJobStartedAt?: Date;
+  };
 }
 
 export const CampaignSchema = SchemaFactory.createForClass(Campaign);

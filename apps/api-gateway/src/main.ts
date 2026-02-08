@@ -22,10 +22,22 @@ async function bootstrap() {
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   // Body parser with increased limits for large transcripts/audio
-  // No limit restrictions as per user requirement
   app.use(bodyParser.json({ limit: '500mb' }));
   app.use(bodyParser.urlencoded({ limit: '500mb', extended: true }));
-  app.use(bodyParser.raw({ limit: '500mb', type: '*/*' }));
+  // Raw parser should NOT handle multipart/form-data (let Multer handle it)
+  app.use(
+    bodyParser.raw({
+      limit: '500mb',
+      type: (req: any) => {
+        const contentType = req.headers['content-type'];
+        // Match explicit application/octet-stream or similar, but EXCLUDE multipart
+        if (contentType && contentType.includes('multipart/form-data')) {
+          return false;
+        }
+        return true;
+      },
+    }),
+  );
 
   // Security middleware
   app.use(cookieParser());

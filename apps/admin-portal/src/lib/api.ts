@@ -149,6 +149,10 @@ export interface Instance {
   domain?: {
     subdomain: string;
     customDomain?: string;
+    // Optional fields populated when a custom domain is configured
+    customDomainVerified?: boolean;
+    sslStatus?: 'valid' | 'pending' | 'expired' | 'disabled';
+    sslExpiry?: string;
   };
   apiKey?: string;
   credits?: {

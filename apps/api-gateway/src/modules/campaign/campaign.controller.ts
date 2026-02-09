@@ -90,7 +90,10 @@ export class CampaignController {
       fs.writeFileSync(filepath, file.buffer);
 
       const audioUrl = process.env.NEXT_PUBLIC_API_URL
-        ? new URL(`/api/uploads/${filename}`, process.env.NEXT_PUBLIC_API_URL).toString()
+        ? new URL(
+            `/api/uploads/${filename}`,
+            process.env.NEXT_PUBLIC_API_URL,
+          ).toString()
         : `/api/uploads/${filename}`;
 
       jobs.push({
@@ -154,7 +157,10 @@ export class CampaignController {
       fs.writeFileSync(filepath, file.buffer);
 
       const audioUrl = process.env.NEXT_PUBLIC_API_URL
-        ? new URL(`/api/uploads/${filename}`, process.env.NEXT_PUBLIC_API_URL).toString()
+        ? new URL(
+            `/api/uploads/${filename}`,
+            process.env.NEXT_PUBLIC_API_URL,
+          ).toString()
         : `/api/uploads/${filename}`;
 
       // Add job

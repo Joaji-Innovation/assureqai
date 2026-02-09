@@ -787,45 +787,7 @@ export default function BrochurePage() {
         </div>
       </section>
 
-      {/* Case Studies / Testimonials */}
-      <Section>
-        <SectionHeader title="Field Reports" />
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-white dark:bg-neutral-900 p-10 rounded-[2rem] shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-6 text-emerald-600">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><ShieldCheck className="w-5 h-5" /></div>
-              <span className="font-bold text-sm uppercase tracking-wide">Collections</span>
-            </div>
-            <p className="text-5xl font-bold mb-4 tracking-tighter">42%</p>
-            <p className="text-base text-neutral-600 dark:text-neutral-400 mb-6 leading-relaxed">Reduction in fatal error rates.</p>
-            <div className="h-px bg-neutral-100 dark:bg-white/5 mb-6" />
-            <p className="text-xs font-mono text-neutral-500">75K calls / month</p>
-          </div>
-
-          <div className="bg-white dark:bg-neutral-900 p-10 rounded-[2rem] shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-6 text-emerald-600">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><TrendingUp className="w-5 h-5" /></div>
-              <span className="font-bold text-sm uppercase tracking-wide">Support</span>
-            </div>
-            <p className="text-5xl font-bold mb-4 tracking-tighter">51/29/20</p>
-            <p className="text-base text-neutral-600 dark:text-neutral-400 mb-6 leading-relaxed">GAR distribution Improvement.</p>
-            <div className="h-px bg-neutral-100 dark:bg-white/5 mb-6" />
-            <p className="text-xs font-mono text-neutral-500">100K calls / month</p>
-          </div>
-
-          <div className="bg-white dark:bg-neutral-900 p-10 rounded-[2rem] shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-6 text-emerald-600">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><Zap className="w-5 h-5" /></div>
-              <span className="font-bold text-sm uppercase tracking-wide">Sales</span>
-            </div>
-            <p className="text-5xl font-bold mb-4 tracking-tighter">27%</p>
-            <p className="text-base text-neutral-600 dark:text-neutral-400 mb-6 leading-relaxed">Increase in parameter compliance.</p>
-            <div className="h-px bg-neutral-100 dark:bg-white/5 mb-6" />
-            <p className="text-xs font-mono text-neutral-500">40K calls / month</p>
-          </div>
-        </div>
-      </Section>
 
       {/* Standard CTA & Footer */}
       <CTASection />

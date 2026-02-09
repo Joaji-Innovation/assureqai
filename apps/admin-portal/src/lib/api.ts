@@ -9,7 +9,10 @@ interface ApiOptions extends RequestInit {
   params?: Record<string, string | number | undefined>;
 }
 
-async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options: ApiOptions = {},
+): Promise<T> {
   const { params, ...fetchOptions } = options;
 
   // Build URL with query params
@@ -76,10 +79,14 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify(credentials),
     }),
-  logout: () =>
-    request('/api/users/logout', { method: 'POST' }),
+  logout: () => request('/api/users/logout', { method: 'POST' }),
   me: () =>
-    request<{ username: string; fullName?: string; email?: string; role: string }>('/api/users/me'),
+    request<{
+      username: string;
+      fullName?: string;
+      email?: string;
+      role: string;
+    }>('/api/users/me'),
 };
 
 export interface AuditStats {
@@ -103,7 +110,13 @@ export interface Instance {
   clientId?: string;
   companyName?: string;
   plan?: string;
-  status: 'running' | 'stopped' | 'provisioning' | 'error' | 'active' | 'suspended';
+  status:
+    | 'running'
+    | 'stopped'
+    | 'provisioning'
+    | 'error'
+    | 'active'
+    | 'suspended';
   region?: string;
   version?: string;
   cpu?: number;
@@ -140,33 +153,87 @@ export interface Instance {
 export const instanceApi = {
   findAll: () => request<Instance[]>('/api/admin/instances'),
   findById: (id: string) => request<Instance>(`/api/admin/instances/${id}`),
-  create: (data: any) => request<Instance>('/api/admin/instances', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: any) => request<Instance>(`/api/admin/instances/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => request<void>(`/api/admin/instances/${id}`, { method: 'DELETE' }),
+  create: (data: any) =>
+    request<Instance>('/api/admin/instances', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: any) =>
+    request<Instance>(`/api/admin/instances/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<void>(`/api/admin/instances/${id}`, { method: 'DELETE' }),
   getLogs: (id: string) => request<any[]>(`/api/admin/instances/${id}/logs`),
-  getDomains: (id: string) => request<any>(`/api/admin/instances/${id}/domains`),
-  regenerateApiKey: (id: string) => request<{ apiKey: string }>(`/api/admin/instances/${id}/regenerate-api-key`, { method: 'POST' }),
+  getDomains: (id: string) =>
+    request<any>(`/api/admin/instances/${id}/domains`),
+  regenerateApiKey: (id: string) =>
+    request<{ apiKey: string }>(
+      `/api/admin/instances/${id}/regenerate-api-key`,
+      { method: 'POST' },
+    ),
   updateBillingType: (id: string, billingType: 'prepaid' | 'postpaid') =>
-    request<Instance>(`/api/admin/instances/${id}/billing-type`, { method: 'PUT', body: JSON.stringify({ billingType }) }),
-  updateLimits: (id: string, limits: { maxUsers?: number; maxStorage?: string }) =>
-    request<Instance>(`/api/admin/instances/${id}/limits`, { method: 'PUT', body: JSON.stringify(limits) }),
-  updateCredits: (id: string, credits: { totalAudits?: number; totalTokens?: number; usedAudits?: number; usedTokens?: number }) =>
-    request<Instance>(`/api/admin/instances/${id}/credits`, { method: 'PUT', body: JSON.stringify(credits) }),
+    request<Instance>(`/api/admin/instances/${id}/billing-type`, {
+      method: 'PUT',
+      body: JSON.stringify({ billingType }),
+    }),
+  updateLimits: (
+    id: string,
+    limits: { maxUsers?: number; maxStorage?: string },
+  ) =>
+    request<Instance>(`/api/admin/instances/${id}/limits`, {
+      method: 'PUT',
+      body: JSON.stringify(limits),
+    }),
+  updateCredits: (
+    id: string,
+    credits: {
+      totalAudits?: number;
+      totalTokens?: number;
+      usedAudits?: number;
+      usedTokens?: number;
+    },
+  ) =>
+    request<Instance>(`/api/admin/instances/${id}/credits`, {
+      method: 'PUT',
+      body: JSON.stringify(credits),
+    }),
 
   // Domain management
   addCustomDomain: (id: string, domain: string) =>
-    request<Instance>(`/api/admin/instances/${id}/domains/custom`, { method: 'POST', body: JSON.stringify({ domain }) }),
+    request<Instance>(`/api/admin/instances/${id}/domains/custom`, {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    }),
   verifyDomain: (id: string) =>
-    request<{ verified: boolean; error?: string }>(`/api/admin/instances/${id}/domains/verify`, { method: 'POST' }),
+    request<{ verified: boolean; error?: string }>(
+      `/api/admin/instances/${id}/domains/verify`,
+      { method: 'POST' },
+    ),
   removeDomain: (id: string) =>
-    request<Instance>(`/api/admin/instances/${id}/domains/custom`, { method: 'DELETE' }),
+    request<Instance>(`/api/admin/instances/${id}/domains/custom`, {
+      method: 'DELETE',
+    }),
   updateSubdomain: (id: string, subdomain: string) =>
-    request<Instance>(`/api/admin/instances/${id}/domains/subdomain`, { method: 'PUT', body: JSON.stringify({ subdomain }) }),
+    request<Instance>(`/api/admin/instances/${id}/domains/subdomain`, {
+      method: 'PUT',
+      body: JSON.stringify({ subdomain }),
+    }),
 
   // Instance actions (will trigger via provisioning/SSH)
-  start: (id: string) => request<{ success: boolean }>(`/api/admin/instances/${id}/start`, { method: 'POST' }),
-  stop: (id: string) => request<{ success: boolean }>(`/api/admin/instances/${id}/stop`, { method: 'POST' }),
-  restart: (id: string) => request<{ success: boolean }>(`/api/admin/instances/${id}/restart`, { method: 'POST' }),
+  start: (id: string) =>
+    request<{ success: boolean }>(`/api/admin/instances/${id}/start`, {
+      method: 'POST',
+    }),
+  stop: (id: string) =>
+    request<{ success: boolean }>(`/api/admin/instances/${id}/stop`, {
+      method: 'POST',
+    }),
+  restart: (id: string) =>
+    request<{ success: boolean }>(`/api/admin/instances/${id}/restart`, {
+      method: 'POST',
+    }),
 };
 
 export interface Audit {
@@ -186,10 +253,24 @@ export interface Audit {
 export const auditApi = {
   getStats: (filters?: Record<string, string | number | undefined>) =>
     request<AuditStats>('/api/audits/stats', { params: filters }),
-  list: (filters: { page?: number; limit?: number; auditType?: string; agentUserId?: string; startDate?: string; endDate?: string }) =>
-    request<{ data: Audit[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/audits', { params: filters as any }),
-  getById: (id: string) =>
-    request<Audit>(`/api/audits/${id}`),
+  list: (filters: {
+    page?: number;
+    limit?: number;
+    auditType?: string;
+    agentUserId?: string;
+    startDate?: string;
+    endDate?: string;
+  }) =>
+    request<{
+      data: Audit[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>('/api/audits', { params: filters as any }),
+  getById: (id: string) => request<Audit>(`/api/audits/${id}`),
   getLeaderboard: (projectId?: string, limit = 10) =>
     request<any[]>('/api/audits/leaderboard', { params: { projectId, limit } }),
 };
@@ -197,37 +278,71 @@ export const auditApi = {
 export const alertsApi = {
   list: (params?: any) => request<any[]>('/api/alerts', { params }),
   getUnreadCount: () => request<{ count: number }>('/api/alerts/unread-count'),
-  markRead: (id: string) => request(`/api/alerts/${id}/read`, { method: 'POST' }),
+  markRead: (id: string) =>
+    request(`/api/alerts/${id}/read`, { method: 'POST' }),
   markAllRead: () => request('/api/alerts/mark-all-read', { method: 'POST' }),
 };
 
 export const userApi = {
   list: (filters: { page?: number; limit?: number; role?: string }) =>
-    request<{ data: User[], pagination: { total: number } }>('/api/users', { params: filters as any }),
-  create: (data: any) => request<User>('/api/users', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: any) => request<User>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => request<void>(`/api/users/${id}`, { method: 'DELETE' }),
+    request<{ data: User[]; pagination: { total: number } }>('/api/users', {
+      params: filters as any,
+    }),
+  create: (data: any) =>
+    request<User>('/api/users', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) =>
+    request<User>(`/api/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<void>(`/api/users/${id}`, { method: 'DELETE' }),
 };
 
 export const adminApi = {
   getPlatformStats: () => request<any>('/api/admin/stats'), // Placeholder endpoint
-}
+};
 
 export const backupApi = {
-  getByInstance: (instanceId: string) => request<any[]>(`/api/admin/backups/instance/${instanceId}`),
-  create: (instanceId: string) => request<any>(`/api/admin/backups/instance/${instanceId}`, { method: 'POST' }),
-  restore: (id: string) => request<{ success: boolean; error?: string }>(`/api/admin/backups/${id}/restore`, { method: 'POST' }),
-  delete: (id: string) => request<void>(`/api/admin/backups/${id}`, { method: 'DELETE' }),
+  getByInstance: (instanceId: string) =>
+    request<any[]>(`/api/admin/backups/instance/${instanceId}`),
+  create: (instanceId: string) =>
+    request<any>(`/api/admin/backups/instance/${instanceId}`, {
+      method: 'POST',
+    }),
+  restore: (id: string) =>
+    request<{ success: boolean; error?: string }>(
+      `/api/admin/backups/${id}/restore`,
+      { method: 'POST' },
+    ),
+  delete: (id: string) =>
+    request<void>(`/api/admin/backups/${id}`, { method: 'DELETE' }),
   getStats: (instanceId?: string) =>
-    request<any>(instanceId ? `/api/admin/backups/stats/${instanceId}` : '/api/admin/backups/stats'),
+    request<any>(
+      instanceId
+        ? `/api/admin/backups/stats/${instanceId}`
+        : '/api/admin/backups/stats',
+    ),
   getById: (id: string) => request<any>(`/api/admin/backups/${id}`),
 };
 
 export const creditsApi = {
-  addAuditCredits: (instanceId: string, data: { amount: number; reason: string }) =>
-    request<void>(`/api/admin/credits/${instanceId}/audit`, { method: 'POST', body: JSON.stringify(data) }),
-  addTokenCredits: (instanceId: string, data: { amount: number; reason: string }) =>
-    request<void>(`/api/admin/credits/${instanceId}/token`, { method: 'POST', body: JSON.stringify(data) }),
+  addAuditCredits: (
+    instanceId: string,
+    data: { amount: number; reason: string },
+  ) =>
+    request<void>(`/api/admin/credits/${instanceId}/audit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  addTokenCredits: (
+    instanceId: string,
+    data: { amount: number; reason: string },
+  ) =>
+    request<void>(`/api/admin/credits/${instanceId}/token`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // Template interfaces and API
@@ -247,12 +362,20 @@ export const templateApi = {
     request<Template[]>('/api/admin/templates', { params: filters as any }),
   getById: (id: string) => request<Template>(`/api/admin/templates/${id}`),
   create: (data: Partial<Template>) =>
-    request<Template>('/api/admin/templates', { method: 'POST', body: JSON.stringify(data) }),
+    request<Template>('/api/admin/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   update: (id: string, data: Partial<Template>) =>
-    request<Template>(`/api/admin/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => request<void>(`/api/admin/templates/${id}`, { method: 'DELETE' }),
+    request<Template>(`/api/admin/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<void>(`/api/admin/templates/${id}`, { method: 'DELETE' }),
   getIndustries: () => request<string[]>('/api/admin/templates/industries'),
-  clone: (id: string) => request<Template>(`/api/admin/templates/${id}/clone`, { method: 'POST' }),
+  clone: (id: string) =>
+    request<Template>(`/api/admin/templates/${id}/clone`, { method: 'POST' }),
 };
 
 // Announcement interfaces and API
@@ -271,15 +394,26 @@ export interface Announcement {
 
 export const announcementApi = {
   list: (all?: boolean) =>
-    request<Announcement[]>('/api/announcements', { params: { all: all ? 'true' : undefined } }),
+    request<Announcement[]>('/api/announcements', {
+      params: { all: all ? 'true' : undefined },
+    }),
   getById: (id: string) => request<Announcement>(`/api/announcements/${id}`),
   create: (data: Partial<Announcement>) =>
-    request<Announcement>('/api/announcements', { method: 'POST', body: JSON.stringify(data) }),
+    request<Announcement>('/api/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   update: (id: string, data: Partial<Announcement>) =>
-    request<Announcement>(`/api/announcements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => request<void>(`/api/announcements/${id}`, { method: 'DELETE' }),
+    request<Announcement>(`/api/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<void>(`/api/announcements/${id}`, { method: 'DELETE' }),
   deactivate: (id: string) =>
-    request<Announcement>(`/api/announcements/${id}/deactivate`, { method: 'PUT' }),
+    request<Announcement>(`/api/announcements/${id}/deactivate`, {
+      method: 'PUT',
+    }),
 };
 
 // Ticket interface and API
@@ -305,27 +439,44 @@ export interface Ticket {
 export const ticketApi = {
   list: (filters?: { status?: string; priority?: string; search?: string }) =>
     request<Ticket[]>('/api/tickets', { params: filters as any }),
-  getById: (id: string) =>
-    request<Ticket>(`/api/tickets/${id}`),
-  getStats: () =>
-    request<any>('/api/tickets/stats'),
+  getById: (id: string) => request<Ticket>(`/api/tickets/${id}`),
+  getStats: () => request<any>('/api/tickets/stats'),
   update: (id: string, data: any) =>
-    request<Ticket>(`/api/tickets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<Ticket>(`/api/tickets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   assign: (id: string, assignedTo: string, assignedToName: string) =>
-    request<Ticket>(`/api/tickets/${id}/assign`, { method: 'PUT', body: JSON.stringify({ assignedTo, assignedToName }) }),
+    request<Ticket>(`/api/tickets/${id}/assign`, {
+      method: 'PUT',
+      body: JSON.stringify({ assignedTo, assignedToName }),
+    }),
   updateStatus: (id: string, status: string) =>
-    request<Ticket>(`/api/tickets/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+    request<Ticket>(`/api/tickets/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }),
   addMessage: (id: string, content: string, isInternal: boolean = false) =>
-    request<Ticket>(`/api/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ content, isInternal }) }),
+    request<Ticket>(`/api/tickets/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content, isInternal }),
+    }),
 };
 
 export const settingsApi = {
   get: () => request<any>('/api/admin/settings'),
-  update: (data: any) => request<any>('/api/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  update: (data: any) =>
+    request<any>('/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
 
 export const healthApi = {
-  check: () => request<{ status: string; info: any; error: any; details: any }>('/api/health'),
+  check: () =>
+    request<{ status: string; info: any; error: any; details: any }>(
+      '/api/health',
+    ),
 };
 
 // Lead interface and API
@@ -354,8 +505,19 @@ export default {
   admin: adminApi,
   instance: {
     ...instanceApi,
-    updateUsage: (id: string, usage: { cpu: number; memory: number; storage: string; activeUsers: number }) =>
-      request<Instance>(`/api/admin/instances/${id}/usage`, { method: 'POST', body: JSON.stringify(usage) }),
+    updateUsage: (
+      id: string,
+      usage: {
+        cpu: number;
+        memory: number;
+        storage: string;
+        activeUsers: number;
+      },
+    ) =>
+      request<Instance>(`/api/admin/instances/${id}/usage`, {
+        method: 'POST',
+        body: JSON.stringify(usage),
+      }),
   },
   user: userApi,
   backup: backupApi,
@@ -366,4 +528,3 @@ export default {
   settings: settingsApi,
   health: healthApi,
 };
-

@@ -1,14 +1,23 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Search, TrendingUp, TrendingDown, AlertTriangle, Award, Loader2 } from 'lucide-react';
+import {
+  Users,
+  Search,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Award,
+  Loader2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useLeaderboard, useUsers } from '@/lib/hooks';
 import { useState } from 'react';
 
 export default function AgentsPage() {
-  const { data: leaderboardData = [], isLoading: leaderboardLoading } = useLeaderboard(undefined, 100);
+  const { data: leaderboardData = [], isLoading: leaderboardLoading } =
+    useLeaderboard(undefined, 100);
   const { data: usersData, isLoading: usersLoading } = useUsers(1, 100);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -43,17 +52,19 @@ export default function AgentsPage() {
   // Merge with user list — agents/auditors/qa_analysts from user management
   const agentRoles = ['agent', 'auditor', 'qa_analyst'];
   const allUsers = usersData?.data || [];
-  const agentUsers = allUsers.filter(u => agentRoles.includes(u.role));
+  const agentUsers = allUsers.filter((u) => agentRoles.includes(u.role));
 
   // Merge: start with leaderboard data, then add users not already represented
   const mergedAgents = [...leaderboardMap.values()];
-  const seenIds = new Set(mergedAgents.map(a => a.id));
+  const seenIds = new Set(mergedAgents.map((a) => a.id));
 
-  agentUsers.forEach(user => {
+  agentUsers.forEach((user) => {
     if (!seenIds.has(user._id)) {
       // Check if matched by name in leaderboard
-      const matchedByName = mergedAgents.find(a =>
-        a.name.toLowerCase() === (user.fullName || user.username || '').toLowerCase()
+      const matchedByName = mergedAgents.find(
+        (a) =>
+          a.name.toLowerCase() ===
+          (user.fullName || user.username || '').toLowerCase(),
       );
       if (!matchedByName) {
         mergedAgents.push({
@@ -70,47 +81,68 @@ export default function AgentsPage() {
     }
   });
 
-  const filteredAgents = mergedAgents.filter(agent => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredAgents = mergedAgents.filter((agent) => {
+    const matchesSearch =
+      agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (agent.email || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
+    const matchesStatus =
+      statusFilter === 'all' || agent.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'excellent': return 'text-emerald-500 bg-emerald-500/10';
-      case 'good': return 'text-blue-500 bg-blue-500/10';
-      case 'needs_improvement': return 'text-amber-500 bg-amber-500/10';
-      case 'at_risk': return 'text-red-500 bg-red-500/10';
-      case 'new': return 'text-muted-foreground bg-muted';
-      default: return 'text-muted-foreground bg-muted';
+      case 'excellent':
+        return 'text-emerald-500 bg-emerald-500/10';
+      case 'good':
+        return 'text-blue-500 bg-blue-500/10';
+      case 'needs_improvement':
+        return 'text-amber-500 bg-amber-500/10';
+      case 'at_risk':
+        return 'text-red-500 bg-red-500/10';
+      case 'new':
+        return 'text-muted-foreground bg-muted';
+      default:
+        return 'text-muted-foreground bg-muted';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'needs_improvement': return 'Needs Impr.';
-      case 'new': return 'No Audits';
-      default: return status.replace('_', ' ');
+      case 'needs_improvement':
+        return 'Needs Impr.';
+      case 'new':
+        return 'No Audits';
+      default:
+        return status.replace('_', ' ');
     }
   };
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
-      case 'up': return <TrendingUp className="h-4 w-4 text-emerald-500" />;
-      case 'down': return <TrendingDown className="h-4 w-4 text-red-500" />;
-      default: return <span className="text-muted-foreground">—</span>;
+      case 'up':
+        return <TrendingUp className="h-4 w-4 text-emerald-500" />;
+      case 'down':
+        return <TrendingDown className="h-4 w-4 text-red-500" />;
+      default:
+        return <span className="text-muted-foreground">—</span>;
     }
   };
 
   // Stats
-  const atRiskCount = mergedAgents.filter(a => a.status === 'at_risk').length;
-  const agentsWithAudits = mergedAgents.filter(a => a.totalAudits > 0);
-  const avgTeamScore = agentsWithAudits.length > 0
-    ? Math.round(agentsWithAudits.reduce((sum, a) => sum + a.avgScore, 0) / agentsWithAudits.length * 10) / 10
-    : 0;
-  const topPerformers = mergedAgents.filter(a => a.status === 'excellent').length;
+  const atRiskCount = mergedAgents.filter((a) => a.status === 'at_risk').length;
+  const agentsWithAudits = mergedAgents.filter((a) => a.totalAudits > 0);
+  const avgTeamScore =
+    agentsWithAudits.length > 0
+      ? Math.round(
+          (agentsWithAudits.reduce((sum, a) => sum + a.avgScore, 0) /
+            agentsWithAudits.length) *
+            10,
+        ) / 10
+      : 0;
+  const topPerformers = mergedAgents.filter(
+    (a) => a.status === 'excellent',
+  ).length;
 
   if (isLoading) {
     return (
@@ -124,8 +156,12 @@ export default function AgentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Agent Performance</h2>
-          <p className="text-muted-foreground">Monitor and compare agent performance</p>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Agent Performance
+          </h2>
+          <p className="text-muted-foreground">
+            Monitor and compare agent performance
+          </p>
         </div>
       </div>
 
@@ -170,7 +206,9 @@ export default function AgentsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className={`bg-card/50 backdrop-blur ${atRiskCount > 0 ? 'border-red-500/50' : 'border-border/50'}`}>
+        <Card
+          className={`bg-card/50 backdrop-blur ${atRiskCount > 0 ? 'border-red-500/50' : 'border-border/50'}`}
+        >
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-lg bg-red-500/10">
@@ -226,7 +264,9 @@ export default function AgentsPage() {
           {filteredAgents.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground">No Agents Found</h3>
+              <h3 className="text-lg font-semibold text-muted-foreground">
+                No Agents Found
+              </h3>
               <p className="text-sm text-muted-foreground mt-2">
                 {mergedAgents.length === 0
                   ? 'No agents found. Add users with agent/auditor roles or run audits to populate this page.'
@@ -238,43 +278,77 @@ export default function AgentsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Agent</th>
-                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">Audits</th>
-                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">Avg Score</th>
-                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">Trend</th>
-                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
-                    <th className="text-right py-3 px-4 font-medium text-muted-foreground">Actions</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                      Agent
+                    </th>
+                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                      Audits
+                    </th>
+                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                      Avg Score
+                    </th>
+                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                      Trend
+                    </th>
+                    <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-muted-foreground">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredAgents.map((agent) => (
-                    <tr key={agent.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                    <tr
+                      key={agent.id}
+                      className="border-b border-border/50 hover:bg-muted/50 transition-colors"
+                    >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                            {(agent.name || '?').split(' ').filter(Boolean).map((n: string) => n[0]).join('').substring(0, 2)}
+                            {(agent.name || '?')
+                              .split(' ')
+                              .filter(Boolean)
+                              .map((n: string) => n[0])
+                              .join('')
+                              .substring(0, 2)}
                           </div>
                           <div>
                             <p className="font-medium">{agent.name}</p>
-                            {agent.email && <p className="text-xs text-muted-foreground">{agent.email}</p>}
+                            {agent.email && (
+                              <p className="text-xs text-muted-foreground">
+                                {agent.email}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
-                      <td className="text-center py-3 px-4">{agent.totalAudits}</td>
                       <td className="text-center py-3 px-4">
-                        <span className={`font-bold ${agent.avgScore >= 90 ? 'text-emerald-500' : agent.avgScore >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
+                        {agent.totalAudits}
+                      </td>
+                      <td className="text-center py-3 px-4">
+                        <span
+                          className={`font-bold ${agent.avgScore >= 90 ? 'text-emerald-500' : agent.avgScore >= 80 ? 'text-amber-500' : 'text-red-500'}`}
+                        >
                           {agent.avgScore.toFixed(1)}%
                         </span>
                       </td>
-                      <td className="text-center py-3 px-4">{getTrendIcon(agent.trend)}</td>
                       <td className="text-center py-3 px-4">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(agent.status)}`}>
+                        {getTrendIcon(agent.trend)}
+                      </td>
+                      <td className="text-center py-3 px-4">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${getStatusColor(agent.status)}`}
+                        >
                           {getStatusLabel(agent.status)}
                         </span>
                       </td>
                       <td className="text-right py-3 px-4">
                         <Link href={`/dashboard/agents/${agent.id}`}>
-                          <Button variant="ghost" size="sm">View</Button>
+                          <Button variant="ghost" size="sm">
+                            View
+                          </Button>
                         </Link>
                       </td>
                     </tr>

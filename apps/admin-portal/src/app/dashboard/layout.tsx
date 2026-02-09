@@ -18,7 +18,15 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { FileText, Megaphone, HardDrive, Terminal, Coins, MessageSquare, ClipboardCheck } from 'lucide-react';
+import {
+  FileText,
+  Megaphone,
+  HardDrive,
+  Terminal,
+  Coins,
+  MessageSquare,
+  ClipboardCheck,
+} from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -48,7 +56,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Basic Client-side Auth Guard
-    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    const token =
+      typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     if (!token) {
       router.push('/login');
     } else {
@@ -66,7 +75,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground animate-pulse">Verifying access...</p>
+          <p className="text-sm text-muted-foreground animate-pulse">
+            Verifying access...
+          </p>
         </div>
       </div>
     );
@@ -75,7 +86,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-card/50 backdrop-blur border-r border-border transition-all duration-300 flex flex-col`}>
+      <aside
+        className={`${collapsed ? 'w-16' : 'w-64'} bg-card/50 backdrop-blur border-r border-border transition-all duration-300 flex flex-col`}
+      >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           {!collapsed && (
@@ -90,25 +103,34 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             onClick={() => setCollapsed(!collapsed)}
             className="p-1.5 rounded-lg hover:bg-muted transition-colors"
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            const isActive =
+              pathname === item.href ||
+              (item.href !== '/dashboard' && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  } ${collapsed ? 'justify-center' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                } ${collapsed ? 'justify-center' : ''}`}
                 title={collapsed ? item.label : undefined}
               >
-                <item.icon className={`h-5 w-5 ${isActive ? 'text-primary' : ''}`} />
+                <item.icon
+                  className={`h-5 w-5 ${isActive ? 'text-primary' : ''}`}
+                />
                 {!collapsed && <span className="text-sm">{item.label}</span>}
               </Link>
             );
@@ -124,7 +146,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">Super Admin</p>
-                <p className="text-xs text-muted-foreground truncate">admin@assureqai.com</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  admin@assureqai.com
+                </p>
               </div>
             </div>
           )}
@@ -143,19 +167,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Header */}
         <header className="h-16 flex items-center justify-between px-6 border-b border-border bg-card/30 backdrop-blur">
           <h1 className="text-lg font-bold">
-            {navItems.find(item => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))?.label || 'Dashboard'}
+            {navItems.find(
+              (item) =>
+                pathname === item.href ||
+                (item.href !== '/dashboard' && pathname.startsWith(item.href)),
+            )?.label || 'Dashboard'}
           </h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
             </span>
           </div>
         </header>
 
         {/* Content */}
-        <div className="flex-1 p-6 overflow-auto">
-          {children}
-        </div>
+        <div className="flex-1 p-6 overflow-auto">{children}</div>
       </main>
     </div>
   );

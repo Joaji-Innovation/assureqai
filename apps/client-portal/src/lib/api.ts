@@ -9,7 +9,10 @@ interface ApiOptions extends RequestInit {
   params?: Record<string, string | number | undefined>;
 }
 
-async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options: ApiOptions = {},
+): Promise<T> {
   const { params, ...fetchOptions } = options;
 
   // Build URL with query params
@@ -81,10 +84,8 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify(credentials),
     }),
-  logout: () =>
-    request('/api/users/logout', { method: 'POST' }),
-  me: () =>
-    request<User>('/api/users/me'),
+  logout: () => request('/api/users/logout', { method: 'POST' }),
+  me: () => request<User>('/api/users/me'),
 };
 
 // Audit APIs
@@ -225,8 +226,6 @@ export interface AuditStats {
   }[];
 }
 
-
-
 // Evidence citation from transcript
 export interface EvidenceCitation {
   text: string;
@@ -251,8 +250,8 @@ export interface AuditResult {
   weight?: number;
   comments: string;
   type: string;
-  confidence?: number;  // 0-100 confidence score
-  evidence?: EvidenceCitation[];  // Transcript citations
+  confidence?: number; // 0-100 confidence score
+  evidence?: EvidenceCitation[]; // Transcript citations
   subResults?: {
     subParameterName: string;
     score: number;
@@ -273,7 +272,7 @@ export interface Audit {
   projectId?: string;
   auditType: 'ai' | 'manual';
   overallScore: number;
-  overallConfidence?: number;  // Overall AI confidence
+  overallConfidence?: number; // Overall AI confidence
   maxPossibleScore?: number;
   createdAt: string;
   updatedAt?: string;
@@ -290,7 +289,8 @@ export interface Audit {
 
   auditResults: AuditResult[];
 
-  metrics?: { // Added metrics object
+  metrics?: {
+    // Added metrics object
     talkToListenRatio?: number;
     silencePercentage?: number;
     holdTime?: number;
@@ -303,14 +303,13 @@ export interface Audit {
     totalTokens: number;
   };
 
-  timing?: AuditTiming;  // Processing timing metrics
+  timing?: AuditTiming; // Processing timing metrics
 
   disputeStatus?: string;
   sentiment?: {
     overall: 'positive' | 'neutral' | 'negative';
   };
 }
-
 
 export interface LeaderboardEntry {
   agentUserId: string;
@@ -325,7 +324,9 @@ export const auditApi = {
     request<AuditStats>('/api/audits/stats', { params: filters }),
 
   getLeaderboard: (projectId?: string, limit = 10) =>
-    request<LeaderboardEntry[]>('/api/audits/leaderboard', { params: { projectId, limit } }),
+    request<LeaderboardEntry[]>('/api/audits/leaderboard', {
+      params: { projectId, limit },
+    }),
 
   list: (filters: {
     page?: number;
@@ -336,12 +337,19 @@ export const auditApi = {
     startDate?: string;
     endDate?: string;
   }) =>
-    request<{ data: Audit[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/audits', {
+    request<{
+      data: Audit[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>('/api/audits', {
       params: filters as Record<string, string | number | undefined>,
     }),
 
-  getById: (id: string) =>
-    request<Audit>(`/api/audits/${id}`),
+  getById: (id: string) => request<Audit>(`/api/audits/${id}`),
 
   create: (data: Partial<Audit>) =>
     request<Audit>('/api/audits', {
@@ -367,11 +375,9 @@ export interface QAParameter {
 }
 
 export const qaParameterApi = {
-  list: () =>
-    request<QAParameter[]>('/api/qa-parameters'),
+  list: () => request<QAParameter[]>('/api/qa-parameters'),
 
-  getById: (id: string) =>
-    request<QAParameter>(`/api/qa-parameters/${id}`),
+  getById: (id: string) => request<QAParameter>(`/api/qa-parameters/${id}`),
 
   create: (data: Partial<QAParameter>) =>
     request<QAParameter>('/api/qa-parameters', {
@@ -390,10 +396,14 @@ export const qaParameterApi = {
 
   // Template methods
   getTemplates: () =>
-    request<{ id: string; name: string; description: string }[]>('/api/qa-parameters/templates'),
+    request<{ id: string; name: string; description: string }[]>(
+      '/api/qa-parameters/templates',
+    ),
 
   getTemplate: (templateId: string) =>
-    request<{ name: string; description: string; parameters: any[] }>(`/api/qa-parameters/templates/${templateId}`),
+    request<{ name: string; description: string; parameters: any[] }>(
+      `/api/qa-parameters/templates/${templateId}`,
+    ),
 
   createFromTemplate: (templateId: string, name?: string) =>
     request<QAParameter>(`/api/qa-parameters/from-template/${templateId}`, {
@@ -402,9 +412,12 @@ export const qaParameterApi = {
     }),
 
   seedDefaults: () =>
-    request<{ success: boolean; message: string; data: QAParameter[] }>('/api/qa-parameters/seed-defaults', {
-      method: 'POST',
-    }),
+    request<{ success: boolean; message: string; data: QAParameter[] }>(
+      '/api/qa-parameters/seed-defaults',
+      {
+        method: 'POST',
+      },
+    ),
 };
 
 // Campaign APIs
@@ -412,7 +425,14 @@ export interface Campaign {
   _id: string;
   name: string;
   description?: string;
-  status: 'pending' | 'processing' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | 'paused';
+  status:
+    | 'pending'
+    | 'processing'
+    | 'in_progress'
+    | 'completed'
+    | 'failed'
+    | 'cancelled'
+    | 'paused';
   config: {
     rpm: number;
     failureThreshold: number;
@@ -450,12 +470,19 @@ export interface CreateCampaignPayload {
 
 export const campaignApi = {
   list: (page = 1, limit = 10) =>
-    request<{ data: Campaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/campaigns', {
+    request<{
+      data: Campaign[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>('/api/campaigns', {
       params: { page, limit },
     }),
 
-  getById: (id: string) =>
-    request<Campaign>(`/api/campaigns/${id}`),
+  getById: (id: string) => request<Campaign>(`/api/campaigns/${id}`),
 
   create: (data: CreateCampaignPayload) =>
     request<Campaign>('/api/campaigns', {
@@ -470,7 +497,12 @@ export const campaignApi = {
     request<void>(`/api/campaigns/${id}`, { method: 'DELETE' }),
 
   getStatus: (id: string) =>
-    request<{ status: string; progress: number; completedJobs: number; totalJobs: number }>(`/api/campaigns/${id}/status`),
+    request<{
+      status: string;
+      progress: number;
+      completedJobs: number;
+      totalJobs: number;
+    }>(`/api/campaigns/${id}/status`),
 
   uploadFile: (id: string, file: File) => {
     const formData = new FormData();
@@ -491,24 +523,45 @@ export const campaignApi = {
     request<Campaign>(`/api/campaigns/${id}/retry`, { method: 'POST' }),
 
   retryJob: (id: string, jobIndex: number) =>
-    request<Campaign>(`/api/campaigns/${id}/jobs/${jobIndex}/retry`, { method: 'POST' }),
+    request<Campaign>(`/api/campaigns/${id}/jobs/${jobIndex}/retry`, {
+      method: 'POST',
+    }),
 
-  updateConfig: (id: string, config: { rpm: number; failureThreshold: number }) =>
-    request<Campaign>(`/api/campaigns/${id}/config`, { method: 'POST', body: JSON.stringify(config) }),
+  updateConfig: (
+    id: string,
+    config: { rpm: number; failureThreshold: number },
+  ) =>
+    request<Campaign>(`/api/campaigns/${id}/config`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    }),
 };
 
 // User APIs - interface defined above
 
 export const userApi = {
   list: (page = 1, limit = 10) =>
-    request<{ data: User[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/users', {
+    request<{
+      data: User[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>('/api/users', {
       params: { page, limit },
     }),
 
-  getById: (id: string) =>
-    request<User>(`/api/users/${id}`),
+  getById: (id: string) => request<User>(`/api/users/${id}`),
 
-  create: (data: { username: string; password: string; fullName?: string; email?: string; role: string }) =>
+  create: (data: {
+    username: string;
+    password: string;
+    fullName?: string;
+    email?: string;
+    role: string;
+  }) =>
     request<User>('/api/users', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -561,14 +614,14 @@ export const aiApi = {
 export interface SOP {
   _id: string;
   id?: string;
-  name: string;  // Schema field
-  title?: string;  // Alias for name - used by frontend
+  name: string; // Schema field
+  title?: string; // Alias for name - used by frontend
   description?: string;
-  content?: string;  // Base64 encoded file content
+  content?: string; // Base64 encoded file content
   fileName?: string;
   fileType?: string;
   fileSize?: number;
-  fileUrl?: string;  // Legacy field
+  fileUrl?: string; // Legacy field
   projectId?: string;
   uploadedBy?: string;
   createdAt?: string;
@@ -579,11 +632,9 @@ export interface SOP {
 }
 
 export const sopApi = {
-  list: () =>
-    request<SOP[]>('/api/sops'),
+  list: () => request<SOP[]>('/api/sops'),
 
-  getById: (id: string) =>
-    request<SOP>(`/api/sops/${id}`),
+  getById: (id: string) => request<SOP>(`/api/sops/${id}`),
 
   create: (data: FormData) =>
     request<SOP>('/api/sops', {
@@ -603,10 +654,14 @@ export const sopApi = {
 
   // Template methods
   getTemplates: () =>
-    request<{ id: string; name: string; description: string }[]>('/api/sops/templates'),
+    request<{ id: string; name: string; description: string }[]>(
+      '/api/sops/templates',
+    ),
 
   getTemplate: (templateId: string) =>
-    request<{ name: string; description: string; content: string }>(`/api/sops/templates/${templateId}`),
+    request<{ name: string; description: string; content: string }>(
+      `/api/sops/templates/${templateId}`,
+    ),
 
   createFromTemplate: (templateId: string, name?: string) =>
     request<SOP>(`/api/sops/from-template/${templateId}`, {
@@ -615,15 +670,23 @@ export const sopApi = {
     }),
 
   seedDefaults: () =>
-    request<{ success: boolean; message: string; data: SOP[] }>('/api/sops/seed-defaults', {
-      method: 'POST',
-    }),
+    request<{ success: boolean; message: string; data: SOP[] }>(
+      '/api/sops/seed-defaults',
+      {
+        method: 'POST',
+      },
+    ),
 };
 
 // Alert APIs
 export interface Alert {
   _id: string;
-  type: 'FATAL_FAILURE' | 'THRESHOLD_BREACH' | 'AT_RISK_AGENT' | 'COMPLIANCE_VIOLATION' | 'LOW_SCORE';
+  type:
+    | 'FATAL_FAILURE'
+    | 'THRESHOLD_BREACH'
+    | 'AT_RISK_AGENT'
+    | 'COMPLIANCE_VIOLATION'
+    | 'LOW_SCORE';
   severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   message: string;
@@ -640,16 +703,20 @@ export interface Alert {
 
 export const alertApi = {
   list: (params?: { page?: number; limit?: number; unreadOnly?: boolean }) =>
-    request<{ data: Alert[]; total: number; page: number; totalPages: number }>('/api/alerts', {
-      params: params ? {
-        page: params.page,
-        limit: params.limit,
-        unreadOnly: params.unreadOnly ? 'true' : undefined
-      } : undefined
-    }),
+    request<{ data: Alert[]; total: number; page: number; totalPages: number }>(
+      '/api/alerts',
+      {
+        params: params
+          ? {
+              page: params.page,
+              limit: params.limit,
+              unreadOnly: params.unreadOnly ? 'true' : undefined,
+            }
+          : undefined,
+      },
+    ),
 
-  getUnreadCount: () =>
-    request<{ count: number }>('/api/alerts/unread-count'),
+  getUnreadCount: () => request<{ count: number }>('/api/alerts/unread-count'),
 
   markAsRead: (id: string) =>
     request<void>(`/api/alerts/${id}/read`, { method: 'POST' }),
@@ -663,7 +730,12 @@ export const alertApi = {
 
 // Notification Settings Interfaces
 export interface AlertRuleConfig {
-  type: 'fatal_failure' | 'threshold_breach' | 'at_risk' | 'compliance' | 'low_score';
+  type:
+    | 'fatal_failure'
+    | 'threshold_breach'
+    | 'at_risk'
+    | 'compliance'
+    | 'low_score';
   enabled: boolean;
   channels: ('push' | 'email' | 'webhook')[];
   config: Record<string, any>;
@@ -704,10 +776,14 @@ export const notificationApi = {
       body: JSON.stringify(data),
     }),
 
-  getWebhooks: () =>
-    request<Webhook[]>('/api/notifications/webhooks'),
+  getWebhooks: () => request<Webhook[]>('/api/notifications/webhooks'),
 
-  createWebhook: (data: { name: string; url: string; events: string[]; secret?: string }) =>
+  createWebhook: (data: {
+    name: string;
+    url: string;
+    events: string[];
+    secret?: string;
+  }) =>
     request<Webhook>('/api/notifications/webhooks', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -723,13 +799,19 @@ export const notificationApi = {
     request<void>(`/api/notifications/webhooks/${id}`, { method: 'DELETE' }),
 
   testWebhook: (id: string) =>
-    request<{ success: boolean; message: string }>(`/api/notifications/webhooks/${id}/test`, { method: 'POST' }),
+    request<{ success: boolean; message: string }>(
+      `/api/notifications/webhooks/${id}/test`,
+      { method: 'POST' },
+    ),
 
   testEmail: (email: string) =>
-    request<{ success: boolean; message: string }>('/api/notifications/email/test', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    }),
+    request<{ success: boolean; message: string }>(
+      '/api/notifications/email/test',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      },
+    ),
 };
 
 // Ticket API
@@ -752,14 +834,23 @@ export interface Ticket {
 export const ticketApi = {
   list: (filters?: { status?: string; search?: string }) =>
     request<Ticket[]>('/api/tickets', { params: filters as any }),
-  getById: (id: string) =>
-    request<Ticket>(`/api/tickets/${id}`),
-  getStats: () =>
-    request<any>('/api/tickets/stats'),
-  create: (data: { subject: string; description: string; category?: string; priority?: string }) =>
-    request<Ticket>('/api/tickets', { method: 'POST', body: JSON.stringify(data) }),
+  getById: (id: string) => request<Ticket>(`/api/tickets/${id}`),
+  getStats: () => request<any>('/api/tickets/stats'),
+  create: (data: {
+    subject: string;
+    description: string;
+    category?: string;
+    priority?: string;
+  }) =>
+    request<Ticket>('/api/tickets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   addMessage: (id: string, content: string, isInternal: boolean = false) =>
-    request<Ticket>(`/api/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ content, isInternal }) }),
+    request<Ticket>(`/api/tickets/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content, isInternal }),
+    }),
 };
 
 export default {
@@ -775,4 +866,3 @@ export default {
   notification: notificationApi,
   ticket: ticketApi,
 };
-

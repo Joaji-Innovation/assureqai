@@ -16,7 +16,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto';
 import { Roles, RequirePermissions, CurrentUser } from '@assureqai/auth';
@@ -28,7 +35,7 @@ import * as fs from 'fs';
 @ApiBearerAuth()
 @Controller('campaigns')
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) { }
+  constructor(private readonly campaignService: CampaignService) {}
 
   /**
    * Bulk upload audio files for campaign
@@ -162,7 +169,10 @@ export class CampaignController {
   @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
   @ApiOperation({ summary: 'Create a new bulk audit campaign' })
   @ApiResponse({ status: 201, description: 'Campaign created successfully' })
-  async create(@Body() dto: CreateCampaignDto, @CurrentUser() user: JwtPayload) {
+  async create(
+    @Body() dto: CreateCampaignDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.campaignService.create(
       {
         ...dto,
@@ -259,10 +269,7 @@ export class CampaignController {
   @ApiResponse({ status: 200, description: 'Job retried successfully' })
   @ApiResponse({ status: 400, description: 'Job is not in failed state' })
   @ApiResponse({ status: 404, description: 'Campaign or job not found' })
-  async retryJob(
-    @Param('id') id: string,
-    @Param('jobIndex') jobIndex: string,
-  ) {
+  async retryJob(@Param('id') id: string, @Param('jobIndex') jobIndex: string) {
     return this.campaignService.retryJob(id, parseInt(jobIndex, 10));
   }
 

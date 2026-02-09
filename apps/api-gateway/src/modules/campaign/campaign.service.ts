@@ -2,10 +2,18 @@
  * Campaign Service
  * Manages bulk audit campaigns/jobs
  */
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Campaign, CampaignDocument } from '../../database/schemas/campaign.schema';
+import {
+  Campaign,
+  CampaignDocument,
+} from '../../database/schemas/campaign.schema';
 import { QueueService } from '../queue/queue.service';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto';
 import { PaginatedResult, LIMITS } from '@assureqai/common';
@@ -17,7 +25,7 @@ export class CampaignService {
   constructor(
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     private queueService: QueueService,
-  ) { }
+  ) {}
 
   /**
    * Create a new campaign and queue jobs
@@ -70,7 +78,9 @@ export class CampaignService {
         campaign.startedAt = new Date();
         await campaign.save();
 
-        this.logger.log(`Campaign ${campaign._id} started with ${dto.jobs.length} jobs`);
+        this.logger.log(
+          `Campaign ${campaign._id} started with ${dto.jobs.length} jobs`,
+        );
       } catch (error) {
         this.logger.error(`Failed to queue jobs: ${error}`);
       }
@@ -162,13 +172,17 @@ export class CampaignService {
   async complete(campaignId: string, stats?: Campaign['stats']): Promise<void> {
     const campaign = await this.findById(campaignId);
 
-    const allCompleted = campaign.completedJobs + campaign.failedJobs >= campaign.totalJobs;
+    const allCompleted =
+      campaign.completedJobs + campaign.failedJobs >= campaign.totalJobs;
     if (allCompleted) {
-      await this.campaignModel.findByIdAndUpdate(campaignId, {
-        status: campaign.failedJobs === campaign.totalJobs ? 'failed' : 'completed',
-        completedAt: new Date(),
-        ...(stats && { stats }),
-      }).exec();
+      await this.campaignModel
+        .findByIdAndUpdate(campaignId, {
+          status:
+            campaign.failedJobs === campaign.totalJobs ? 'failed' : 'completed',
+          completedAt: new Date(),
+          ...(stats && { stats }),
+        })
+        .exec();
     }
   }
 
@@ -176,11 +190,9 @@ export class CampaignService {
    * Cancel campaign
    */
   async cancel(id: string): Promise<Campaign> {
-    const campaign = await this.campaignModel.findByIdAndUpdate(
-      id,
-      { status: 'cancelled' },
-      { new: true },
-    ).exec();
+    const campaign = await this.campaignModel
+      .findByIdAndUpdate(id, { status: 'cancelled' }, { new: true })
+      .exec();
 
     if (!campaign) {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
@@ -193,11 +205,9 @@ export class CampaignService {
    * Pause campaign
    */
   async pause(id: string): Promise<Campaign> {
-    const campaign = await this.campaignModel.findByIdAndUpdate(
-      id,
-      { status: 'paused' },
-      { new: true },
-    ).exec();
+    const campaign = await this.campaignModel
+      .findByIdAndUpdate(id, { status: 'paused' }, { new: true })
+      .exec();
 
     if (!campaign) {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
@@ -224,12 +234,13 @@ export class CampaignService {
   /**
    * Update campaign configuration (RPM, Failure Threshold)
    */
-  async updateConfig(id: string, config: { rpm: number; failureThreshold: number }): Promise<Campaign> {
-    const campaign = await this.campaignModel.findByIdAndUpdate(
-      id,
-      { config },
-      { new: true },
-    ).exec();
+  async updateConfig(
+    id: string,
+    config: { rpm: number; failureThreshold: number },
+  ): Promise<Campaign> {
+    const campaign = await this.campaignModel
+      .findByIdAndUpdate(id, { config }, { new: true })
+      .exec();
 
     if (!campaign) {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
@@ -241,7 +252,10 @@ export class CampaignService {
   /**
    * Update campaign usage statistics (internal)
    */
-  async updateUsage(id: string, usage: { lastJobStartedAt: Date }): Promise<void> {
+  async updateUsage(
+    id: string,
+    usage: { lastJobStartedAt: Date },
+  ): Promise<void> {
     await this.campaignModel.findByIdAndUpdate(id, { usage }).exec();
   }
 
@@ -296,13 +310,15 @@ export class CampaignService {
       if (job.status === 'failed') {
         // Re-queue
         if (this.queueService.isAvailable()) {
-          await this.queueService.addJobs([{
-            campaignId: id,
-            audioUrl: job.audioUrl,
-            agentName: job.agentName,
-            callId: job.callId,
-            parameterId: campaign.qaParameterSetId.toString()
-          }]);
+          await this.queueService.addJobs([
+            {
+              campaignId: id,
+              audioUrl: job.audioUrl,
+              agentName: job.agentName,
+              callId: job.callId,
+              parameterId: campaign.qaParameterSetId.toString(),
+            },
+          ]);
         }
         // Reset status
         campaign.jobs[i].status = 'pending';
@@ -333,18 +349,22 @@ export class CampaignService {
 
     const job = campaign.jobs[jobIndex];
     if (job.status !== 'failed') {
-      throw new BadRequestException(`Job at index ${jobIndex} is not in failed state (current: ${job.status})`);
+      throw new BadRequestException(
+        `Job at index ${jobIndex} is not in failed state (current: ${job.status})`,
+      );
     }
 
     // Re-queue the single job
     if (this.queueService.isAvailable()) {
-      await this.queueService.addJobs([{
-        campaignId: id,
-        audioUrl: job.audioUrl,
-        agentName: job.agentName,
-        callId: job.callId,
-        parameterId: campaign.qaParameterSetId.toString(),
-      }]);
+      await this.queueService.addJobs([
+        {
+          campaignId: id,
+          audioUrl: job.audioUrl,
+          agentName: job.agentName,
+          callId: job.callId,
+          parameterId: campaign.qaParameterSetId.toString(),
+        },
+      ]);
     }
 
     // Reset job status
@@ -396,7 +416,7 @@ export class CampaignService {
     campaign.jobs.push(newJob as any);
     campaign.totalJobs += 1;
 
-    // If campaign was completed/failed, set back to processing? 
+    // If campaign was completed/failed, set back to processing?
     // Usually we add jobs to a new/pending/processing campaign.
     if (campaign.status === 'completed' || campaign.status === 'failed') {
       campaign.status = 'processing';

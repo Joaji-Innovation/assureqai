@@ -2,12 +2,29 @@
  * Ticket Service
  * Business logic for support tickets
  */
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Ticket, TicketDocument, TICKET_STATUSES, TicketStatus, TicketPriority } from '../../database/schemas/ticket.schema';
+import {
+  Ticket,
+  TicketDocument,
+  TICKET_STATUSES,
+  TicketStatus,
+  TicketPriority,
+} from '../../database/schemas/ticket.schema';
 import { ROLES } from '@assureqai/common';
-import { IsString, IsOptional, IsArray, IsNotEmpty, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsNotEmpty,
+  IsEnum,
+} from 'class-validator';
 
 // DTOs
 export class CreateTicketDto {
@@ -65,7 +82,7 @@ export class TicketService {
 
   constructor(
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
-  ) { }
+  ) {}
 
   /**
    * Create a new ticket
@@ -136,10 +153,7 @@ export class TicketService {
       ];
     }
 
-    return this.ticketModel
-      .find(query)
-      .sort({ createdAt: -1 })
-      .exec();
+    return this.ticketModel.find(query).sort({ createdAt: -1 }).exec();
   }
 
   /**
@@ -163,7 +177,7 @@ export class TicketService {
 
     // Filter out internal messages for non-admin users
     if (role !== ROLES.SUPER_ADMIN && role !== 'client_admin') {
-      ticket.messages = ticket.messages.filter(m => !m.isInternal);
+      ticket.messages = ticket.messages.filter((m) => !m.isInternal);
     }
 
     return ticket;
@@ -215,7 +229,11 @@ export class TicketService {
     }
 
     // Check access for non-internal messages
-    if (!dto.isInternal && userRole !== ROLES.SUPER_ADMIN && userRole !== 'client_admin') {
+    if (
+      !dto.isInternal &&
+      userRole !== ROLES.SUPER_ADMIN &&
+      userRole !== 'client_admin'
+    ) {
       const isOwner = ticket.createdBy.toString() === userId;
       const isAssigned = ticket.assignedTo?.toString() === userId;
       if (!isOwner && !isAssigned) {
@@ -248,14 +266,20 @@ export class TicketService {
     }
 
     const saved = await ticket.save();
-    this.logger.log(`Added message to ticket ${ticket.ticketNumber} by ${userName}`);
+    this.logger.log(
+      `Added message to ticket ${ticket.ticketNumber} by ${userName}`,
+    );
     return saved;
   }
 
   /**
    * Assign ticket to user
    */
-  async assign(id: string, assignedTo: string, assignedToName: string): Promise<Ticket> {
+  async assign(
+    id: string,
+    assignedTo: string,
+    assignedToName: string,
+  ): Promise<Ticket> {
     const ticket = await this.ticketModel
       .findByIdAndUpdate(
         id,
@@ -272,7 +296,9 @@ export class TicketService {
       throw new NotFoundException(`Ticket not found`);
     }
 
-    this.logger.log(`Assigned ticket ${ticket.ticketNumber} to ${assignedToName}`);
+    this.logger.log(
+      `Assigned ticket ${ticket.ticketNumber} to ${assignedToName}`,
+    );
     return ticket;
   }
 
@@ -315,12 +341,12 @@ export class TicketService {
     ]);
 
     const statusCounts: Record<string, number> = {};
-    stats.forEach(s => {
+    stats.forEach((s) => {
       statusCounts[s._id] = s.count;
     });
 
     const priorityCounts: Record<string, number> = {};
-    priorityStats.forEach(p => {
+    priorityStats.forEach((p) => {
       priorityCounts[p._id] = p.count;
     });
 

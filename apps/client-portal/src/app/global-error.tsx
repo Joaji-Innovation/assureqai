@@ -24,8 +24,10 @@ export default function GlobalError({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            background:
+              'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+            fontFamily:
+              '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             color: '#e2e8f0',
             padding: '24px',
           }}
@@ -85,7 +87,8 @@ export default function GlobalError({
                 lineHeight: '1.6',
               }}
             >
-              An unexpected error occurred. Our team has been notified and is looking into it.
+              An unexpected error occurred. Our team has been notified and is
+              looking into it.
             </p>
 
             {/* Error Details Card */}
@@ -115,7 +118,8 @@ export default function GlobalError({
                 style={{
                   fontSize: '13px',
                   color: '#cbd5e1',
-                  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
+                  fontFamily:
+                    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
                   wordBreak: 'break-word' as const,
                   margin: 0,
                   lineHeight: '1.5',
@@ -138,7 +142,9 @@ export default function GlobalError({
             </div>
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div
+              style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}
+            >
               <button
                 onClick={() => reset()}
                 style={{
@@ -152,8 +158,12 @@ export default function GlobalError({
                   cursor: 'pointer',
                   transition: 'background 0.2s',
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#2563eb')}
-                onMouseOut={(e) => (e.currentTarget.style.background = '#3b82f6')}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = '#2563eb')
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = '#3b82f6')
+                }
               >
                 Try Again
               </button>
@@ -170,8 +180,12 @@ export default function GlobalError({
                   cursor: 'pointer',
                   transition: 'border-color 0.2s',
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.borderColor = '#475569')}
-                onMouseOut={(e) => (e.currentTarget.style.borderColor = '#334155')}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.borderColor = '#475569')
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.borderColor = '#334155')
+                }
               >
                 Go to Dashboard
               </button>

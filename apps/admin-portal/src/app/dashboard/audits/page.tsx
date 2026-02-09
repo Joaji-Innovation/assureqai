@@ -80,7 +80,7 @@ export default function AdminAuditsPage() {
             (a) =>
               (a.agentName || '').toLowerCase().includes(q) ||
               (a.callId || '').toLowerCase().includes(q) ||
-              (a.campaignName || '').toLowerCase().includes(q)
+              (a.campaignName || '').toLowerCase().includes(q),
           );
         }
         setAudits(data);
@@ -146,14 +146,20 @@ export default function AdminAuditsPage() {
           </div>
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <p className="text-sm text-muted-foreground mb-1">Type</p>
-            <span className={`px-2 py-1 text-xs rounded-full ${auditTypeColors[selectedAudit.auditType] || ''}`}>
+            <span
+              className={`px-2 py-1 text-xs rounded-full ${auditTypeColors[selectedAudit.auditType] || ''}`}
+            >
               {selectedAudit.auditType?.toUpperCase()}
             </span>
           </div>
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <p className="text-sm text-muted-foreground mb-1">Overall Score</p>
-            <p className={`text-2xl font-bold ${getScoreColor(selectedAudit.overallScore)}`}>
-              {selectedAudit.overallScore !== undefined ? `${Math.round(selectedAudit.overallScore)}%` : '—'}
+            <p
+              className={`text-2xl font-bold ${getScoreColor(selectedAudit.overallScore)}`}
+            >
+              {selectedAudit.overallScore !== undefined
+                ? `${Math.round(selectedAudit.overallScore)}%`
+                : '—'}
             </p>
           </div>
         </div>
@@ -165,47 +171,67 @@ export default function AdminAuditsPage() {
           </div>
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <p className="text-sm text-muted-foreground mb-1">Parameter Set</p>
-            <p className="font-medium">{selectedAudit.qaParameterSetName || '—'}</p>
+            <p className="font-medium">
+              {selectedAudit.qaParameterSetName || '—'}
+            </p>
           </div>
         </div>
 
         <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
           <p className="text-sm text-muted-foreground mb-1">Date</p>
-          <p className="font-medium">{formatDate(selectedAudit.auditDate || selectedAudit.createdAt)}</p>
+          <p className="font-medium">
+            {formatDate(selectedAudit.auditDate || selectedAudit.createdAt)}
+          </p>
         </div>
 
         {/* Audit Results */}
-        {selectedAudit.auditResults && selectedAudit.auditResults.length > 0 && (
-          <div className="bg-card/50 backdrop-blur rounded-xl border border-border overflow-hidden">
-            <div className="px-4 py-3 border-b border-border">
-              <h3 className="font-semibold">Audit Results ({selectedAudit.auditResults.length} parameters)</h3>
-            </div>
-            <div className="divide-y divide-border">
-              {selectedAudit.auditResults.map((result: any, idx: number) => (
-                <div key={idx} className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{result.parameterName || result.parameter || `Parameter ${idx + 1}`}</p>
-                    {result.feedback && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{result.feedback}</p>
-                    )}
+        {selectedAudit.auditResults &&
+          selectedAudit.auditResults.length > 0 && (
+            <div className="bg-card/50 backdrop-blur rounded-xl border border-border overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <h3 className="font-semibold">
+                  Audit Results ({selectedAudit.auditResults.length} parameters)
+                </h3>
+              </div>
+              <div className="divide-y divide-border">
+                {selectedAudit.auditResults.map((result: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="px-4 py-3 flex items-center justify-between"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">
+                        {result.parameterName ||
+                          result.parameter ||
+                          `Parameter ${idx + 1}`}
+                      </p>
+                      {result.feedback && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {result.feedback}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 ml-4">
+                      {result.score !== undefined && (
+                        <span
+                          className={`text-sm font-bold ${getScoreColor(result.score)}`}
+                        >
+                          {Math.round(result.score)}%
+                        </span>
+                      )}
+                      {result.pass !== undefined && (
+                        <span
+                          className={`px-2 py-0.5 text-xs rounded-full ${result.pass ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}
+                        >
+                          {result.pass ? 'Pass' : 'Fail'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 ml-4">
-                    {result.score !== undefined && (
-                      <span className={`text-sm font-bold ${getScoreColor(result.score)}`}>
-                        {Math.round(result.score)}%
-                      </span>
-                    )}
-                    {result.pass !== undefined && (
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${result.pass ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                        {result.pass ? 'Pass' : 'Fail'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     );
   }
@@ -228,28 +254,36 @@ export default function AdminAuditsPage() {
               <p className="text-sm text-muted-foreground">Total Audits</p>
               <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-2xl font-bold mt-1">{stats.total?.toLocaleString() || 0}</p>
+            <p className="text-2xl font-bold mt-1">
+              {stats.total?.toLocaleString() || 0}
+            </p>
           </div>
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">AI Audits</p>
               <Bot className="h-4 w-4 text-purple-500" />
             </div>
-            <p className="text-2xl font-bold mt-1 text-purple-500">{stats.aiAudits?.toLocaleString() || 0}</p>
+            <p className="text-2xl font-bold mt-1 text-purple-500">
+              {stats.aiAudits?.toLocaleString() || 0}
+            </p>
           </div>
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Manual Audits</p>
               <User className="h-4 w-4 text-blue-500" />
             </div>
-            <p className="text-2xl font-bold mt-1 text-blue-500">{stats.manualAudits?.toLocaleString() || 0}</p>
+            <p className="text-2xl font-bold mt-1 text-blue-500">
+              {stats.manualAudits?.toLocaleString() || 0}
+            </p>
           </div>
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Avg Score</p>
               <BarChart2 className="h-4 w-4 text-emerald-500" />
             </div>
-            <p className={`text-2xl font-bold mt-1 ${getScoreColor(stats.avgScore)}`}>
+            <p
+              className={`text-2xl font-bold mt-1 ${getScoreColor(stats.avgScore)}`}
+            >
               {stats.avgScore ? `${Math.round(stats.avgScore)}%` : '—'}
             </p>
           </div>
@@ -258,7 +292,9 @@ export default function AdminAuditsPage() {
               <p className="text-sm text-muted-foreground">Pass Rate</p>
               <TrendingUp className="h-4 w-4 text-green-500" />
             </div>
-            <p className={`text-2xl font-bold mt-1 ${getScoreColor(stats.passRate)}`}>
+            <p
+              className={`text-2xl font-bold mt-1 ${getScoreColor(stats.passRate)}`}
+            >
               {stats.passRate ? `${Math.round(stats.passRate)}%` : '—'}
             </p>
           </div>
@@ -326,29 +362,50 @@ export default function AdminAuditsPage() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Call ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Agent</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Campaign</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Score</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Call ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Agent
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Type
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Campaign
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Score
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Date
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {audits.map((audit) => (
-                  <tr key={audit._id} className="hover:bg-muted/30 transition-colors">
+                  <tr
+                    key={audit._id}
+                    className="hover:bg-muted/30 transition-colors"
+                  >
                     <td className="px-4 py-3">
-                      <span className="font-mono text-sm">{audit.callId || audit._id.slice(-8)}</span>
+                      <span className="font-mono text-sm">
+                        {audit.callId || audit._id.slice(-8)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{audit.agentName || '—'}</span>
+                        <span className="text-sm">
+                          {audit.agentName || '—'}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${auditTypeColors[audit.auditType] || ''}`}>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${auditTypeColors[audit.auditType] || ''}`}
+                      >
                         {audit.auditType?.toUpperCase()}
                       </span>
                     </td>
@@ -358,8 +415,12 @@ export default function AdminAuditsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`font-bold ${getScoreColor(audit.overallScore)}`}>
-                        {audit.overallScore !== undefined ? `${Math.round(audit.overallScore)}%` : '—'}
+                      <span
+                        className={`font-bold ${getScoreColor(audit.overallScore)}`}
+                      >
+                        {audit.overallScore !== undefined
+                          ? `${Math.round(audit.overallScore)}%`
+                          : '—'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -384,7 +445,8 @@ export default function AdminAuditsPage() {
           {/* Pagination */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total} audits
+              Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)}{' '}
+              of {total} audits
             </p>
             <div className="flex items-center gap-2">
               <button

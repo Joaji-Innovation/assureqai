@@ -1,13 +1,43 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Edit, ClipboardList, Save, Loader2, Play, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import {
+  Edit,
+  ClipboardList,
+  Save,
+  Loader2,
+  Play,
+  AlertCircle,
+  CheckCircle,
+  Info,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { qaParameterApi, campaignApi, auditApi, type QAParameter, type Campaign } from '@/lib/api';
-import { AudioUploadDropzone, type AudioUploadDropzoneRef } from '@/components/dashboard/AudioUploadDropzone';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  qaParameterApi,
+  campaignApi,
+  auditApi,
+  type QAParameter,
+  type Campaign,
+} from '@/lib/api';
+import {
+  AudioUploadDropzone,
+  type AudioUploadDropzoneRef,
+} from '@/components/dashboard/AudioUploadDropzone';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface AuditParameter {
   id: string;
@@ -52,23 +82,63 @@ export default function ManualAuditPage() {
 
   // Separate: Parameter Sets (scoring templates) vs Campaigns (grouping)
   const [parameterSets, setParameterSets] = useState<QAParameter[]>([]);
-  const [selectedParameterSetId, setSelectedParameterSetId] = useState<string>('');
+  const [selectedParameterSetId, setSelectedParameterSetId] =
+    useState<string>('');
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
 
   // Default parameters if no parameter set selected
   const defaultParameters: AuditParameter[] = [
-    { id: '1', name: 'Greeting & Opening', weight: 10, category: 'Opening', isFatal: false },
-    { id: '2', name: 'Problem Identification', weight: 15, category: 'Discovery', isFatal: false },
-    { id: '3', name: 'Solution Provided', weight: 20, category: 'Resolution', isFatal: false },
-    { id: '4', name: 'Tone & Professionalism', weight: 15, category: 'Soft Skills', isFatal: false },
-    { id: '5', name: 'Closing & Wrap-up', weight: 10, category: 'Closing', isFatal: false },
-    { id: '6', name: 'Data Protection Compliance', weight: 0, category: 'Compliance', isFatal: true },
+    {
+      id: '1',
+      name: 'Greeting & Opening',
+      weight: 10,
+      category: 'Opening',
+      isFatal: false,
+    },
+    {
+      id: '2',
+      name: 'Problem Identification',
+      weight: 15,
+      category: 'Discovery',
+      isFatal: false,
+    },
+    {
+      id: '3',
+      name: 'Solution Provided',
+      weight: 20,
+      category: 'Resolution',
+      isFatal: false,
+    },
+    {
+      id: '4',
+      name: 'Tone & Professionalism',
+      weight: 15,
+      category: 'Soft Skills',
+      isFatal: false,
+    },
+    {
+      id: '5',
+      name: 'Closing & Wrap-up',
+      weight: 10,
+      category: 'Closing',
+      isFatal: false,
+    },
+    {
+      id: '6',
+      name: 'Data Protection Compliance',
+      weight: 0,
+      category: 'Compliance',
+      isFatal: true,
+    },
   ];
 
-  const [parameters, setParameters] = useState<AuditParameter[]>(defaultParameters);
-  const [scores, setScores] = useState<Record<string, { score: number; comment: string }>>({});
+  const [parameters, setParameters] =
+    useState<AuditParameter[]>(defaultParameters);
+  const [scores, setScores] = useState<
+    Record<string, { score: number; comment: string }>
+  >({});
   const [saving, setSaving] = useState(false);
 
   // Audio state
@@ -82,7 +152,12 @@ export default function ManualAuditPage() {
       try {
         const [paramData, campaignData] = await Promise.all([
           qaParameterApi.list(),
-          campaignApi.list(1, 100).catch(() => ({ data: [], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 } })),
+          campaignApi
+            .list(1, 100)
+            .catch(() => ({
+              data: [],
+              pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+            })),
         ]);
         if (paramData && Array.isArray(paramData)) {
           setParameterSets(paramData);
@@ -104,7 +179,9 @@ export default function ManualAuditPage() {
 
   const handleParameterSetChange = (paramSetId: string) => {
     setSelectedParameterSetId(paramSetId);
-    const paramSet = parameterSets.find(p => p.id === paramSetId || p._id === paramSetId);
+    const paramSet = parameterSets.find(
+      (p) => p.id === paramSetId || p._id === paramSetId,
+    );
 
     if (paramSet && paramSet.parameters) {
       const uiParams = convertApiParamsToUi(paramSet.parameters);
@@ -132,16 +209,24 @@ export default function ManualAuditPage() {
   };
 
   const handleScoreChange = (paramId: string, value: number) => {
-    setScores(prev => ({
+    setScores((prev) => ({
       ...prev,
-      [paramId]: { ...prev[paramId], score: value, comment: prev[paramId]?.comment || '' }
+      [paramId]: {
+        ...prev[paramId],
+        score: value,
+        comment: prev[paramId]?.comment || '',
+      },
     }));
   };
 
   const handleCommentChange = (paramId: string, comment: string) => {
-    setScores(prev => ({
+    setScores((prev) => ({
       ...prev,
-      [paramId]: { ...prev[paramId], comment, score: prev[paramId]?.score || 0 }
+      [paramId]: {
+        ...prev[paramId],
+        comment,
+        score: prev[paramId]?.score || 0,
+      },
     }));
   };
 
@@ -150,7 +235,7 @@ export default function ManualAuditPage() {
     let weightedScore = 0;
     let hasFatalFail = false;
 
-    parameters.forEach(param => {
+    parameters.forEach((param) => {
       const paramScore = scores[param.id]?.score || 0;
       if (param.isFatal && paramScore < 100) {
         hasFatalFail = true;
@@ -162,7 +247,9 @@ export default function ManualAuditPage() {
     });
 
     if (hasFatalFail) return 0;
-    return totalWeight > 0 ? Math.round((weightedScore / totalWeight) * 100) : 0;
+    return totalWeight > 0
+      ? Math.round((weightedScore / totalWeight) * 100)
+      : 0;
   };
 
   const handleSubmit = async (isDraft: boolean) => {
@@ -173,17 +260,22 @@ export default function ManualAuditPage() {
 
     setSaving(true);
     try {
-      const selectedParamSet = parameterSets.find(p => p.id === selectedParameterSetId || p._id === selectedParameterSetId);
-      const selectedCampaign = campaigns.find(c => c._id === selectedCampaignId);
+      const selectedParamSet = parameterSets.find(
+        (p) =>
+          p.id === selectedParameterSetId || p._id === selectedParameterSetId,
+      );
+      const selectedCampaign = campaigns.find(
+        (c) => c._id === selectedCampaignId,
+      );
 
       // Build auditResults in the format the backend expects
-      const auditResults = parameters.map(param => ({
+      const auditResults = parameters.map((param) => ({
         parameterId: param.id,
         parameterName: param.name,
         score: scores[param.id]?.score || 0,
         maxScore: 100,
         weight: param.weight,
-        type: param.isFatal ? 'Fatal' : (param.type || 'Non-Fatal'),
+        type: param.isFatal ? 'Fatal' : param.type || 'Non-Fatal',
         comments: scores[param.id]?.comment || '',
       }));
 
@@ -204,13 +296,21 @@ export default function ManualAuditPage() {
 
       toast({
         title: isDraft ? 'Draft Saved' : 'Audit Submitted',
-        description: isDraft ? 'Your progress has been saved.' : 'The manual audit has been submitted successfully.',
+        description: isDraft
+          ? 'Your progress has been saved.'
+          : 'The manual audit has been submitted successfully.',
         className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500',
       });
 
       // Reset form on successful submit (not draft)
       if (!isDraft) {
-        setFormData({ agentName: '', teamLead: '', callId: '', callDate: new Date().toISOString().split('T')[0], callType: 'Inbound Support' });
+        setFormData({
+          agentName: '',
+          teamLead: '',
+          callId: '',
+          callDate: new Date().toISOString().split('T')[0],
+          callType: 'Inbound Support',
+        });
         setScores({});
         setAudioFile(null);
         setAudioSrc(null);
@@ -233,12 +333,18 @@ export default function ManualAuditPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Manual Audit Form</h2>
-          <p className="text-muted-foreground">Traditional quality assessment with optional audio playback</p>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Manual Audit Form
+          </h2>
+          <p className="text-muted-foreground">
+            Traditional quality assessment with optional audio playback
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Overall Score:</span>
-          <span className={`text-2xl font-bold ${overallScore >= 80 ? 'text-emerald-500' : overallScore >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+          <span
+            className={`text-2xl font-bold ${overallScore >= 80 ? 'text-emerald-500' : overallScore >= 60 ? 'text-amber-500' : 'text-red-500'}`}
+          >
             {overallScore}%
           </span>
         </div>
@@ -255,8 +361,13 @@ export default function ManualAuditPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Parameter Set (Scoring Template) *</label>
-              <Select value={selectedParameterSetId} onValueChange={handleParameterSetChange}>
+              <label className="text-sm font-medium mb-1.5 block">
+                Parameter Set (Scoring Template) *
+              </label>
+              <Select
+                value={selectedParameterSetId}
+                onValueChange={handleParameterSetChange}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a parameter set" />
                 </SelectTrigger>
@@ -268,7 +379,9 @@ export default function ManualAuditPage() {
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="default" disabled>No parameter sets available</SelectItem>
+                    <SelectItem value="default" disabled>
+                      No parameter sets available
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -278,8 +391,13 @@ export default function ManualAuditPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Campaign (Optional)</label>
-              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+              <label className="text-sm font-medium mb-1.5 block">
+                Campaign (Optional)
+              </label>
+              <Select
+                value={selectedCampaignId}
+                onValueChange={setSelectedCampaignId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="No campaign — standalone audit" />
                 </SelectTrigger>
@@ -299,22 +417,30 @@ export default function ManualAuditPage() {
 
             <div className="grid gap-4 grid-cols-2">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Agent Name *</label>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Agent Name *
+                </label>
                 <input
                   type="text"
                   value={formData.agentName}
-                  onChange={(e) => setFormData({ ...formData, agentName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, agentName: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter agent name"
                   required
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Team Lead</label>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Team Lead
+                </label>
                 <input
                   type="text"
                   value={formData.teamLead}
-                  onChange={(e) => setFormData({ ...formData, teamLead: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, teamLead: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter team lead name"
                 />
@@ -323,22 +449,30 @@ export default function ManualAuditPage() {
 
             <div className="grid gap-4 grid-cols-2">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Call ID *</label>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Call ID *
+                </label>
                 <input
                   type="text"
                   value={formData.callId}
-                  onChange={(e) => setFormData({ ...formData, callId: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, callId: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter call ID"
                   required
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Call Date *</label>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Call Date *
+                </label>
                 <input
                   type="date"
                   value={formData.callDate}
-                  onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, callDate: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
@@ -346,10 +480,14 @@ export default function ManualAuditPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Call Type</label>
+              <label className="text-sm font-medium mb-1.5 block">
+                Call Type
+              </label>
               <select
                 value={formData.callType}
-                onChange={(e) => setFormData({ ...formData, callType: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, callType: e.target.value })
+                }
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option>Inbound Support</option>
@@ -412,7 +550,10 @@ export default function ManualAuditPage() {
         <CardContent>
           <div className="space-y-6">
             {parameters.map((param) => (
-              <div key={param.id} className="p-4 rounded-lg border border-border bg-card/30">
+              <div
+                key={param.id}
+                className="p-4 rounded-lg border border-border bg-card/30"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className="font-medium">{param.name}</span>
@@ -426,7 +567,9 @@ export default function ManualAuditPage() {
                     </span>
                   </div>
                   {!param.isFatal && (
-                    <span className="text-sm text-muted-foreground font-mono">Weight: {param.weight}%</span>
+                    <span className="text-sm text-muted-foreground font-mono">
+                      Weight: {param.weight}%
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-4 mb-3">
@@ -436,19 +579,29 @@ export default function ManualAuditPage() {
                     max="100"
                     step="5"
                     value={scores[param.id]?.score || 0}
-                    onChange={(e) => handleScoreChange(param.id, parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleScoreChange(param.id, parseInt(e.target.value))
+                    }
                     className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                   />
-                  <span className={`text-lg font-bold min-w-[4rem] text-right font-mono ${(scores[param.id]?.score || 0) >= 80 ? 'text-emerald-500' :
-                      (scores[param.id]?.score || 0) >= 60 ? 'text-amber-500' : 'text-red-500'
-                    }`}>
+                  <span
+                    className={`text-lg font-bold min-w-[4rem] text-right font-mono ${
+                      (scores[param.id]?.score || 0) >= 80
+                        ? 'text-emerald-500'
+                        : (scores[param.id]?.score || 0) >= 60
+                          ? 'text-amber-500'
+                          : 'text-red-500'
+                    }`}
+                  >
                     {scores[param.id]?.score || 0}%
                   </span>
                 </div>
                 <textarea
                   placeholder="Add observation or feedback..."
                   value={scores[param.id]?.comment || ''}
-                  onChange={(e) => handleCommentChange(param.id, e.target.value)}
+                  onChange={(e) =>
+                    handleCommentChange(param.id, e.target.value)
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[60px]"
                 />
               </div>
@@ -459,11 +612,18 @@ export default function ManualAuditPage() {
 
       {/* Actions */}
       <div className="flex justify-end gap-4 pb-8">
-        <Button variant="outline" onClick={() => handleSubmit(true)} disabled={saving}>
+        <Button
+          variant="outline"
+          onClick={() => handleSubmit(true)}
+          disabled={saving}
+        >
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Save Draft
         </Button>
-        <Button onClick={() => handleSubmit(false)} disabled={saving || !formData.agentName || !formData.callId}>
+        <Button
+          onClick={() => handleSubmit(false)}
+          disabled={saving || !formData.agentName || !formData.callId}
+        >
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Submit Audit
         </Button>

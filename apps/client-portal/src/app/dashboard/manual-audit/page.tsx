@@ -492,7 +492,9 @@ export default function ManualAuditPage() {
                     </button>
                   </div>
                   <div>
-                    <label className="text-xs font-medium mb-1 block">Campaign Name *</label>
+                    <label className="text-xs font-medium mb-1 block">
+                      Campaign Name *
+                    </label>
                     <input
                       type="text"
                       value={newCampaignName}
@@ -503,7 +505,9 @@ export default function ManualAuditPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium mb-1 block">Description (Optional)</label>
+                    <label className="text-xs font-medium mb-1 block">
+                      Description (Optional)
+                    </label>
                     <input
                       type="text"
                       value={newCampaignDesc}

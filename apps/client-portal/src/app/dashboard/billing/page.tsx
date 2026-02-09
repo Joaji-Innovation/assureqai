@@ -50,9 +50,7 @@ function BillingContent() {
     api.audit
       .getStats()
       .then((stats: any) => {
-        setUsageLimit(
-          stats.usageLimit || stats.maxAudits || stats.total || 0,
-        );
+        setUsageLimit(stats.usageLimit || stats.maxAudits || stats.total || 0);
       })
       .catch(() => {});
   }, []);

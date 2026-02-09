@@ -13,22 +13,30 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
-import { AuditReportService, CreateAuditReportDto } from './audit-report.service';
-import { RequirePermissions } from '@assureqai/auth';
+import {
+  AuditReportService,
+  CreateAuditReportDto,
+} from './audit-report.service';
+import { RequirePermissions, Public } from '@assureqai/auth';
 import { PERMISSIONS } from '@assureqai/common';
 
 @ApiTags('Admin - Audit Reports')
 @Controller('admin/audit-reports')
 export class AuditReportController {
-  constructor(private readonly auditReportService: AuditReportService) { }
+  constructor(private readonly auditReportService: AuditReportService) {}
 
   /**
    * Receive audit report from isolated instance
    * Authenticated via X-API-Key header
    */
   @Post()
+  @Public() // Bypass JWT auth — isolated instances authenticate via X-API-Key
   @ApiOperation({ summary: 'Submit audit report (from isolated instance)' })
-  @ApiHeader({ name: 'X-API-Key', required: true, description: 'Instance API key' })
+  @ApiHeader({
+    name: 'X-API-Key',
+    required: true,
+    description: 'Instance API key',
+  })
   async create(
     @Headers('x-api-key') apiKey: string,
     @Body() dto: CreateAuditReportDto,

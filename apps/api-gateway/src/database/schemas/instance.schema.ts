@@ -71,7 +71,10 @@ export class CreditLimits {
 
 // Database configuration sub-schema
 export class DatabaseConfig {
-  @Prop({ enum: ['shared', 'isolated_db', 'isolated_server'], default: 'shared' })
+  @Prop({
+    enum: ['shared', 'isolated_db', 'isolated_server'],
+    default: 'shared',
+  })
   type: 'shared' | 'isolated_db' | 'isolated_server';
   // shared = Same MongoDB, scoped by projectId
   // isolated_db = Same MongoDB server, separate database per instance
@@ -107,8 +110,26 @@ export class Instance {
   @Prop({ enum: ['trial', 'standard', 'enterprise'], default: 'trial' })
   plan: 'trial' | 'standard' | 'enterprise';
 
-  @Prop({ enum: ['provisioning', 'active', 'running', 'stopped', 'suspended', 'terminated', 'error'], default: 'provisioning' })
-  status: 'provisioning' | 'active' | 'running' | 'stopped' | 'suspended' | 'terminated' | 'error';
+  @Prop({
+    enum: [
+      'provisioning',
+      'active',
+      'running',
+      'stopped',
+      'suspended',
+      'terminated',
+      'error',
+    ],
+    default: 'provisioning',
+  })
+  status:
+    | 'provisioning'
+    | 'active'
+    | 'running'
+    | 'stopped'
+    | 'suspended'
+    | 'terminated'
+    | 'error';
 
   @Prop({ type: VpsConfig })
   vps?: VpsConfig;

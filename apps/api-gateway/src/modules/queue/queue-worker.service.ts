@@ -385,25 +385,33 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
     if (jobIndex === -1) return;
 
-    const update: Record<string, any> = {
+    const setFields: Record<string, any> = {
       [`jobs.${jobIndex}.status`]: status,
     };
+    const incFields: Record<string, number> = {};
 
     if (status === 'processing') {
-      update.$inc = { processingJobs: 1 };
+      incFields.processingJobs = 1;
     } else if (status === 'completed') {
-      update.$inc = { completedJobs: 1, processingJobs: -1 };
+      incFields.completedJobs = 1;
+      incFields.processingJobs = -1;
       if (auditId) {
-        update[`jobs.${jobIndex}.auditId`] = new Types.ObjectId(auditId);
+        setFields[`jobs.${jobIndex}.auditId`] = new Types.ObjectId(auditId);
       }
     } else if (status === 'failed') {
-      update.$inc = { failedJobs: 1, processingJobs: -1 };
+      incFields.failedJobs = 1;
+      incFields.processingJobs = -1;
       if (error) {
-        update[`jobs.${jobIndex}.error`] = error;
+        setFields[`jobs.${jobIndex}.error`] = error;
       }
     }
 
-    await this.campaignModel.findByIdAndUpdate(campaignId, update).exec();
+    const updateOps: Record<string, any> = { $set: setFields };
+    if (Object.keys(incFields).length > 0) {
+      updateOps.$inc = incFields;
+    }
+
+    await this.campaignModel.findByIdAndUpdate(campaignId, updateOps).exec();
   }
 
   /**

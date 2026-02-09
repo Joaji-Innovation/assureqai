@@ -14,6 +14,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -35,6 +36,8 @@ import * as fs from 'fs';
 @ApiBearerAuth()
 @Controller('campaigns')
 export class CampaignController {
+  private readonly logger = new Logger(CampaignController.name);
+
   constructor(private readonly campaignService: CampaignService) {}
 
   /**
@@ -157,7 +160,7 @@ export class CampaignController {
         callId: originalName,
       });
     } catch (error) {
-      console.error('File upload failed:', error);
+      this.logger.error('File upload failed:', error);
       throw new BadRequestException(`File upload failed: ${error.message}`);
     }
   }

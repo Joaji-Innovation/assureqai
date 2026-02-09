@@ -110,7 +110,12 @@ export interface AuditStats {
   };
   agentPerformance?: {
     topAgents: { id: string; name: string; score: number; audits: number }[];
-    underperformingAgents: { id: string; name: string; score: number; audits: number }[];
+    underperformingAgents: {
+      id: string;
+      name: string;
+      score: number;
+      audits: number;
+    }[];
   };
   campaignPerformance?: { name: string; score: number; audits: number }[];
   callMetrics?: {

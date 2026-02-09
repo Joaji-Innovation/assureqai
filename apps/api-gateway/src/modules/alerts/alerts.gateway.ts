@@ -12,6 +12,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
@@ -26,8 +27,29 @@ export class AlertsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(AlertsGateway.name);
   private projectRooms: Map<string, Set<string>> = new Map();
 
+  constructor(private readonly jwtService: JwtService) {}
+
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+    try {
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace('Bearer ', '');
+      if (!token) {
+        this.logger.warn(`Client ${client.id} rejected: no token`);
+        client.emit('error', { message: 'Authentication required' });
+        client.disconnect(true);
+        return;
+      }
+      const payload = this.jwtService.verify(token);
+      (client as any).user = payload;
+      this.logger.log(
+        `Client authenticated: ${client.id} (${payload.sub || payload.username})`,
+      );
+    } catch (err) {
+      this.logger.warn(`Client ${client.id} rejected: invalid token`);
+      client.emit('error', { message: 'Invalid token' });
+      client.disconnect(true);
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -45,14 +67,14 @@ export class AlertsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleSubscribe(client: Socket, payload: { projectId?: string }) {
     const projectId = payload.projectId || 'global';
     const roomName = `project:${projectId}`;
-    
+
     client.join(roomName);
-    
+
     if (!this.projectRooms.has(projectId)) {
       this.projectRooms.set(projectId, new Set());
     }
     this.projectRooms.get(projectId)?.add(client.id);
-    
+
     this.logger.log(`Client ${client.id} subscribed to ${roomName}`);
     return { success: true, room: roomName };
   }
@@ -64,10 +86,10 @@ export class AlertsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleUnsubscribe(client: Socket, payload: { projectId?: string }) {
     const projectId = payload.projectId || 'global';
     const roomName = `project:${projectId}`;
-    
+
     client.leave(roomName);
     this.projectRooms.get(projectId)?.delete(client.id);
-    
+
     this.logger.log(`Client ${client.id} unsubscribed from ${roomName}`);
     return { success: true };
   }
@@ -79,13 +101,13 @@ export class AlertsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleAlertCreated(payload: { alert: any; projectId?: string }) {
     const projectId = payload.projectId || 'global';
     const roomName = `project:${projectId}`;
-    
+
     // Broadcast to project room
     this.server.to(roomName).emit('newAlert', payload.alert);
-    
+
     // Also broadcast to global room for admin visibility
     this.server.to('project:global').emit('newAlert', payload.alert);
-    
+
     this.logger.log(`Alert broadcasted to ${roomName}: ${payload.alert.type}`);
   }
 

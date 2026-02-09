@@ -52,7 +52,6 @@ export default function AdminDashboardPage() {
         // Process Users
         if (usersRes.status === 'fulfilled') {
           newStats.totalUsers = usersRes.value.pagination.total;
-          newStats.totalClients = Math.floor(newStats.totalUsers * 0.1);
         } else {
           healthStatus.db = 'degraded';
         }
@@ -72,7 +71,7 @@ export default function AdminDashboardPage() {
             if (plan === 'standard' || plan === 'pro') return acc + 99;
             return acc;
           }, 0);
-          newStats.monthlyRevenue = revenue * 1000;
+          newStats.monthlyRevenue = revenue;
 
           setClients(
             instances.slice(0, 5).map((inst: any) => ({
@@ -118,7 +117,7 @@ export default function AdminDashboardPage() {
               status: healthStatus.db,
               latency:
                 healthStatus.db === 'healthy'
-                  ? `${Math.round(apiLatency * 0.3)}ms`
+                  ? `~${Math.round(apiLatency * 0.4)}ms`
                   : '-',
             },
             {
@@ -246,9 +245,18 @@ export default function AdminDashboardPage() {
         <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">System Health</h2>
-            <span className="flex items-center gap-1 text-sm text-emerald-500">
-              <CheckCircle className="h-4 w-4" />
-              All Systems Operational
+            <span
+              className={`flex items-center gap-1 text-sm ${health.every((s) => s.status === 'healthy') ? 'text-emerald-500' : 'text-yellow-500'}`}
+            >
+              {health.every((s) => s.status === 'healthy') ? (
+                <>
+                  <CheckCircle className="h-4 w-4" /> All Systems Operational
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4" /> Degraded Performance
+                </>
+              )}
             </span>
           </div>
           <div className="space-y-3">

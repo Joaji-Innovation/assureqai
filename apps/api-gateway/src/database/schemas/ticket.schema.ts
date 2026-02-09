@@ -16,7 +16,8 @@ export const TICKET_CATEGORIES = {
   OTHER: 'other',
 } as const;
 
-export type TicketCategory = typeof TICKET_CATEGORIES[keyof typeof TICKET_CATEGORIES];
+export type TicketCategory =
+  (typeof TICKET_CATEGORIES)[keyof typeof TICKET_CATEGORIES];
 
 // Ticket priorities
 export const TICKET_PRIORITIES = {
@@ -26,7 +27,8 @@ export const TICKET_PRIORITIES = {
   CRITICAL: 'critical',
 } as const;
 
-export type TicketPriority = typeof TICKET_PRIORITIES[keyof typeof TICKET_PRIORITIES];
+export type TicketPriority =
+  (typeof TICKET_PRIORITIES)[keyof typeof TICKET_PRIORITIES];
 
 // Ticket statuses
 export const TICKET_STATUSES = {
@@ -37,7 +39,8 @@ export const TICKET_STATUSES = {
   CLOSED: 'closed',
 } as const;
 
-export type TicketStatus = typeof TICKET_STATUSES[keyof typeof TICKET_STATUSES];
+export type TicketStatus =
+  (typeof TICKET_STATUSES)[keyof typeof TICKET_STATUSES];
 
 // Embedded message schema
 @Schema({ timestamps: true })
@@ -146,7 +149,7 @@ export class Ticket {
 export const TicketSchema = SchemaFactory.createForClass(Ticket);
 
 // Indexes
-TicketSchema.index({ ticketNumber: 1 });
+TicketSchema.index({ ticketNumber: 1 }, { unique: true });
 TicketSchema.index({ status: 1 });
 TicketSchema.index({ priority: 1 });
 TicketSchema.index({ createdBy: 1 });
@@ -154,11 +157,17 @@ TicketSchema.index({ assignedTo: 1 });
 TicketSchema.index({ projectId: 1 });
 TicketSchema.index({ createdAt: -1 });
 
-// Pre-save hook to generate ticket number
+// Pre-save hook to generate ticket number (atomic via findOneAndUpdate counter)
 TicketSchema.pre('save', async function () {
   if (this.isNew && !this.ticketNumber) {
-    const count = await this.model('Ticket').countDocuments();
-    this.ticketNumber = `TKT-${String(count + 1).padStart(6, '0')}`;
+    const mongoose = require('mongoose');
+    const counter = await mongoose.connection.db
+      .collection('counters')
+      .findOneAndUpdate(
+        { _id: 'ticketNumber' },
+        { $inc: { seq: 1 } },
+        { upsert: true, returnDocument: 'after' },
+      );
+    this.ticketNumber = `TKT-${String(counter.seq).padStart(6, '0')}`;
   }
 });
-

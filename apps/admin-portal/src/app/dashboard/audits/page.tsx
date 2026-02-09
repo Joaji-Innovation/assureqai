@@ -200,8 +200,10 @@ export default function AdminAuditsPage() {
                   {selectedAudit.tokenUsage.totalTokens?.toLocaleString() || 0}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  In: {selectedAudit.tokenUsage.inputTokens?.toLocaleString() || 0} /
-                  Out: {selectedAudit.tokenUsage.outputTokens?.toLocaleString() || 0}
+                  In:{' '}
+                  {selectedAudit.tokenUsage.inputTokens?.toLocaleString() || 0}{' '}
+                  / Out:{' '}
+                  {selectedAudit.tokenUsage.outputTokens?.toLocaleString() || 0}
                 </p>
               </div>
             ) : (
@@ -211,13 +213,15 @@ export default function AdminAuditsPage() {
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <p className="text-sm text-muted-foreground mb-1">Sentiment</p>
             {selectedAudit.sentiment?.overall ? (
-              <span className={`px-2 py-1 text-xs rounded-full ${
-                selectedAudit.sentiment.overall === 'positive'
-                  ? 'bg-green-500/10 text-green-500'
-                  : selectedAudit.sentiment.overall === 'negative'
-                    ? 'bg-red-500/10 text-red-500'
-                    : 'bg-yellow-500/10 text-yellow-500'
-              }`}>
+              <span
+                className={`px-2 py-1 text-xs rounded-full ${
+                  selectedAudit.sentiment.overall === 'positive'
+                    ? 'bg-green-500/10 text-green-500'
+                    : selectedAudit.sentiment.overall === 'negative'
+                      ? 'bg-red-500/10 text-red-500'
+                      : 'bg-yellow-500/10 text-yellow-500'
+                }`}
+              >
                 {selectedAudit.sentiment.overall.toUpperCase()}
               </span>
             ) : (
@@ -226,7 +230,9 @@ export default function AdminAuditsPage() {
           </div>
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <p className="text-sm text-muted-foreground mb-1">Confidence</p>
-            <p className={`font-bold text-lg ${getScoreColor(selectedAudit.overallConfidence)}`}>
+            <p
+              className={`font-bold text-lg ${getScoreColor(selectedAudit.overallConfidence)}`}
+            >
               {selectedAudit.overallConfidence !== undefined
                 ? `${Math.round(selectedAudit.overallConfidence)}%`
                 : '—'}
@@ -238,7 +244,9 @@ export default function AdminAuditsPage() {
         {selectedAudit.callSummary && (
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
             <p className="text-sm text-muted-foreground mb-2">Call Summary</p>
-            <p className="text-sm leading-relaxed">{selectedAudit.callSummary}</p>
+            <p className="text-sm leading-relaxed">
+              {selectedAudit.callSummary}
+            </p>
           </div>
         )}
 

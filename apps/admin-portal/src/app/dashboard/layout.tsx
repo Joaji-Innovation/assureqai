@@ -27,6 +27,7 @@ import {
   MessageSquare,
   ClipboardCheck,
 } from 'lucide-react';
+import { authApi } from '@/lib/api';
 
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -53,6 +54,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{
+    fullName?: string;
+    username: string;
+    role: string;
+  } | null>(null);
 
   useEffect(() => {
     // Basic Client-side Auth Guard
@@ -62,6 +68,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.push('/login');
     } else {
       setIsChecking(false);
+      authApi
+        .me()
+        .then((user) => setCurrentUser(user))
+        .catch(() => {});
     }
   }, [router, pathname]);
 
@@ -142,12 +152,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {!collapsed && (
             <div className="flex items-center gap-3 mb-3 p-2 rounded-lg bg-muted/50">
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/80 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
-                SA
+                {currentUser?.fullName
+                  ? currentUser.fullName
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2)
+                  : 'SA'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Super Admin</p>
+                <p className="text-sm font-medium truncate">
+                  {currentUser?.fullName || currentUser?.username || 'Admin'}
+                </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  admin@assureqai.com
+                  {currentUser?.role || 'admin'}
                 </p>
               </div>
             </div>

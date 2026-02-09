@@ -502,7 +502,6 @@ ${parametersDesc}
 {
   "identifiedAgentName": "string",
   "transcriptionInOriginalLanguage": "string with speaker labels",
-  "transcriptionInOriginalLanguage": "string with speaker labels",
   "englishTranslation": "string (required, same as original if already English)",
   ${request.transcriptionLanguage ? `"additionalTranslation": "string (translation in ${request.transcriptionLanguage})",` : ''}
   "callSummary": "string (max 500 chars)",
@@ -560,10 +559,11 @@ CRITICAL: Score using EXACT parameter names listed above.`;
           this.logger.log('JSON repair successful');
         } catch (repairError: any) {
           // Extract what we can from the partial response
-          this.logger.warn(
+          this.logger.error(
             `JSON repair failed: ${repairError.message}. Extracting partial data...`,
           );
           output = this.extractPartialData(jsonText, request.parameters);
+          output._dataQuality = 'partial';
         }
       }
 
@@ -689,6 +689,7 @@ CRITICAL: Score using EXACT parameter names listed above.`;
     callSummary: string;
     identifiedAgentName: string;
     detectedLanguage: string;
+    _dataQuality?: 'full' | 'partial';
   }> {
     const transcriptionPrompt = `You are an expert call center transcriptionist. Analyze the attached audio and provide ONLY transcription-related output.
 
@@ -725,7 +726,6 @@ CRITICAL: Score using EXACT parameter names listed above.`;
 {
   "identifiedAgentName": "string (agent's name from greeting - MUST extract if mentioned)",
   "detectedLanguage": "string (e.g., 'Hindi', 'English', 'Spanish')",
-  "transcriptionInOriginalLanguage": "string (full transcript with speaker labels)",
   "transcriptionInOriginalLanguage": "string (full transcript with speaker labels)",
   "englishTranslation": "string (same as transcript if already English)",
   ${targetTranslationLanguage ? `"additionalTranslation": "string (translation in ${targetTranslationLanguage})",` : ''}
@@ -784,6 +784,9 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
         };
       } catch {
         // Extract transcript via regex as fallback
+        this.logger.error(
+          'Transcription JSON parse+repair both failed, using regex fallback',
+        );
         const transcriptMatch = jsonText.match(
           /"transcriptionInOriginalLanguage"\s*:\s*"((?:[^"\\]|\\.)*)"/,
         );
@@ -795,9 +798,11 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
             ? transcriptMatch[1]
             : 'Transcription failed - please retry',
           englishTranslation: translationMatch ? translationMatch[1] : '',
-          callSummary: 'Transcription partially completed',
+          callSummary:
+            'Transcription partially completed - results may be incomplete',
           identifiedAgentName: 'Unknown',
           detectedLanguage: language || 'en',
+          _dataQuality: 'partial' as const,
         };
       }
     }
@@ -1442,7 +1447,7 @@ ${parametersJson}
     prompt: string,
     retries = LIMITS.MAX_RETRIES,
   ): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent?key=${this.apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -1530,10 +1535,11 @@ ${parametersJson}
         parsed = JSON.parse(repairedJson);
         this.logger.log('Audit JSON repair successful');
       } catch (repairError: any) {
-        this.logger.warn(
+        this.logger.error(
           `Audit JSON repair failed: ${repairError.message}. Extracting partial data...`,
         );
         parsed = this.extractPartialData(jsonStr, parameters);
+        parsed._dataQuality = 'partial';
       }
     }
 

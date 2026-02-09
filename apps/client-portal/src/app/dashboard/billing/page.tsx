@@ -1,5 +1,6 @@
-"use client";
+'use client';
 
+import { useState, useEffect, Suspense } from 'react';
 import {
   Card,
   CardContent,
@@ -7,14 +8,14 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Check, CreditCard, Star } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Check, CreditCard, Star } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import api from '@/lib/api';
 
-import { Suspense } from "react";
-import { useLocationPricing } from "@/hooks/useLocationPricing";
+import { useLocationPricing } from '@/hooks/useLocationPricing';
 
 interface Plan {
   name: string;
@@ -36,31 +37,50 @@ export default function BillingPage() {
 
 function BillingContent() {
   const { pricing } = useLocationPricing();
-  const currentUsage = 37; // Example data
-  const usageLimit = 150; // Example data
-  const usagePercentage = (currentUsage / usageLimit) * 100;
+  const [currentUsage, setCurrentUsage] = useState(0);
+  const [usageLimit, setUsageLimit] = useState(0);
+
+  useEffect(() => {
+    api.audit
+      .getStats()
+      .then((stats) => {
+        setCurrentUsage(stats.total || 0);
+      })
+      .catch(() => {});
+    api.settings
+      .get()
+      .then((settings: any) => {
+        setUsageLimit(
+          settings.credits?.totalAudits || settings.limits?.maxAudits || 0,
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  const usagePercentage =
+    usageLimit > 0 ? Math.min((currentUsage / usageLimit) * 100, 100) : 0;
 
   const plans = [
     {
-      name: "AssureQAI Pay-Per-Call",
+      name: 'AssureQAI Pay-Per-Call',
       price: `${pricing.currencySymbol}${pricing.aiAuditPrice}`,
-      pricePeriod: "per AI audit",
-      description: "Simple, transparent pricing. Pay only for what you use.",
+      pricePeriod: 'per AI audit',
+      description: 'Simple, transparent pricing. Pay only for what you use.',
       features: [
-        "AI-Assisted Audits",
-        "100% Call Coverage",
-        "Real-time Scoring",
-        "Advanced Dashboard",
-        "Unlimited Calls",
-        "Priority Support",
-        "Custom Parameters",
-        "Team Collaboration",
-        "Compliance Reports",
-        "API Access",
-        "Custom Integrations",
-        "24/7 Monitoring",
+        'AI-Assisted Audits',
+        '100% Call Coverage',
+        'Real-time Scoring',
+        'Advanced Dashboard',
+        'Unlimited Calls',
+        'Priority Support',
+        'Custom Parameters',
+        'Team Collaboration',
+        'Compliance Reports',
+        'API Access',
+        'Custom Integrations',
+        '24/7 Monitoring',
       ],
-      cta: "View Details",
+      cta: 'View Details',
     },
   ];
   return (
@@ -83,13 +103,17 @@ function BillingContent() {
             <div className="space-y-2">
               <h3 className="text-xl font-semibold">Current Usage</h3>
               <p className="text-sm text-muted-foreground">
-                You have used {currentUsage} of your {usageLimit} available
-                audits this month.
+                {usageLimit > 0
+                  ? `You have used ${currentUsage} of your ${usageLimit} available audits.`
+                  : `You have performed ${currentUsage} audits (pay-per-use plan).`}
               </p>
               <Progress value={usagePercentage} className="w-full" />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{usagePercentage.toFixed(0)}% used</span>
-                <span>Resets in 12 days</span>
+                <span>
+                  {usageLimit > 0
+                    ? `${usagePercentage.toFixed(0)}% used`
+                    : `${currentUsage} total`}
+                </span>
               </div>
             </div>
             <div className="text-center">

@@ -9,7 +9,11 @@ export type CallAuditDocument = CallAudit & Document;
 
 @Schema({ timestamps: true })
 export class CallAudit {
-  @Prop({ trim: true, default: () => `CALL-${Date.now()}-${Math.random().toString(36).substring(7)}` })
+  @Prop({
+    trim: true,
+    default: () =>
+      `CALL-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+  })
   callId: string;
 
   @Prop({ trim: true })
@@ -27,8 +31,8 @@ export class CallAudit {
   @Prop({ type: Types.ObjectId, ref: 'Project' })
   projectId?: Types.ObjectId;
 
-  @Prop({ required: true, enum: ['ai', 'manual'], default: 'ai' })
-  auditType: 'ai' | 'manual';
+  @Prop({ required: true, enum: ['ai', 'manual', 'bulk'], default: 'ai' })
+  auditType: 'ai' | 'manual' | 'bulk';
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
   auditedBy?: Types.ObjectId;
@@ -64,8 +68,9 @@ export class CallAudit {
     weight: number;
     type: 'Fatal' | 'Non-Fatal' | 'ZTP';
     comments?: string;
-    confidence?: number;  // 0-100 confidence score
-    evidence?: {          // Transcript citations
+    confidence?: number; // 0-100 confidence score
+    evidence?: {
+      // Transcript citations
       text: string;
       lineNumber?: number;
       startChar?: number;
@@ -104,7 +109,11 @@ export class CallAudit {
     overall: 'positive' | 'neutral' | 'negative';
     customerScore: number;
     agentScore: number;
-    emotionalMoments?: { timestamp: string; emotion: string; speaker: string }[];
+    emotionalMoments?: {
+      timestamp: string;
+      emotion: string;
+      speaker: string;
+    }[];
   };
 
   // Call metrics ⭐ NEW
@@ -131,7 +140,10 @@ export class CallAudit {
         {
           rule: String,
           description: String,
-          severity: { type: String, enum: ['low', 'medium', 'high', 'critical'] },
+          severity: {
+            type: String,
+            enum: ['low', 'medium', 'high', 'critical'],
+          },
         },
       ],
       complianceScore: Number,

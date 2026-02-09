@@ -15,7 +15,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { CreateAuditDto, UpdateAuditDto, AuditFiltersDto } from './dto';
 import { Roles, RequirePermissions, CurrentUser } from '@assureqai/auth';
@@ -25,7 +30,7 @@ import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('audits')
 export class AuditController {
-  constructor(private readonly auditService: AuditService) { }
+  constructor(private readonly auditService: AuditService) {}
 
   /**
    * Create a new audit
@@ -35,13 +40,13 @@ export class AuditController {
   @ApiOperation({ summary: 'Create a new audit' })
   @ApiResponse({ status: 201, description: 'Audit created successfully' })
   async create(@Body() dto: CreateAuditDto, @CurrentUser() user: JwtPayload) {
-    console.log('[AuditController] POST /audits called by user:', user?.username, 'role:', user?.role);
-
     // Transform parameters to auditResults if parameters is provided (agent-ai format)
-    // This matches the agent-ai API route transformation at lines 309-319
     let processedDto = { ...dto };
-    if (dto.parameters && Array.isArray(dto.parameters) && dto.parameters.length > 0) {
-      console.log('[AuditController] Transforming parameters to auditResults');
+    if (
+      dto.parameters &&
+      Array.isArray(dto.parameters) &&
+      dto.parameters.length > 0
+    ) {
       processedDto.auditResults = dto.parameters.flatMap((param: any) =>
         (param.subParameters || []).map((subParam: any) => ({
           parameterId: subParam.id,
@@ -51,32 +56,17 @@ export class AuditController {
           weight: subParam.weight || 100,
           type: subParam.type || 'Non-Fatal',
           comments: subParam.comments || '',
-        }))
+        })),
       );
-      console.log('[AuditController] Transformed auditResults:', JSON.stringify(processedDto.auditResults?.[0]));
     }
 
-    console.log('[AuditController] DTO received:', JSON.stringify({
-      auditType: processedDto.auditType,
-      agentName: processedDto.agentName,
-      overallScore: processedDto.overallScore,
-      campaignName: processedDto.campaignName,
-      auditResultsType: Array.isArray(processedDto.auditResults) ? 'Array' : typeof processedDto.auditResults,
-      auditResultsLength: processedDto.auditResults?.length,
-      auditResultsSample: processedDto.auditResults?.[0] ? JSON.stringify(processedDto.auditResults[0]) : 'None'
-    }));
-
-    try {
-      const result = await this.auditService.create({
+    return this.auditService.create(
+      {
         ...processedDto,
         projectId: processedDto.projectId || user.projectId,
-      }, (user as any).instanceId);
-      console.log('[AuditController] Audit created successfully, id:', (result as any)._id);
-      return result;
-    } catch (error) {
-      console.error('[AuditController] Error creating audit:', error);
-      throw error;
-    }
+      },
+      (user as any).instanceId,
+    );
   }
 
   /**
@@ -116,9 +106,10 @@ export class AuditController {
     @Query('campaignName') campaignName?: string,
     @CurrentUser() user?: JwtPayload,
   ) {
-    const dateRange = startDate && endDate
-      ? { start: new Date(startDate), end: new Date(endDate) }
-      : undefined;
+    const dateRange =
+      startDate && endDate
+        ? { start: new Date(startDate), end: new Date(endDate) }
+        : undefined;
 
     // Scope to user's project if not admin
     const scopedProjectId =
@@ -126,7 +117,10 @@ export class AuditController {
         ? projectId
         : user?.projectId;
 
-    return this.auditService.getStats(scopedProjectId, dateRange, { auditType, campaignName });
+    return this.auditService.getStats(scopedProjectId, dateRange, {
+      auditType,
+      campaignName,
+    });
   }
 
   /**
@@ -143,15 +137,13 @@ export class AuditController {
     @CurrentUser() user?: JwtPayload,
   ) {
     const numericLimit = Number(limit) || 10;
-    console.log(`[AuditController] getLeaderboard called: limit=${numericLimit} (raw: ${limit}), projectId=${projectId}, role=${user?.role}`);
 
     // If client admin doesn't specify project, default to their own
     const scopedProjectId =
-      (user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.CLIENT_ADMIN) && projectId
+      (user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.CLIENT_ADMIN) &&
+      projectId
         ? projectId
         : user?.projectId;
-
-    console.log(`[AuditController] getLeaderboard scopedProjectId: ${scopedProjectId}`);
 
     return this.auditService.getLeaderboard(scopedProjectId, numericLimit);
   }

@@ -22,20 +22,13 @@ async function bootstrap() {
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   // Body parser with increased limits for large transcripts/audio
-  app.use(bodyParser.json({ limit: '500mb' }));
-  app.use(bodyParser.urlencoded({ limit: '500mb', extended: true }));
-  // Raw parser should NOT handle multipart/form-data (let Multer handle it)
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+  // Raw parser only for binary uploads (audio files)
   app.use(
     bodyParser.raw({
-      limit: '500mb',
-      type: (req: any) => {
-        const contentType = req.headers['content-type'];
-        // Match explicit application/octet-stream or similar, but EXCLUDE multipart
-        if (contentType && contentType.includes('multipart/form-data')) {
-          return false;
-        }
-        return true;
-      },
+      limit: '50mb',
+      type: 'application/octet-stream',
     }),
   );
 
@@ -93,7 +86,9 @@ async function bootstrap() {
   Logger.log(
     `🚀 AssureQai API running on: http://localhost:${port}/${globalPrefix}`,
   );
-  Logger.log(`⚡ Health check: http://localhost:${port}/${globalPrefix}/health`);
+  Logger.log(
+    `⚡ Health check: http://localhost:${port}/${globalPrefix}/health`,
+  );
 }
 
 bootstrap();

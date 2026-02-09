@@ -42,8 +42,7 @@ export default function InstanceDetailPage() {
 
   const fetchInstance = async () => {
     try {
-      const data = await instanceApi.findAll();
-      const found = data.find((i: Instance) => i._id === instanceId);
+      const found = await instanceApi.findById(instanceId);
       if (found) {
         setInstance(found);
         setLimits({
@@ -99,7 +98,11 @@ export default function InstanceDetailPage() {
   };
 
   const regenerateApiKey = async () => {
-    if (!instance || !confirm('Regenerate API key? The old key will stop working immediately.')) return;
+    if (
+      !instance ||
+      !confirm('Regenerate API key? The old key will stop working immediately.')
+    )
+      return;
     setRegeneratingKey(true);
     try {
       const result = await instanceApi.regenerateApiKey(instance._id);
@@ -178,10 +181,14 @@ export default function InstanceDetailPage() {
             <div>
               <h1 className="text-2xl font-bold">{instance.name}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(instance.status)}`}>
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(instance.status)}`}
+                >
                   {instance.status}
                 </span>
-                <span className={`px-2 py-0.5 text-xs rounded-full ${getPlanColor(instance.plan || 'trial')}`}>
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full ${getPlanColor(instance.plan || 'trial')}`}
+                >
                   {instance.plan || 'trial'}
                 </span>
                 {instance.domain?.subdomain && (
@@ -192,7 +199,8 @@ export default function InstanceDetailPage() {
                     className="flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <ExternalLink className="h-3 w-3" />
-                    {instance.domain.customDomain || `${instance.domain.subdomain}.assureqai.com`}
+                    {instance.domain.customDomain ||
+                      `${instance.domain.subdomain}.assureqai.com`}
                   </a>
                 )}
               </div>
@@ -221,7 +229,9 @@ export default function InstanceDetailPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Tokens Used</p>
-              <p className="text-xl font-bold">{(usedTokens / 1000).toFixed(0)}K</p>
+              <p className="text-xl font-bold">
+                {(usedTokens / 1000).toFixed(0)}K
+              </p>
             </div>
           </div>
         </div>
@@ -243,7 +253,9 @@ export default function InstanceDetailPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Billing Type</p>
-              <p className="text-xl font-bold capitalize">{instance.credits?.billingType || 'prepaid'}</p>
+              <p className="text-xl font-bold capitalize">
+                {instance.credits?.billingType || 'prepaid'}
+              </p>
             </div>
           </div>
         </div>
@@ -262,7 +274,9 @@ export default function InstanceDetailPage() {
               <input
                 type="number"
                 value={limits.maxUsers}
-                onChange={(e) => setLimits({ ...limits, maxUsers: Number(e.target.value) })}
+                onChange={(e) =>
+                  setLimits({ ...limits, maxUsers: Number(e.target.value) })
+                }
                 className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 min={1}
               />
@@ -272,7 +286,9 @@ export default function InstanceDetailPage() {
               <input
                 type="text"
                 value={limits.maxStorage}
-                onChange={(e) => setLimits({ ...limits, maxStorage: e.target.value })}
+                onChange={(e) =>
+                  setLimits({ ...limits, maxStorage: e.target.value })
+                }
                 className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
@@ -281,7 +297,11 @@ export default function InstanceDetailPage() {
               disabled={saving}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
               Save Limits
             </button>
           </div>
@@ -299,29 +319,48 @@ export default function InstanceDetailPage() {
               <input
                 type="number"
                 value={credits.totalAudits}
-                onChange={(e) => setCredits({ ...credits, totalAudits: Number(e.target.value) })}
+                onChange={(e) =>
+                  setCredits({
+                    ...credits,
+                    totalAudits: Number(e.target.value),
+                  })
+                }
                 className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 min={0}
               />
-              <p className="text-xs text-muted-foreground mt-1">Used: {usedAudits} / {credits.totalAudits}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Used: {usedAudits} / {credits.totalAudits}
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium">Total Token Credits</label>
               <input
                 type="number"
                 value={credits.totalTokens}
-                onChange={(e) => setCredits({ ...credits, totalTokens: Number(e.target.value) })}
+                onChange={(e) =>
+                  setCredits({
+                    ...credits,
+                    totalTokens: Number(e.target.value),
+                  })
+                }
                 className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 min={0}
               />
-              <p className="text-xs text-muted-foreground mt-1">Used: {(usedTokens / 1000).toFixed(0)}K / {(credits.totalTokens / 1000).toFixed(0)}K</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Used: {(usedTokens / 1000).toFixed(0)}K /{' '}
+                {(credits.totalTokens / 1000).toFixed(0)}K
+              </p>
             </div>
             <button
               onClick={handleSaveCredits}
               disabled={saving}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
               Save Credits
             </button>
           </div>
@@ -357,13 +396,16 @@ export default function InstanceDetailPage() {
                 className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
                 title="Regenerate API Key"
               >
-                <RefreshCw className={`h-5 w-5 text-muted-foreground ${regeneratingKey ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-5 w-5 text-muted-foreground ${regeneratingKey ? 'animate-spin' : ''}`}
+                />
               </button>
             </>
           )}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Use this API key for authentication when making API calls from this instance.
+          Use this API key for authentication when making API calls from this
+          instance.
         </p>
       </div>
     </div>

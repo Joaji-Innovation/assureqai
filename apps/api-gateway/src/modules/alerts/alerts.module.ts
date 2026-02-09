@@ -8,10 +8,12 @@ import { AlertsController } from './alerts.controller';
 import { AlertsService } from './alerts.service';
 import { AlertsGateway } from './alerts.gateway';
 import { Alert, AlertSchema } from '../../database/schemas/alert.schema';
+import { AuthModule } from '@assureqai/auth';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Alert.name, schema: AlertSchema }]),
+    AuthModule,
   ],
   controllers: [AlertsController],
   providers: [AlertsService, AlertsGateway],

@@ -13,9 +13,20 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { NotificationsService, UpdateSettingsDto, CreateWebhookDto, UpdateWebhookDto } from './notifications.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import {
+  NotificationsService,
+  UpdateSettingsDto,
+  CreateWebhookDto,
+  UpdateWebhookDto,
+} from './notifications.service';
 import { CurrentUser, RequirePermissions } from '@assureqai/auth';
 import { JwtPayload, PERMISSIONS, ROLES } from '@assureqai/common';
 import { UsersService } from '../users/users.service';
@@ -24,10 +35,12 @@ import { UsersService } from '../users/users.service';
 @ApiBearerAuth()
 @Controller('notifications')
 export class NotificationsController {
+  private readonly logger = new Logger(NotificationsController.name);
+
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
-  ) { }
+  ) {}
 
   /**
    * Helper to resolve project ID if missing in JWT (e.g. for super admins or legacy tokens)
@@ -40,7 +53,9 @@ export class NotificationsController {
       const dbUser = await this.usersService.findById(user.sub);
       if (dbUser.projectId) return dbUser.projectId.toString();
     } catch (e) {
-      console.warn(`[NotificationsController] Failed to resolve project for user ${user.sub}`);
+      console.warn(
+        `[NotificationsController] Failed to resolve project for user ${user.sub}`,
+      );
     }
 
     return null;
@@ -55,10 +70,12 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Settings retrieved' })
   async getSettings(@CurrentUser() user: JwtPayload) {
     const projectId = await this.resolveProjectId(user);
-    console.log(`[NotificationsController] getSettings called for user: ${user?.username} (${user?.role}), projectId: ${projectId}`);
+    this.logger.log(
+      `getSettings called for user: ${user?.username} (${user?.role}), projectId: ${projectId}`,
+    );
 
     if (!projectId) {
-      console.warn('[NotificationsController] No projectId found for user, returning empty defaults');
+      this.logger.warn('No projectId found for user, returning empty defaults');
       return {
         _id: 'virtual-empty',
         projectId: 'virtual',
@@ -70,7 +87,9 @@ export class NotificationsController {
     }
 
     const settings = await this.notificationsService.getSettings(projectId);
-    console.log(`[NotificationsController] Retrieved settings for project ${user.projectId}: rules=${settings?.alertRules?.length || 0}`);
+    this.logger.log(
+      `Retrieved settings for project ${user.projectId}: rules=${settings?.alertRules?.length || 0}`,
+    );
     return settings;
   }
 
@@ -87,7 +106,9 @@ export class NotificationsController {
   ) {
     const projectId = await this.resolveProjectId(user);
     if (!projectId) {
-      throw new BadRequestException('No project associated with user. Please log out and log in again.');
+      throw new BadRequestException(
+        'No project associated with user. Please log out and log in again.',
+      );
     }
     return this.notificationsService.updateSettings(projectId, dto);
   }
@@ -120,7 +141,9 @@ export class NotificationsController {
   ) {
     const projectId = await this.resolveProjectId(user);
     if (!projectId) {
-      throw new BadRequestException('No project associated with user. Please log out and log in again.');
+      throw new BadRequestException(
+        'No project associated with user. Please log out and log in again.',
+      );
     }
     return this.notificationsService.createWebhook(projectId, dto);
   }
@@ -132,10 +155,7 @@ export class NotificationsController {
   @RequirePermissions(PERMISSIONS.MANAGE_USERS)
   @ApiOperation({ summary: 'Update webhook' })
   @ApiResponse({ status: 200, description: 'Webhook updated' })
-  async updateWebhook(
-    @Param('id') id: string,
-    @Body() dto: UpdateWebhookDto,
-  ) {
+  async updateWebhook(@Param('id') id: string, @Body() dto: UpdateWebhookDto) {
     return this.notificationsService.updateWebhook(id, dto);
   }
 

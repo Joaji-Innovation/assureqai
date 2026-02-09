@@ -6,6 +6,35 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NodeSSH } from 'node-ssh';
 
+/**
+ * Sanitize a string for safe use in shell commands / configs.
+ * Rejects any input containing shell metacharacters.
+ */
+function sanitizeShellValue(value: string, fieldName: string): string {
+  if (/[;&|`$(){}\\<>!#\n\r]/.test(value)) {
+    throw new Error(
+      `Invalid characters in ${fieldName}: shell metacharacters are not allowed`,
+    );
+  }
+  return value;
+}
+
+function sanitizeAlphanumericDash(value: string, fieldName: string): string {
+  if (!/^[a-zA-Z0-9._-]+$/.test(value)) {
+    throw new Error(
+      `Invalid ${fieldName}: only alphanumeric, dot, dash, underscore allowed`,
+    );
+  }
+  return value;
+}
+
+function sanitizeDomain(value: string): string {
+  if (!/^[a-zA-Z0-9.-]+$/.test(value)) {
+    throw new Error('Invalid domain: only alphanumeric, dot, dash allowed');
+  }
+  return value;
+}
+
 export interface DeployConfig {
   host: string;
   port?: number;
@@ -25,24 +54,36 @@ export interface DeployResult {
 export class ProvisioningService {
   private readonly logger = new Logger(ProvisioningService.name);
 
-  constructor(private configService: ConfigService) { }
+  constructor(private configService: ConfigService) {}
 
   /**
    * Deploy a new client instance to remote VPS
    */
-  async deploy(config: DeployConfig, options: {
-    version: string;
-    instanceId: string;
-    mongoUri: string;
-    apiKey: string;
-    domain: string;
-  }): Promise<DeployResult> {
+  async deploy(
+    config: DeployConfig,
+    options: {
+      version: string;
+      instanceId: string;
+      mongoUri: string;
+      apiKey: string;
+      domain: string;
+    },
+  ): Promise<DeployResult> {
     const startTime = Date.now();
     const logs: string[] = [];
     const ssh = new NodeSSH();
 
     try {
-      logs.push(`[${new Date().toISOString()}] Starting deployment to ${config.host}`);
+      // Validate all user-supplied values before use in shell commands
+      sanitizeAlphanumericDash(options.version, 'version');
+      sanitizeAlphanumericDash(options.instanceId, 'instanceId');
+      sanitizeDomain(options.domain);
+      sanitizeShellValue(options.mongoUri, 'mongoUri');
+      sanitizeShellValue(options.apiKey, 'apiKey');
+
+      logs.push(
+        `[${new Date().toISOString()}] Starting deployment to ${config.host}`,
+      );
 
       // Connect via SSH
       await ssh.connect({
@@ -59,7 +100,9 @@ export class ProvisioningService {
       if (!dockerCheck.includes('Docker')) {
         throw new Error('Docker not installed on target VPS');
       }
-      logs.push(`[${new Date().toISOString()}] Docker verified: ${dockerCheck.trim()}`);
+      logs.push(
+        `[${new Date().toISOString()}] Docker verified: ${dockerCheck.trim()}`,
+      );
 
       // Create deployment directory
       await ssh.execCommand('mkdir -p /opt/assureqai');
@@ -80,20 +123,32 @@ EOF`);
       logs.push(`[${new Date().toISOString()}] Environment file created`);
 
       // Pull and start containers
-      const { stdout: pullOutput } = await ssh.execCommand('cd /opt/assureqai && docker-compose pull');
+      const { stdout: pullOutput } = await ssh.execCommand(
+        'cd /opt/assureqai && docker-compose pull',
+      );
       logs.push(`[${new Date().toISOString()}] Docker images pulled`);
 
-      const { stdout: upOutput, stderr: upError } = await ssh.execCommand('cd /opt/assureqai && docker-compose up -d');
-      if (upError && !upError.includes('Creating') && !upError.includes('Starting')) {
+      const { stdout: upOutput, stderr: upError } = await ssh.execCommand(
+        'cd /opt/assureqai && docker-compose up -d',
+      );
+      if (
+        upError &&
+        !upError.includes('Creating') &&
+        !upError.includes('Starting')
+      ) {
         throw new Error(`Docker compose failed: ${upError}`);
       }
       logs.push(`[${new Date().toISOString()}] Containers started`);
 
       // Verify health
-      await new Promise(r => setTimeout(r, 5000)); // Wait for startup
-      const { stdout: healthCheck } = await ssh.execCommand('curl -s http://localhost:3000/health || echo "FAILED"');
+      await new Promise((r) => setTimeout(r, 5000)); // Wait for startup
+      const { stdout: healthCheck } = await ssh.execCommand(
+        'curl -s http://localhost:3000/health || echo "FAILED"',
+      );
       if (healthCheck.includes('FAILED')) {
-        logs.push(`[${new Date().toISOString()}] Warning: Health check failed, may need more time`);
+        logs.push(
+          `[${new Date().toISOString()}] Warning: Health check failed, may need more time`,
+        );
       } else {
         logs.push(`[${new Date().toISOString()}] Health check passed`);
       }
@@ -103,8 +158,12 @@ EOF`);
       await ssh.execCommand(`cat > /opt/assureqai/Caddyfile << 'EOF'
 ${caddyConfig}
 EOF`);
-      await ssh.execCommand('cd /opt/assureqai && docker-compose restart caddy 2>/dev/null || true');
-      logs.push(`[${new Date().toISOString()}] Caddy configured for ${options.domain}`);
+      await ssh.execCommand(
+        'cd /opt/assureqai && docker-compose restart caddy 2>/dev/null || true',
+      );
+      logs.push(
+        `[${new Date().toISOString()}] Caddy configured for ${options.domain}`,
+      );
 
       ssh.dispose();
 
@@ -113,7 +172,6 @@ EOF`);
         logs,
         duration: Date.now() - startTime,
       };
-
     } catch (error) {
       logs.push(`[${new Date().toISOString()}] ERROR: ${error.message}`);
       ssh.dispose();
@@ -160,7 +218,6 @@ EOF`);
         logs,
         duration: Date.now() - startTime,
       };
-
     } catch (error) {
       logs.push(`[${new Date().toISOString()}] ERROR: ${error.message}`);
       ssh.dispose();
@@ -199,7 +256,12 @@ EOF`);
       return { success: true, logs, duration: Date.now() - startTime };
     } catch (error) {
       ssh.dispose();
-      return { success: false, logs, duration: Date.now() - startTime, error: error.message };
+      return {
+        success: false,
+        logs,
+        duration: Date.now() - startTime,
+        error: error.message,
+      };
     }
   }
 
@@ -228,7 +290,12 @@ EOF`);
       return { success: true, logs, duration: Date.now() - startTime };
     } catch (error) {
       ssh.dispose();
-      return { success: false, logs, duration: Date.now() - startTime, error: error.message };
+      return {
+        success: false,
+        logs,
+        duration: Date.now() - startTime,
+        error: error.message,
+      };
     }
   }
 
@@ -257,14 +324,22 @@ EOF`);
       return { success: true, logs, duration: Date.now() - startTime };
     } catch (error) {
       ssh.dispose();
-      return { success: false, logs, duration: Date.now() - startTime, error: error.message };
+      return {
+        success: false,
+        logs,
+        duration: Date.now() - startTime,
+        error: error.message,
+      };
     }
   }
 
   /**
    * Get logs from instance
    */
-  async getLogs(config: DeployConfig, lines = 100): Promise<{ logs: string; error?: string }> {
+  async getLogs(
+    config: DeployConfig,
+    lines = 100,
+  ): Promise<{ logs: string; error?: string }> {
     const ssh = new NodeSSH();
 
     try {
@@ -276,7 +351,10 @@ EOF`);
         password: config.password,
       });
 
-      const { stdout } = await ssh.execCommand(`cd /opt/assureqai && docker-compose logs --tail=${lines}`);
+      const safeLine = Math.max(1, Math.min(Number(lines) || 100, 10000));
+      const { stdout } = await ssh.execCommand(
+        `cd /opt/assureqai && docker-compose logs --tail=${safeLine}`,
+      );
       ssh.dispose();
 
       return { logs: stdout };
@@ -305,12 +383,17 @@ EOF`);
         password: config.password,
       });
 
-      const { stdout: containers } = await ssh.execCommand('cd /opt/assureqai && docker-compose ps --format json 2>/dev/null || docker-compose ps');
-      const { stdout: health } = await ssh.execCommand('curl -s http://localhost:3000/health || echo "UNREACHABLE"');
+      const { stdout: containers } = await ssh.execCommand(
+        'cd /opt/assureqai && docker-compose ps --format json 2>/dev/null || docker-compose ps',
+      );
+      const { stdout: health } = await ssh.execCommand(
+        'curl -s http://localhost:3000/health || echo "UNREACHABLE"',
+      );
 
       ssh.dispose();
 
-      const isHealthy = !health.includes('UNREACHABLE') && !health.includes('error');
+      const isHealthy =
+        !health.includes('UNREACHABLE') && !health.includes('error');
 
       return {
         healthy: isHealthy,

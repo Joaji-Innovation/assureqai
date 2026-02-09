@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Key, Clock, AlertTriangle, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
+import {
+  Shield,
+  Key,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
+  Loader2,
+} from 'lucide-react';
 import api from '@/lib/api';
 
 interface AuditLog {
@@ -13,15 +21,13 @@ interface AuditLog {
   status: 'success' | 'failed';
 }
 
-
-
 export default function SecurityPage() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     activeKeys: 0,
     failedLogins: 0,
-    twoFactorEnabled: 0
+    twoFactorEnabled: 0,
   });
 
   useEffect(() => {
@@ -33,32 +39,38 @@ export default function SecurityPage() {
       setLoading(true);
       const [auditsResult, instances] = await Promise.all([
         api.audit.list({ limit: 100 }) as Promise<any>,
-        api.instance.findAll()
+        api.instance.findAll(),
       ]);
 
-      // Process Audits
+      // Process Audits as recent activity (these are QA audits, not security logs)
       const logs = auditsResult.data || auditsResult;
-      const mappedLogs = Array.isArray(logs) ? logs.map((log: any) => ({
-        id: log._id || log.id,
-        action: log.action || 'Unknown Action',
-        user: log.user?.email || log.userId || 'System',
-        ip: log.ipAddress || '127.0.0.1',
-        timestamp: log.createdAt || new Date().toISOString(),
-        status: (log.status === 'failure' ? 'failed' : 'success') as 'success' | 'failed'
-      })) : [];
+      const mappedLogs = Array.isArray(logs)
+        ? logs.map((log: any) => ({
+            id: log._id || log.id,
+            action: `${(log.auditType || 'manual').toUpperCase()} Audit${log.status ? ` (${log.status})` : ''}`,
+            user: log.auditedBy || log.user?.email || log.userId || 'System',
+            ip: log.instanceId || '-',
+            timestamp: log.createdAt || new Date().toISOString(),
+            status: (log.status === 'failed' ? 'failed' : 'success') as
+              | 'success'
+              | 'failed',
+          }))
+        : [];
 
       setAuditLogs(mappedLogs);
 
       // Calculate Stats
-      const activeKeysCount = instances.filter(i => i.apiKey).length;
-      const failedLoginsCount = mappedLogs.filter(l => l.action.toLowerCase().includes('login') && l.status === 'failed').length;
+      const activeKeysCount = instances.filter((i) => i.apiKey).length;
+      const failedLoginsCount = mappedLogs.filter(
+        (l) =>
+          l.action.toLowerCase().includes('login') && l.status === 'failed',
+      ).length;
 
       setStats({
         activeKeys: activeKeysCount,
         failedLogins: failedLoginsCount,
-        twoFactorEnabled: 0 // Placeholder until 2FA is implemented
+        twoFactorEnabled: 0, // Placeholder until 2FA is implemented
       });
-
     } catch (error) {
       console.error('Failed to fetch security data', error);
     } finally {
@@ -70,7 +82,9 @@ export default function SecurityPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Security</h2>
-        <p className="text-muted-foreground">Security settings and audit logs</p>
+        <p className="text-muted-foreground">
+          Security settings and audit logs
+        </p>
       </div>
 
       {/* Security Status */}
@@ -83,7 +97,9 @@ export default function SecurityPage() {
             <span className="font-medium">System Status</span>
           </div>
           <p className="text-2xl font-bold text-emerald-500">Secure</p>
-          <p className="text-xs text-muted-foreground">All systems operational</p>
+          <p className="text-xs text-muted-foreground">
+            All systems operational
+          </p>
         </div>
         <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-5">
           <div className="flex items-center gap-3 mb-3">
@@ -102,8 +118,12 @@ export default function SecurityPage() {
             </div>
             <span className="font-medium">Failed Actions</span>
           </div>
-          <p className="text-2xl font-bold text-red-500">{stats.failedLogins}</p>
-          <p className="text-xs text-muted-foreground">Recorded in recent logs</p>
+          <p className="text-2xl font-bold text-red-500">
+            {stats.failedLogins}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Recorded in recent logs
+          </p>
         </div>
       </div>
 
@@ -115,7 +135,10 @@ export default function SecurityPage() {
             <Clock className="h-5 w-5 text-primary" />
             <div>
               <p className="font-medium">Session Timeout Settings</p>
-              <p className="text-xs text-muted-foreground">Global session timeout is set to 30 minutes (Configured in Environment)</p>
+              <p className="text-xs text-muted-foreground">
+                Global session timeout is set to 30 minutes (Configured in
+                Environment)
+              </p>
             </div>
           </div>
         </div>
@@ -124,25 +147,40 @@ export default function SecurityPage() {
       {/* Audit Logs */}
       <div className="bg-card/50 backdrop-blur rounded-xl border border-border overflow-hidden">
         <div className="p-4 border-b border-border">
-          <h3 className="text-lg font-semibold">Audit Logs</h3>
+          <h3 className="text-lg font-semibold">Recent Activity</h3>
         </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">Action</th>
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">User</th>
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">IP Address</th>
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">Time</th>
-              <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
+              <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                Activity
+              </th>
+              <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                User
+              </th>
+              <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                Instance
+              </th>
+              <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                Time
+              </th>
+              <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                Status
+              </th>
             </tr>
           </thead>
           <tbody>
             {auditLogs.map((log) => (
-              <tr key={log.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+              <tr
+                key={log.id}
+                className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+              >
                 <td className="py-3 px-4 font-medium">{log.action}</td>
                 <td className="py-3 px-4">{log.user}</td>
-                <td className="py-3 px-4 font-mono text-xs">{log.ip}</td>
-                <td className="py-3 px-4 text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</td>
+                <td className="py-3 px-4">{log.ip}</td>
+                <td className="py-3 px-4 text-muted-foreground">
+                  {new Date(log.timestamp).toLocaleString()}
+                </td>
                 <td className="text-center py-3 px-4">
                   {log.status === 'success' ? (
                     <CheckCircle className="h-4 w-4 text-emerald-500 inline" />

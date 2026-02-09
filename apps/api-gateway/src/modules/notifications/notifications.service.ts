@@ -5,8 +5,15 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { NotificationSettings, NotificationSettingsDocument, AlertRuleConfig } from '../../database/schemas/notification-settings.schema';
-import { Webhook, WebhookDocument } from '../../database/schemas/webhook.schema';
+import {
+  NotificationSettings,
+  NotificationSettingsDocument,
+  AlertRuleConfig,
+} from '../../database/schemas/notification-settings.schema';
+import {
+  Webhook,
+  WebhookDocument,
+} from '../../database/schemas/webhook.schema';
 import axios from 'axios';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EmailService } from '../email/email.service';
@@ -38,10 +45,11 @@ export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
-    @InjectModel(NotificationSettings.name) private settingsModel: Model<NotificationSettingsDocument>,
+    @InjectModel(NotificationSettings.name)
+    private settingsModel: Model<NotificationSettingsDocument>,
     @InjectModel(Webhook.name) private webhookModel: Model<WebhookDocument>,
     private emailService: EmailService,
-  ) { }
+  ) {}
 
   /**
    * Handle alert created event - trigger notifications
@@ -55,7 +63,9 @@ export class NotificationsService {
       const settings = await this.getSettings(projectId);
       if (!settings || !settings.alertRules) return;
 
-      const rule = settings.alertRules.find(r => r.type === alert.type && r.enabled);
+      const rule = settings.alertRules.find(
+        (r) => r.type === alert.type && r.enabled,
+      );
       if (!rule) return;
 
       // 1. Webhooks
@@ -64,7 +74,11 @@ export class NotificationsService {
       }
 
       // 2. Email
-      if (rule.channels.includes('email') && settings.emailNotificationsEnabled && settings.alertRecipientEmails?.length > 0) {
+      if (
+        rule.channels.includes('email') &&
+        settings.emailNotificationsEnabled &&
+        settings.alertRecipientEmails?.length > 0
+      ) {
         const subject = `[AssureQai Alert] ${alert.title}`;
         const html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -82,7 +96,9 @@ export class NotificationsService {
         for (const email of settings.alertRecipientEmails) {
           await this.emailService.sendEmail(email, subject, html);
         }
-        this.logger.log(`Sent alert emails to ${settings.alertRecipientEmails.length} recipients for ${alert.type}`);
+        this.logger.log(
+          `Sent alert emails to ${settings.alertRecipientEmails.length} recipients for ${alert.type}`,
+        );
       }
     } catch (error) {
       this.logger.error('Failed to process alert notifications', error);
@@ -93,7 +109,9 @@ export class NotificationsService {
    * Get or create notification settings for a project
    */
   async getSettings(projectId: string): Promise<NotificationSettingsDocument> {
-    let settings = await this.settingsModel.findOne({ projectId: new Types.ObjectId(projectId) });
+    let settings = await this.settingsModel.findOne({
+      projectId: new Types.ObjectId(projectId),
+    });
 
     if (!settings) {
       // Create default settings
@@ -105,11 +123,31 @@ export class NotificationsService {
     // Check and populate default rules if missing (for both new and existing settings)
     if (!settings.alertRules || settings.alertRules.length === 0) {
       settings.alertRules = [
-        { type: 'fatal_failure', enabled: true, channels: ['push', 'email'], config: {} },
-        { type: 'threshold_breach', enabled: true, channels: ['push'], config: { threshold: 70 } },
-        { type: 'at_risk', enabled: true, channels: ['email'], config: { consecutiveLow: 3 } },
+        {
+          type: 'fatal_failure',
+          enabled: true,
+          channels: ['push', 'email'],
+          config: {},
+        },
+        {
+          type: 'threshold_breach',
+          enabled: true,
+          channels: ['push'],
+          config: { threshold: 70 },
+        },
+        {
+          type: 'at_risk',
+          enabled: true,
+          channels: ['email'],
+          config: { consecutiveLow: 3 },
+        },
         { type: 'compliance', enabled: false, channels: ['push'], config: {} },
-        { type: 'low_score', enabled: true, channels: ['push'], config: { threshold: 60 } },
+        {
+          type: 'low_score',
+          enabled: true,
+          channels: ['push'],
+          config: { threshold: 60 },
+        },
       ] as any[];
       // We need to save if we modified it OR if it's new
       await settings.save();
@@ -124,7 +162,10 @@ export class NotificationsService {
   /**
    * Update notification settings
    */
-  async updateSettings(projectId: string, dto: UpdateSettingsDto): Promise<NotificationSettingsDocument> {
+  async updateSettings(
+    projectId: string,
+    dto: UpdateSettingsDto,
+  ): Promise<NotificationSettingsDocument> {
     const settings = await this.getSettings(projectId);
 
     if (dto.alertRules) {
@@ -148,13 +189,18 @@ export class NotificationsService {
    * Get all webhooks for a project
    */
   async getWebhooks(projectId: string): Promise<WebhookDocument[]> {
-    return this.webhookModel.find({ projectId: new Types.ObjectId(projectId) }).sort({ createdAt: -1 });
+    return this.webhookModel
+      .find({ projectId: new Types.ObjectId(projectId) })
+      .sort({ createdAt: -1 });
   }
 
   /**
    * Create a webhook
    */
-  async createWebhook(projectId: string, dto: CreateWebhookDto): Promise<WebhookDocument> {
+  async createWebhook(
+    projectId: string,
+    dto: CreateWebhookDto,
+  ): Promise<WebhookDocument> {
     const webhook = new this.webhookModel({
       projectId: new Types.ObjectId(projectId),
       ...dto,
@@ -167,7 +213,10 @@ export class NotificationsService {
   /**
    * Update a webhook
    */
-  async updateWebhook(webhookId: string, dto: UpdateWebhookDto): Promise<WebhookDocument> {
+  async updateWebhook(
+    webhookId: string,
+    dto: UpdateWebhookDto,
+  ): Promise<WebhookDocument> {
     const webhook = await this.webhookModel.findByIdAndUpdate(
       webhookId,
       { $set: dto },
@@ -192,7 +241,9 @@ export class NotificationsService {
   /**
    * Test a webhook by sending a test payload
    */
-  async testWebhook(webhookId: string): Promise<{ success: boolean; message: string }> {
+  async testWebhook(
+    webhookId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const webhook = await this.webhookModel.findById(webhookId);
     if (!webhook) {
       throw new NotFoundException('Webhook not found');
@@ -213,7 +264,14 @@ export class NotificationsService {
         headers: {
           'Content-Type': 'application/json',
           'X-AssureQai-Event': 'test',
-          ...(webhook.secret ? { 'X-AssureQai-Signature': this.generateSignature(testPayload, webhook.secret) } : {}),
+          ...(webhook.secret
+            ? {
+                'X-AssureQai-Signature': this.generateSignature(
+                  testPayload,
+                  webhook.secret,
+                ),
+              }
+            : {}),
         },
         timeout: 10000,
       });
@@ -223,9 +281,13 @@ export class NotificationsService {
         $inc: { successCount: 1 },
       });
 
-      return { success: true, message: `Webhook responded with status ${response.status}` };
+      return {
+        success: true,
+        message: `Webhook responded with status ${response.status}`,
+      };
     } catch (error: any) {
-      const errorMessage = error.response?.statusText || error.message || 'Unknown error';
+      const errorMessage =
+        error.response?.statusText || error.message || 'Unknown error';
 
       await this.webhookModel.findByIdAndUpdate(webhookId, {
         lastError: errorMessage,
@@ -239,7 +301,11 @@ export class NotificationsService {
   /**
    * Trigger webhooks for an event
    */
-  async triggerWebhooks(projectId: string, event: string, payload: any): Promise<void> {
+  async triggerWebhooks(
+    projectId: string,
+    event: string,
+    payload: any,
+  ): Promise<void> {
     const webhooks = await this.webhookModel.find({
       projectId: new Types.ObjectId(projectId),
       active: true,
@@ -248,27 +314,41 @@ export class NotificationsService {
 
     for (const webhook of webhooks) {
       try {
-        await axios.post(webhook.url, {
-          event,
-          timestamp: new Date().toISOString(),
-          data: payload,
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-AssureQai-Event': event,
-            ...(webhook.secret ? { 'X-AssureQai-Signature': this.generateSignature(payload, webhook.secret) } : {}),
+        await axios.post(
+          webhook.url,
+          {
+            event,
+            timestamp: new Date().toISOString(),
+            data: payload,
           },
-          timeout: 10000,
-        });
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-AssureQai-Event': event,
+              ...(webhook.secret
+                ? {
+                    'X-AssureQai-Signature': this.generateSignature(
+                      payload,
+                      webhook.secret,
+                    ),
+                  }
+                : {}),
+            },
+            timeout: 10000,
+          },
+        );
 
         await this.webhookModel.findByIdAndUpdate(webhook._id, {
           lastTriggered: new Date(),
           $inc: { successCount: 1 },
         });
 
-        this.logger.log(`Webhook triggered: ${webhook.name} for event ${event}`);
+        this.logger.log(
+          `Webhook triggered: ${webhook.name} for event ${event}`,
+        );
       } catch (error: any) {
-        const errorMessage = error.response?.statusText || error.message || 'Unknown error';
+        const errorMessage =
+          error.response?.statusText || error.message || 'Unknown error';
 
         await this.webhookModel.findByIdAndUpdate(webhook._id, {
           lastError: errorMessage,
@@ -284,15 +364,19 @@ export class NotificationsService {
    * Generate HMAC signature for webhook payload
    */
   private generateSignature(payload: any, secret: string): string {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const crypto = require('crypto');
     const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(JSON.stringify(payload));
     return `sha256=${hmac.digest('hex')}`;
   }
 
   /**
    * Send a test email
    */
-  async sendTestEmail(email: string): Promise<{ success: boolean; message: string }> {
+  async sendTestEmail(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
     return this.emailService.sendTestEmail(email);
   }
 }

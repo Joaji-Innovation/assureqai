@@ -3,14 +3,22 @@
  * Industry-standard health check endpoints
  */
 import { Controller, Get } from '@nestjs/common';
-import { HealthCheck, HealthCheckService, HealthCheckResult } from '@nestjs/terminus';
+import {
+  HealthCheck,
+  HealthCheckService,
+  HealthCheckResult,
+  MongooseHealthIndicator,
+} from '@nestjs/terminus';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Public } from '@assureqai/auth';
 
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
-  constructor(private health: HealthCheckService) {}
+  constructor(
+    private health: HealthCheckService,
+    private db: MongooseHealthIndicator,
+  ) {}
 
   /**
    * Liveness probe - is the service running?
@@ -37,9 +45,7 @@ export class HealthController {
   @ApiResponse({ status: 503, description: 'Service is not ready' })
   async ready(): Promise<HealthCheckResult> {
     return this.health.check([
-      // Add database and redis checks here when connected
-      // () => this.db.pingCheck('database'),
-      // () => this.redis.pingCheck('redis'),
+      () => this.db.pingCheck('database', { timeout: 3000 }),
     ]);
   }
 

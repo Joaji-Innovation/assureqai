@@ -1,12 +1,18 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Res,
+  BadRequestException,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { Public } from '@assureqai/auth';
 import { Response } from 'express';
-import { join } from 'path';
+import { join, resolve, basename } from 'path';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) { }
+  constructor(private readonly appService: AppService) {}
 
   @Get()
   getData() {
@@ -16,6 +22,16 @@ export class AppController {
   @Public()
   @Get('uploads/:filename')
   serveFile(@Param('filename') filename: string, @Res() res: Response) {
-    return res.sendFile(join(process.cwd(), 'uploads', filename));
+    // Sanitize filename to prevent path traversal
+    const safeName = basename(filename);
+    const uploadsDir = resolve(process.cwd(), 'uploads');
+    const fullPath = resolve(uploadsDir, safeName);
+
+    // Ensure resolved path stays within uploads directory
+    if (!fullPath.startsWith(uploadsDir)) {
+      throw new BadRequestException('Invalid filename');
+    }
+
+    return res.sendFile(fullPath);
   }
 }

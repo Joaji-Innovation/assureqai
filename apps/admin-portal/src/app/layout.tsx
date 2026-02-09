@@ -17,11 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`antialiased bg-background text-foreground ${inter.variable} ${outfit.variable} font-sans`}>
-        <QueryProvider>
-          {children}
-        </QueryProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`antialiased bg-background text-foreground ${inter.variable} ${outfit.variable} font-sans`}
+      >
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

@@ -2,10 +2,20 @@
  * Instance Service - For Admin Portal
  * Manages client instances and domain configuration
  */
-import { Injectable, NotFoundException, ConflictException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Inject,
+  forwardRef,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Instance, InstanceDocument } from '../../database/schemas/instance.schema';
+import {
+  Instance,
+  InstanceDocument,
+} from '../../database/schemas/instance.schema';
 import { randomBytes } from 'crypto';
 import * as dns from 'dns';
 import { promisify } from 'util';
@@ -15,11 +25,13 @@ const resolveTxt = promisify(dns.resolveTxt);
 
 @Injectable()
 export class InstanceService {
+  private readonly logger = new Logger(InstanceService.name);
+
   constructor(
     @InjectModel(Instance.name) private instanceModel: Model<InstanceDocument>,
     @Inject(forwardRef(() => ProvisioningService))
     private provisioningService: ProvisioningService,
-  ) { }
+  ) {}
 
   // Create new instance
   async create(data: Partial<Instance> & { vps?: any }): Promise<Instance> {
@@ -27,27 +39,34 @@ export class InstanceService {
     if (!data.domain?.subdomain) {
       data.domain = {
         ...data.domain,
-        subdomain: this.generateSubdomain(data.companyName || data.name || 'client'),
+        subdomain: this.generateSubdomain(
+          data.companyName || data.name || 'client',
+        ),
         sslStatus: 'pending',
         customDomainVerified: false,
       };
     }
 
     // Check if subdomain already exists
-    const existing = await this.instanceModel.findOne({ 'domain.subdomain': data.domain.subdomain });
+    const existing = await this.instanceModel.findOne({
+      'domain.subdomain': data.domain.subdomain,
+    });
     if (existing) {
-      throw new ConflictException(`Subdomain ${data.domain.subdomain} already exists`);
+      throw new ConflictException(
+        `Subdomain ${data.domain.subdomain} already exists`,
+      );
     }
 
     // Generate API key
     if (!data.apiKey) data.apiKey = this.generateApiKey();
-    if (!data.clientId) data.clientId = `client_${randomBytes(8).toString('hex')}`;
+    if (!data.clientId)
+      data.clientId = `client_${randomBytes(8).toString('hex')}`;
 
     // Set initial status based on deployment type
     if (data.vps) {
       data.status = 'provisioning';
     } else {
-      // Cloud instances might default to active if purely virtual/mock, 
+      // Cloud instances might default to active if purely virtual/mock,
       // or provisioning if there's a cloud provisioner (which is missing/implicit).
       // For now, assuming standard creation is 'active' or 'provisioning'.
       data.status = 'active';
@@ -60,36 +79,52 @@ export class InstanceService {
     if (data.vps) {
       // Extract password transiently (not stored in DB for security)
       const sshPassword = data.vps?.password;
-      this.triggerDeployment(savedInstance, sshPassword).catch(err => console.error('Background deployment failed', err));
+      this.triggerDeployment(savedInstance, sshPassword).catch((err) =>
+        this.logger.error('Background deployment failed', err),
+      );
     }
 
     return savedInstance;
   }
 
-  private async triggerDeployment(instance: InstanceDocument, sshPassword?: string) {
+  private async triggerDeployment(
+    instance: InstanceDocument,
+    sshPassword?: string,
+  ) {
     if (!instance.vps) return;
 
     try {
       // Determine MongoDB URI for this instance
       let mongoUri = 'mongodb://mongo:27017/assureqai'; // Default for shared/container
-      if (instance.database?.type === 'isolated_server' && instance.database.mongoUri) {
+      if (
+        instance.database?.type === 'isolated_server' &&
+        instance.database.mongoUri
+      ) {
         mongoUri = instance.database.mongoUri;
-      } else if (instance.database?.type === 'isolated_db' && instance.database.dbName) {
+      } else if (
+        instance.database?.type === 'isolated_db' &&
+        instance.database.dbName
+      ) {
         mongoUri = `mongodb://mongo:27017/${instance.database.dbName}`;
       }
 
-      const result = await this.provisioningService.deploy({
-        host: instance.vps.host,
-        username: instance.vps.sshUser,
-        port: instance.vps.sshPort,
-        password: sshPassword,
-      }, {
-        version: 'latest',
-        instanceId: instance.clientId,
-        mongoUri,
-        apiKey: instance.apiKey,
-        domain: instance.domain.customDomain || `${instance.domain.subdomain}.assureqai.com`
-      });
+      const result = await this.provisioningService.deploy(
+        {
+          host: instance.vps.host,
+          username: instance.vps.sshUser,
+          port: instance.vps.sshPort,
+          password: sshPassword,
+        },
+        {
+          version: 'latest',
+          instanceId: instance.clientId,
+          mongoUri,
+          apiKey: instance.apiKey,
+          domain:
+            instance.domain.customDomain ||
+            `${instance.domain.subdomain}.assureqai.com`,
+        },
+      );
 
       // Store real deployment logs
       const logEntry = {
@@ -114,8 +149,10 @@ export class InstanceService {
         });
       }
     } catch (error) {
-      console.error('Deployment error', error);
-      await this.instanceModel.findByIdAndUpdate(instance._id, { status: 'error' });
+      this.logger.error('Deployment error', error);
+      await this.instanceModel.findByIdAndUpdate(instance._id, {
+        status: 'error',
+      });
     }
   }
 
@@ -137,7 +174,9 @@ export class InstanceService {
   async findByClientId(clientId: string): Promise<Instance> {
     const instance = await this.instanceModel.findOne({ clientId }).exec();
     if (!instance) {
-      throw new NotFoundException(`Instance with clientId ${clientId} not found`);
+      throw new NotFoundException(
+        `Instance with clientId ${clientId} not found`,
+      );
     }
     return instance;
   }
@@ -158,14 +197,19 @@ export class InstanceService {
   // Update subdomain
   async updateSubdomain(id: string, subdomain: string): Promise<Instance> {
     // Validate subdomain format
-    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(subdomain) || subdomain.length < 3) {
-      throw new ConflictException('Subdomain must be lowercase alphanumeric with hyphens, min 3 chars');
+    if (
+      !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(subdomain) ||
+      subdomain.length < 3
+    ) {
+      throw new ConflictException(
+        'Subdomain must be lowercase alphanumeric with hyphens, min 3 chars',
+      );
     }
 
     // Check if subdomain already exists
     const existing = await this.instanceModel.findOne({
       'domain.subdomain': subdomain,
-      _id: { $ne: id }
+      _id: { $ne: id },
     });
     if (existing) {
       throw new ConflictException(`Subdomain ${subdomain} already exists`);
@@ -180,14 +224,18 @@ export class InstanceService {
   // Add custom domain
   async addCustomDomain(id: string, customDomain: string): Promise<Instance> {
     // Validate domain format
-    if (!/^[a-z0-9][a-z0-9.-]*[a-z0-9]\.[a-z]{2,}$/.test(customDomain.toLowerCase())) {
+    if (
+      !/^[a-z0-9][a-z0-9.-]*[a-z0-9]\.[a-z]{2,}$/.test(
+        customDomain.toLowerCase(),
+      )
+    ) {
       throw new ConflictException('Invalid domain format');
     }
 
     // Check if domain already exists
     const existing = await this.instanceModel.findOne({
       'domain.customDomain': customDomain.toLowerCase(),
-      _id: { $ne: id }
+      _id: { $ne: id },
     });
     if (existing) {
       throw new ConflictException(`Domain ${customDomain} is already in use`);
@@ -204,7 +252,9 @@ export class InstanceService {
   }
 
   // Verify custom domain DNS
-  async verifyCustomDomain(id: string): Promise<{ verified: boolean; message: string }> {
+  async verifyCustomDomain(
+    id: string,
+  ): Promise<{ verified: boolean; message: string }> {
     const instance = await this.findById(id);
 
     if (!instance.domain?.customDomain) {
@@ -217,11 +267,15 @@ export class InstanceService {
 
     try {
       // Lookup TXT records for the domain
-      const records = await resolveTxt(`_assureqai.${instance.domain.customDomain}`);
+      const records = await resolveTxt(
+        `_assureqai.${instance.domain.customDomain}`,
+      );
       const flatRecords = records.flat();
 
       // Check if verification token exists
-      const verified = flatRecords.includes(instance.domain.dnsVerificationToken);
+      const verified = flatRecords.includes(
+        instance.domain.dnsVerificationToken,
+      );
 
       if (verified) {
         await this.update(id, {
@@ -235,12 +289,12 @@ export class InstanceService {
 
       return {
         verified: false,
-        message: `TXT record not found. Add: _assureqai.${instance.domain.customDomain} TXT "${instance.domain.dnsVerificationToken}"`
+        message: `TXT record not found. Add: _assureqai.${instance.domain.customDomain} TXT "${instance.domain.dnsVerificationToken}"`,
       };
     } catch (error) {
       return {
         verified: false,
-        message: `DNS lookup failed. Add TXT record: _assureqai.${instance.domain.customDomain} with value "${instance.domain.dnsVerificationToken}"`
+        message: `DNS lookup failed. Add TXT record: _assureqai.${instance.domain.customDomain} with value "${instance.domain.dnsVerificationToken}"`,
       };
     }
   }
@@ -292,17 +346,21 @@ export class InstanceService {
     const logs = (instance as any).deploymentLogs || [];
 
     // Return stored logs, mapped to expected format
-    return logs.map((log: any, index: number) => ({
-      id: `log_${(instance as any)._id}_${index}`,
-      instanceId: instance.clientId,
-      instanceName: instance.name,
-      action: log.action || 'deploy',
-      status: log.status || 'success',
-      logs: log.logs || [],
-      duration: log.duration,
-      error: log.error,
-      createdAt: log.createdAt ? new Date(log.createdAt).toISOString() : new Date().toISOString(),
-    })).reverse(); // Most recent first
+    return logs
+      .map((log: any, index: number) => ({
+        id: `log_${(instance as any)._id}_${index}`,
+        instanceId: instance.clientId,
+        instanceName: instance.name,
+        action: log.action || 'deploy',
+        status: log.status || 'success',
+        logs: log.logs || [],
+        duration: log.duration,
+        error: log.error,
+        createdAt: log.createdAt
+          ? new Date(log.createdAt).toISOString()
+          : new Date().toISOString(),
+      }))
+      .reverse(); // Most recent first
   }
 
   private generateApiKey(): string {
@@ -317,7 +375,10 @@ export class InstanceService {
   }
 
   // Update billing type
-  async updateBillingType(id: string, billingType: 'prepaid' | 'postpaid'): Promise<Instance> {
+  async updateBillingType(
+    id: string,
+    billingType: 'prepaid' | 'postpaid',
+  ): Promise<Instance> {
     return this.update(id, {
       'credits.billingType': billingType,
     } as any);
@@ -331,47 +392,64 @@ export class InstanceService {
   }
 
   // Update instance limits (maxUsers, maxStorage)
-  async updateLimits(id: string, limits: { maxUsers?: number; maxStorage?: string }): Promise<Instance> {
+  async updateLimits(
+    id: string,
+    limits: { maxUsers?: number; maxStorage?: string },
+  ): Promise<Instance> {
     const updateData: any = {};
-    if (limits.maxUsers !== undefined) updateData['limits.maxUsers'] = limits.maxUsers;
-    if (limits.maxStorage !== undefined) updateData['limits.maxStorage'] = limits.maxStorage;
+    if (limits.maxUsers !== undefined)
+      updateData['limits.maxUsers'] = limits.maxUsers;
+    if (limits.maxStorage !== undefined)
+      updateData['limits.maxStorage'] = limits.maxStorage;
     return this.update(id, updateData);
   }
 
   // Update instance credits (totalAudits, totalTokens)
-  async updateCredits(id: string, credits: {
-    totalAudits?: number;
-    totalTokens?: number;
-    usedAudits?: number;
-    usedTokens?: number;
-  }): Promise<Instance> {
+  async updateCredits(
+    id: string,
+    credits: {
+      totalAudits?: number;
+      totalTokens?: number;
+      usedAudits?: number;
+      usedTokens?: number;
+    },
+  ): Promise<Instance> {
     const updateData: any = {};
-    if (credits.totalAudits !== undefined) updateData['credits.totalAudits'] = credits.totalAudits;
-    if (credits.totalTokens !== undefined) updateData['credits.totalTokens'] = credits.totalTokens;
-    if (credits.usedAudits !== undefined) updateData['credits.usedAudits'] = credits.usedAudits;
-    if (credits.usedTokens !== undefined) updateData['credits.usedTokens'] = credits.usedTokens;
+    if (credits.totalAudits !== undefined)
+      updateData['credits.totalAudits'] = credits.totalAudits;
+    if (credits.totalTokens !== undefined)
+      updateData['credits.totalTokens'] = credits.totalTokens;
+    if (credits.usedAudits !== undefined)
+      updateData['credits.usedAudits'] = credits.usedAudits;
+    if (credits.usedTokens !== undefined)
+      updateData['credits.usedTokens'] = credits.usedTokens;
     return this.update(id, updateData);
   }
 
   // Update instance usage metrics (called by agent)
-  async updateUsage(id: string, usage: {
-    cpu: number;
-    memory: number;
-    storage: string;
-    activeUsers: number;
-  }): Promise<Instance> {
+  async updateUsage(
+    id: string,
+    usage: {
+      cpu: number;
+      memory: number;
+      storage: string;
+      activeUsers: number;
+    },
+  ): Promise<Instance> {
     return this.update(id, {
       usage: {
         ...usage,
-        lastReportedAt: new Date()
-      }
+        lastReportedAt: new Date(),
+      },
     } as any);
   }
 
   // ===== Instance Lifecycle Actions =====
 
   // Start instance containers
-  async startInstance(id: string): Promise<{ success: boolean; error?: string }> {
+  async startInstance(
+    id: string,
+  ): Promise<{ success: boolean; error?: string }> {
     const instance = await this.findById(id);
 
     if (!instance.vps?.host) {
@@ -389,16 +467,21 @@ export class InstanceService {
         await this.update(id, { status: 'running' } as any);
         return { success: true };
       } else {
-        return { success: false, error: result.error || 'Failed to start containers' };
+        return {
+          success: false,
+          error: result.error || 'Failed to start containers',
+        };
       }
     } catch (error) {
-      console.error('Start instance error:', error);
+      this.logger.error('Start instance error:', error);
       return { success: false, error: 'Failed to connect to instance' };
     }
   }
 
   // Stop instance containers
-  async stopInstance(id: string): Promise<{ success: boolean; error?: string }> {
+  async stopInstance(
+    id: string,
+  ): Promise<{ success: boolean; error?: string }> {
     const instance = await this.findById(id);
 
     if (!instance.vps?.host) {
@@ -416,16 +499,21 @@ export class InstanceService {
         await this.update(id, { status: 'stopped' } as any);
         return { success: true };
       } else {
-        return { success: false, error: result.error || 'Failed to stop containers' };
+        return {
+          success: false,
+          error: result.error || 'Failed to stop containers',
+        };
       }
     } catch (error) {
-      console.error('Stop instance error:', error);
+      this.logger.error('Stop instance error:', error);
       return { success: false, error: 'Failed to connect to instance' };
     }
   }
 
   // Restart instance containers
-  async restartInstance(id: string): Promise<{ success: boolean; error?: string }> {
+  async restartInstance(
+    id: string,
+  ): Promise<{ success: boolean; error?: string }> {
     const instance = await this.findById(id);
 
     if (!instance.vps?.host) {
@@ -443,10 +531,13 @@ export class InstanceService {
         await this.update(id, { status: 'running' } as any);
         return { success: true };
       } else {
-        return { success: false, error: result.error || 'Failed to restart containers' };
+        return {
+          success: false,
+          error: result.error || 'Failed to restart containers',
+        };
       }
     } catch (error) {
-      console.error('Restart instance error:', error);
+      this.logger.error('Restart instance error:', error);
       return { success: false, error: 'Failed to connect to instance' };
     }
   }

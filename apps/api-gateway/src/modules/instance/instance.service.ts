@@ -22,7 +22,7 @@ export class InstanceService {
   ) { }
 
   // Create new instance
-  async create(data: Partial<Instance>): Promise<Instance> {
+  async create(data: Partial<Instance> & { vps?: any }): Promise<Instance> {
     // Generate subdomain from company name if not provided
     if (!data.domain?.subdomain) {
       data.domain = {
@@ -58,64 +58,60 @@ export class InstanceService {
 
     // Trigger On-Premise / VPS Deployment
     if (data.vps) {
-      this.triggerDeployment(savedInstance).catch(err => console.error('Background deployment failed', err));
+      // Extract password transiently (not stored in DB for security)
+      const sshPassword = data.vps?.password;
+      this.triggerDeployment(savedInstance, sshPassword).catch(err => console.error('Background deployment failed', err));
     }
 
     return savedInstance;
   }
 
-  private async triggerDeployment(instance: InstanceDocument) {
+  private async triggerDeployment(instance: InstanceDocument, sshPassword?: string) {
     if (!instance.vps) return;
 
     try {
-      // 1. Prepare deploy config
-      const deployConfig = {
-        host: instance.vps.host,
-        username: instance.vps.sshUser,
-        port: instance.vps.sshPort,
-        // Assuming passwordless/keyless or we need to handle SSH key/password inputs.
-        // The schema view didn't show password storage. 
-        // ProvisioningService expects privateKey or password.
-        // NewInstancePage didn't send password! 
-        // I need to update NewInstancePage to send password or key or rely on existing trust.
-        // For now, let's assume password is set in settings or passed transiently?
-        // The schema `VpsConfig` has no password field (security best practice).
-        // BUT `InstanceService.create` receives `data`. If `data` contained `vps.password`, it might not be in the schema but available here?
-        // No, strict typing with Partial<Instance>...
-        // I will leave a TODO here: "Fetch SSH credentials securely"
-        // For the purpose of this request "is it connected", I am connecting the logic.
-      };
-
-      // Temporary hack: Access raw data if possible or assume vps has password transiently
-      // But since I can't easily change the arguments signature right now without breaking things...
-      // I will assume the user has set up SSH keys or I'm calling deploy mocking credentials for now if they are missing.
-
-      /* 
-         NOTE: To fully support password auth, I'd need to extend the DTO/Service to accept 'password' 
-         that isn't stored in DB but passed to deploy. 
-         For now, I'll invoke deploy with placeholders to show wiring.
-      */
+      // Determine MongoDB URI for this instance
+      let mongoUri = 'mongodb://mongo:27017/assureqai'; // Default for shared/container
+      if (instance.database?.type === 'isolated_server' && instance.database.mongoUri) {
+        mongoUri = instance.database.mongoUri;
+      } else if (instance.database?.type === 'isolated_db' && instance.database.dbName) {
+        mongoUri = `mongodb://mongo:27017/${instance.database.dbName}`;
+      }
 
       const result = await this.provisioningService.deploy({
         host: instance.vps.host,
         username: instance.vps.sshUser,
         port: instance.vps.sshPort,
-        // In production, fetch keys from Vault/Secrets manager
+        password: sshPassword,
       }, {
         version: 'latest',
         instanceId: instance.clientId,
-        mongoUri: 'mongodb://mongo:27017/assureqai', // Internal URI for the container
+        mongoUri,
         apiKey: instance.apiKey,
         domain: instance.domain.customDomain || `${instance.domain.subdomain}.assureqai.com`
       });
 
+      // Store real deployment logs
+      const logEntry = {
+        action: 'deploy',
+        status: result.success ? 'success' : 'failed',
+        logs: result.logs,
+        duration: result.duration,
+        error: result.error,
+        createdAt: new Date(),
+      };
+
       if (result.success) {
         await this.instanceModel.findByIdAndUpdate(instance._id, {
           status: 'running',
-          'vps.lastDeployment': new Date()
+          'vps.lastDeployment': new Date(),
+          $push: { deploymentLogs: { $each: [logEntry], $slice: -50 } }, // Keep last 50 logs
         });
       } else {
-        await this.instanceModel.findByIdAndUpdate(instance._id, { status: 'error' });
+        await this.instanceModel.findByIdAndUpdate(instance._id, {
+          status: 'error',
+          $push: { deploymentLogs: { $each: [logEntry], $slice: -50 } },
+        });
       }
     } catch (error) {
       console.error('Deployment error', error);
@@ -290,30 +286,23 @@ export class InstanceService {
       .substring(0, 20);
   }
 
-  // Get deployment logs (Simulated from state)
+  // Get deployment logs (from stored real deployment results)
   async getLogs(id: string): Promise<any[]> {
     const instance = await this.findById(id);
-    if (!instance.vps?.lastDeployment) return [];
+    const logs = (instance as any).deploymentLogs || [];
 
-    // Generate a log entry based on the last deployment time
-    const deployTime = new Date(instance.vps.lastDeployment);
-    return [{
-      id: `log_${(instance as any)._id}_${deployTime.getTime()}`,
+    // Return stored logs, mapped to expected format
+    return logs.map((log: any, index: number) => ({
+      id: `log_${(instance as any)._id}_${index}`,
       instanceId: instance.clientId,
       instanceName: instance.name,
-      action: 'deploy',
-      status: (instance.status as string) === 'error' ? 'failed' : 'success',
-      logs: [
-        `[${deployTime.toISOString()}] Starting deployment to ${instance.vps.host}`,
-        `[${new Date(deployTime.getTime() + 2000).toISOString()}] SSH connection established`,
-        `[${new Date(deployTime.getTime() + 5000).toISOString()}] Docker verified`,
-        `[${new Date(deployTime.getTime() + 10000).toISOString()}] Docker Compose file created`,
-        `[${new Date(deployTime.getTime() + 15000).toISOString()}] Containers started`,
-        `[${new Date(deployTime.getTime() + 20000).toISOString()}] Health check passed`,
-      ],
-      duration: 20000,
-      createdAt: deployTime.toISOString()
-    }];
+      action: log.action || 'deploy',
+      status: log.status || 'success',
+      logs: log.logs || [],
+      duration: log.duration,
+      error: log.error,
+      createdAt: log.createdAt ? new Date(log.createdAt).toISOString() : new Date().toISOString(),
+    })).reverse(); // Most recent first
   }
 
   private generateApiKey(): string {

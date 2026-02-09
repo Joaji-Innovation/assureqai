@@ -143,6 +143,16 @@ export class Instance {
   @Prop()
   deployedVersion?: string;
 
+  @Prop({ type: [Object], default: [] })
+  deploymentLogs?: Array<{
+    action: string;
+    status: string;
+    logs: string[];
+    duration?: number;
+    error?: string;
+    createdAt: Date;
+  }>;
+
   @Prop({ type: Object })
   usage?: {
     cpu: number; // Percentage 0-100

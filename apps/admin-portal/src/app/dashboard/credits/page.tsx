@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Coins, Search, Plus, ArrowUpCircle, ArrowDownCircle, Clock, Building2, Loader2 } from 'lucide-react';
+import {
+  Coins,
+  Search,
+  Plus,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Clock,
+  Building2,
+  Loader2,
+} from 'lucide-react';
 import api from '@/lib/api';
 
 interface InstanceCredits {
@@ -24,24 +33,14 @@ interface Transaction {
   createdAt: string;
 }
 
-const mockCredits: InstanceCredits[] = [
-  { id: '1', instanceId: 'inst-1', instanceName: 'Acme Corp', instanceType: 'standard', auditCredits: { balance: 847, used: 153, total: 1000 }, tokenCredits: { balance: 156000, used: 344000, total: 500000 } },
-  { id: '2', instanceId: 'inst-2', instanceName: 'Beta Inc', instanceType: 'trial', auditCredits: { balance: 45, used: 55, total: 100 }, tokenCredits: { balance: 12000, used: 38000, total: 50000 }, trialExpiresAt: '2026-01-31' },
-  { id: '3', instanceId: 'inst-3', instanceName: 'Gamma LLC', instanceType: 'enterprise', auditCredits: { balance: 4500, used: 500, total: 5000 }, tokenCredits: { balance: 800000, used: 200000, total: 1000000 } },
-  { id: '4', instanceId: 'inst-4', instanceName: 'Delta Corp', instanceType: 'standard', auditCredits: { balance: 120, used: 380, total: 500 }, tokenCredits: { balance: 45000, used: 205000, total: 250000 } },
-];
-
-const mockTransactions: Transaction[] = [
-  { id: '1', type: 'use', creditType: 'audit', amount: -5, balanceAfter: 847, reason: 'Bulk audit campaign', createdAt: '2026-01-17T10:30:00Z' },
-  { id: '2', type: 'add', creditType: 'audit', amount: 500, balanceAfter: 852, reason: 'Monthly top-up', createdAt: '2026-01-15T09:00:00Z' },
-  { id: '3', type: 'use', creditType: 'token', amount: -12500, balanceAfter: 156000, reason: 'AI audit processing', createdAt: '2026-01-17T10:30:00Z' },
-];
-
 export default function CreditsPage() {
   const [credits, setCredits] = useState<InstanceCredits[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [addingCredits, setAddingCredits] = useState<{ type: 'audit' | 'token'; instanceId: string } | null>(null);
+  const [addingCredits, setAddingCredits] = useState<{
+    type: 'audit' | 'token';
+    instanceId: string;
+  } | null>(null);
   const [addAmount, setAddAmount] = useState(100);
   const [addReason, setAddReason] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -60,14 +59,16 @@ export default function CreditsPage() {
         instanceName: inst.name,
         instanceType: inst.plan || 'standard',
         auditCredits: {
-          balance: (inst.credits?.totalAudits || 0) - (inst.credits?.usedAudits || 0),
+          balance:
+            (inst.credits?.totalAudits || 0) - (inst.credits?.usedAudits || 0),
           used: inst.credits?.usedAudits || 0,
-          total: inst.credits?.totalAudits || 0
+          total: inst.credits?.totalAudits || 0,
         },
         tokenCredits: {
-          balance: (inst.credits?.totalTokens || 0) - (inst.credits?.usedTokens || 0),
+          balance:
+            (inst.credits?.totalTokens || 0) - (inst.credits?.usedTokens || 0),
           used: inst.credits?.usedTokens || 0,
-          total: inst.credits?.totalTokens || 0
+          total: inst.credits?.totalTokens || 0,
         },
         trialExpiresAt: inst.trialExpiresAt,
       }));
@@ -79,8 +80,8 @@ export default function CreditsPage() {
     }
   };
 
-  const filteredCredits = credits.filter(c =>
-    c.instanceName.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCredits = credits.filter((c) =>
+    c.instanceName.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleAddCredits = async () => {
@@ -91,12 +92,12 @@ export default function CreditsPage() {
       if (addingCredits.type === 'audit') {
         await api.credits.addAuditCredits(addingCredits.instanceId, {
           amount: addAmount,
-          reason: addReason
+          reason: addReason,
         });
       } else {
         await api.credits.addTokenCredits(addingCredits.instanceId, {
           amount: addAmount,
-          reason: addReason
+          reason: addReason,
         });
       }
       // Refresh data
@@ -115,10 +116,14 @@ export default function CreditsPage() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'trial': return 'bg-amber-500/10 text-amber-500';
-      case 'standard': return 'bg-blue-500/10 text-blue-500';
-      case 'enterprise': return 'bg-purple-500/10 text-purple-500';
-      default: return 'bg-muted text-muted-foreground';
+      case 'trial':
+        return 'bg-amber-500/10 text-amber-500';
+      case 'standard':
+        return 'bg-blue-500/10 text-blue-500';
+      case 'enterprise':
+        return 'bg-purple-500/10 text-purple-500';
+      default:
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -134,8 +139,10 @@ export default function CreditsPage() {
 
   const stats = {
     totalInstances: credits.length,
-    trialInstances: credits.filter(c => c.instanceType === 'trial').length,
-    lowCredit: credits.filter(c => getPercentage(c.auditCredits.balance, c.auditCredits.total) < 20).length,
+    trialInstances: credits.filter((c) => c.instanceType === 'trial').length,
+    lowCredit: credits.filter(
+      (c) => getPercentage(c.auditCredits.balance, c.auditCredits.total) < 20,
+    ).length,
   };
 
   if (loading) {
@@ -151,7 +158,9 @@ export default function CreditsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Credits Management</h2>
-          <p className="text-muted-foreground">Manage audit and token credits for instances</p>
+          <p className="text-muted-foreground">
+            Manage audit and token credits for instances
+          </p>
         </div>
       </div>
 
@@ -175,7 +184,9 @@ export default function CreditsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">On Trial</p>
-              <p className="text-2xl font-bold text-amber-500">{stats.trialInstances}</p>
+              <p className="text-2xl font-bold text-amber-500">
+                {stats.trialInstances}
+              </p>
             </div>
           </div>
         </div>
@@ -186,7 +197,9 @@ export default function CreditsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Low Credits</p>
-              <p className="text-2xl font-bold text-red-500">{stats.lowCredit}</p>
+              <p className="text-2xl font-bold text-red-500">
+                {stats.lowCredit}
+              </p>
             </div>
           </div>
         </div>
@@ -207,11 +220,20 @@ export default function CreditsPage() {
       {/* Credits List */}
       <div className="space-y-4">
         {filteredCredits.map((instance) => {
-          const auditPercent = getPercentage(instance.auditCredits.balance, instance.auditCredits.total);
-          const tokenPercent = getPercentage(instance.tokenCredits.balance, instance.tokenCredits.total);
+          const auditPercent = getPercentage(
+            instance.auditCredits.balance,
+            instance.auditCredits.total,
+          );
+          const tokenPercent = getPercentage(
+            instance.tokenCredits.balance,
+            instance.tokenCredits.total,
+          );
 
           return (
-            <div key={instance.id} className="bg-card/50 backdrop-blur rounded-xl border border-border p-5">
+            <div
+              key={instance.id}
+              className="bg-card/50 backdrop-blur rounded-xl border border-border p-5"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
@@ -220,12 +242,17 @@ export default function CreditsPage() {
                   <div>
                     <h3 className="font-semibold">{instance.instanceName}</h3>
                     <div className="flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-0.5 rounded-full ${getTypeColor(instance.instanceType)}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full ${getTypeColor(instance.instanceType)}`}
+                      >
                         {instance.instanceType}
                       </span>
                       {instance.trialExpiresAt && (
                         <span className="text-muted-foreground">
-                          Expires: {new Date(instance.trialExpiresAt).toLocaleDateString()}
+                          Expires:{' '}
+                          {new Date(
+                            instance.trialExpiresAt,
+                          ).toLocaleDateString()}
                         </span>
                       )}
                     </div>
@@ -239,15 +266,24 @@ export default function CreditsPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">Audit Credits</span>
                     <button
-                      onClick={() => setAddingCredits({ type: 'audit', instanceId: instance.id })}
+                      onClick={() =>
+                        setAddingCredits({
+                          type: 'audit',
+                          instanceId: instance.id,
+                        })
+                      }
                       className="p-1 rounded hover:bg-muted transition-colors"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-2xl font-bold">{instance.auditCredits.balance.toLocaleString()}</span>
-                    <span className="text-sm text-muted-foreground">/ {instance.auditCredits.total.toLocaleString()}</span>
+                    <span className="text-2xl font-bold">
+                      {instance.auditCredits.balance.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      / {instance.auditCredits.total.toLocaleString()}
+                    </span>
                   </div>
                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                     <div
@@ -256,7 +292,8 @@ export default function CreditsPage() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {instance.auditCredits.used.toLocaleString()} used ({auditPercent}% remaining)
+                    {instance.auditCredits.used.toLocaleString()} used (
+                    {auditPercent}% remaining)
                   </p>
                 </div>
 
@@ -265,15 +302,24 @@ export default function CreditsPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">Token Credits</span>
                     <button
-                      onClick={() => setAddingCredits({ type: 'token', instanceId: instance.id })}
+                      onClick={() =>
+                        setAddingCredits({
+                          type: 'token',
+                          instanceId: instance.id,
+                        })
+                      }
                       className="p-1 rounded hover:bg-muted transition-colors"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-2xl font-bold">{(instance.tokenCredits.balance / 1000).toFixed(0)}K</span>
-                    <span className="text-sm text-muted-foreground">/ {(instance.tokenCredits.total / 1000).toFixed(0)}K</span>
+                    <span className="text-2xl font-bold">
+                      {(instance.tokenCredits.balance / 1000).toFixed(0)}K
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      / {(instance.tokenCredits.total / 1000).toFixed(0)}K
+                    </span>
                   </div>
                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                     <div
@@ -282,7 +328,8 @@ export default function CreditsPage() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {(instance.tokenCredits.used / 1000).toFixed(0)}K used ({tokenPercent}% remaining)
+                    {(instance.tokenCredits.used / 1000).toFixed(0)}K used (
+                    {tokenPercent}% remaining)
                   </p>
                 </div>
               </div>
@@ -332,7 +379,10 @@ export default function CreditsPage() {
                 Add Credits
               </button>
               <button
-                onClick={() => { setAddingCredits(null); setAddReason(''); }}
+                onClick={() => {
+                  setAddingCredits(null);
+                  setAddReason('');
+                }}
                 className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
               >
                 Cancel

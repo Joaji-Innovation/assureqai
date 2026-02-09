@@ -184,6 +184,74 @@ export default function AdminAuditsPage() {
           </p>
         </div>
 
+        {/* Billing & Usage Info */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
+            <p className="text-sm text-muted-foreground mb-1">Project ID</p>
+            <p className="font-mono text-sm">
+              {selectedAudit.projectId || '—'}
+            </p>
+          </div>
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
+            <p className="text-sm text-muted-foreground mb-1">Token Usage</p>
+            {selectedAudit.tokenUsage ? (
+              <div>
+                <p className="font-bold text-lg">
+                  {selectedAudit.tokenUsage.totalTokens?.toLocaleString() || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  In: {selectedAudit.tokenUsage.inputTokens?.toLocaleString() || 0} /
+                  Out: {selectedAudit.tokenUsage.outputTokens?.toLocaleString() || 0}
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">—</p>
+            )}
+          </div>
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
+            <p className="text-sm text-muted-foreground mb-1">Sentiment</p>
+            {selectedAudit.sentiment?.overall ? (
+              <span className={`px-2 py-1 text-xs rounded-full ${
+                selectedAudit.sentiment.overall === 'positive'
+                  ? 'bg-green-500/10 text-green-500'
+                  : selectedAudit.sentiment.overall === 'negative'
+                    ? 'bg-red-500/10 text-red-500'
+                    : 'bg-yellow-500/10 text-yellow-500'
+              }`}>
+                {selectedAudit.sentiment.overall.toUpperCase()}
+              </span>
+            ) : (
+              <p className="text-muted-foreground">—</p>
+            )}
+          </div>
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
+            <p className="text-sm text-muted-foreground mb-1">Confidence</p>
+            <p className={`font-bold text-lg ${getScoreColor(selectedAudit.overallConfidence)}`}>
+              {selectedAudit.overallConfidence !== undefined
+                ? `${Math.round(selectedAudit.overallConfidence)}%`
+                : '—'}
+            </p>
+          </div>
+        </div>
+
+        {/* Call Summary */}
+        {selectedAudit.callSummary && (
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
+            <p className="text-sm text-muted-foreground mb-2">Call Summary</p>
+            <p className="text-sm leading-relaxed">{selectedAudit.callSummary}</p>
+          </div>
+        )}
+
+        {/* Transcript */}
+        {selectedAudit.transcript && (
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4">
+            <p className="text-sm text-muted-foreground mb-2">Transcript</p>
+            <pre className="text-xs bg-muted/50 rounded-lg p-3 max-h-64 overflow-y-auto whitespace-pre-wrap font-mono">
+              {selectedAudit.transcript}
+            </pre>
+          </div>
+        )}
+
         {/* Audit Results */}
         {selectedAudit.auditResults &&
           selectedAudit.auditResults.length > 0 && (
@@ -205,9 +273,9 @@ export default function AdminAuditsPage() {
                           result.parameter ||
                           `Parameter ${idx + 1}`}
                       </p>
-                      {result.feedback && (
+                      {(result.comments || result.feedback) && (
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {result.feedback}
+                          {result.comments || result.feedback}
                         </p>
                       )}
                     </div>
@@ -375,7 +443,13 @@ export default function AdminAuditsPage() {
                     Campaign
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Project
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Score
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Tokens
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Date
@@ -415,11 +489,25 @@ export default function AdminAuditsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      <span className="text-xs font-mono text-muted-foreground">
+                        {audit.projectId
+                          ? String(audit.projectId).slice(-8)
+                          : '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       <span
                         className={`font-bold ${getScoreColor(audit.overallScore)}`}
                       >
                         {audit.overallScore !== undefined
                           ? `${Math.round(audit.overallScore)}%`
+                          : '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-muted-foreground">
+                        {audit.tokenUsage?.totalTokens
+                          ? audit.tokenUsage.totalTokens.toLocaleString()
                           : '—'}
                       </span>
                     </td>

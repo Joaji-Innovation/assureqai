@@ -28,20 +28,19 @@ export interface AuditRequest {
   audioUrl?: string;
 }
 
-
 // Evidence citation from transcript
 export interface EvidenceCitation {
-  text: string;           // Quoted transcript excerpt
-  lineNumber?: number;    // Line number in transcript
-  startChar?: number;     // Character position start
-  endChar?: number;       // Character position end
+  text: string; // Quoted transcript excerpt
+  lineNumber?: number; // Line number in transcript
+  startChar?: number; // Character position start
+  endChar?: number; // Character position end
 }
 
 // Audit timing metrics
 export interface AuditTiming {
-  startTime: string;      // ISO timestamp when audit started
-  endTime: string;        // ISO timestamp when audit completed
-  processingDurationMs: number;  // Total AI processing time
+  startTime: string; // ISO timestamp when audit started
+  endTime: string; // ISO timestamp when audit completed
+  processingDurationMs: number; // Total AI processing time
   promptTokensPerSecond?: number; // Processing speed
 }
 
@@ -54,8 +53,8 @@ export interface AuditResult {
     weight: number;
     type: string;
     comments: string;
-    confidence: number;   // NEW: 0-100 confidence score
-    evidence: EvidenceCitation[];  // NEW: transcript citations
+    confidence: number; // NEW: 0-100 confidence score
+    evidence: EvidenceCitation[]; // NEW: transcript citations
     subResults?: {
       subParameterId: string;
       subParameterName: string;
@@ -67,7 +66,7 @@ export interface AuditResult {
     }[];
   }[];
   overallScore: number;
-  overallConfidence: number;  // NEW: overall confidence level
+  overallConfidence: number; // NEW: overall confidence level
   sentiment: {
     overall: 'positive' | 'neutral' | 'negative';
     customerScore: number;
@@ -76,7 +75,12 @@ export interface AuditResult {
     predictedCSAT: number;
     emotionalMoments: {
       timestamp: string;
-      emotion: 'frustration' | 'satisfaction' | 'anger' | 'empathy' | 'confusion';
+      emotion:
+        | 'frustration'
+        | 'satisfaction'
+        | 'anger'
+        | 'empathy'
+        | 'confusion';
       speaker: 'customer' | 'agent';
       text: string;
     }[];
@@ -103,7 +107,7 @@ export interface AuditResult {
     outputTokens: number;
     totalTokens: number;
   };
-  timing: AuditTiming;  // NEW: timing metrics
+  timing: AuditTiming; // NEW: timing metrics
   timeout?: boolean; // NEW: explicilty track timeout success/failure
 }
 
@@ -116,7 +120,8 @@ export class AiService {
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get<string>('GEMINI_API_KEY');
     // Default to gemini-2.0-flash for best speed/cost balance, configurable via env
-    this.model = this.configService.get<string>('GEMINI_MODEL') || 'gemini-2.0-flash';
+    this.model =
+      this.configService.get<string>('GEMINI_MODEL') || 'gemini-2.0-flash';
 
     if (!this.apiKey) {
       this.logger.warn('GEMINI_API_KEY not configured - AI features disabled');
@@ -145,7 +150,9 @@ export class AiService {
     // Check if parameters need batching (limit prompt size to avoid truncation)
     const BATCH_SIZE = 5;
     if (request.parameters.length > BATCH_SIZE) {
-      this.logger.log(`High parameter count (${request.parameters.length}), using batch processing...`);
+      this.logger.log(
+        `High parameter count (${request.parameters.length}), using batch processing...`,
+      );
 
       // Split parameters into chunks
       const chunks = [];
@@ -161,7 +168,9 @@ export class AiService {
         const chunkParams = chunks[i];
         const isFirstChunk = i === 0;
 
-        this.logger.log(`Processing batch ${i + 1}/${chunks.length} (${chunkParams.length} params)`);
+        this.logger.log(
+          `Processing batch ${i + 1}/${chunks.length} (${chunkParams.length} params)`,
+        );
 
         // Build prompt for this chunk
         // For first chunk: ask for full analysis (Summary, Sentiment, etc.) + 1st batch scoring
@@ -174,17 +183,24 @@ export class AiService {
         const response = await this.callGemini(prompt);
 
         // Parse Result
-        const chunkResult = this.parseAuditResponse(response, chunkParams, startTime); // startTime reused but timing duration accumulates
+        const chunkResult = this.parseAuditResponse(
+          response,
+          chunkParams,
+          startTime,
+        ); // startTime reused but timing duration accumulates
 
         if (isFirstChunk) {
           baseResult = chunkResult; // Keep the rich metadata (sentiment, summary) from first chunk
         }
 
         // Accumulate audit results
-        combinedAuditResults = [...combinedAuditResults, ...chunkResult.auditResults];
+        combinedAuditResults = [
+          ...combinedAuditResults,
+          ...chunkResult.auditResults,
+        ];
       }
 
-      if (!baseResult) throw new Error("Failed to process audit batches");
+      if (!baseResult) throw new Error('Failed to process audit batches');
 
       // Merge all results into the base result
       baseResult.auditResults = combinedAuditResults;
@@ -195,17 +211,20 @@ export class AiService {
       let totalWeight = 0;
       let hasFatalFailure = false;
 
-      baseResult.auditResults.forEach(r => {
-        totalWeightedScore += (r.score * r.weight);
+      baseResult.auditResults.forEach((r) => {
+        totalWeightedScore += r.score * r.weight;
         totalWeight += r.weight;
         if (r.type === 'Fatal' && r.score < 50) hasFatalFailure = true;
       });
 
-      baseResult.overallScore = totalWeight > 0 ? Math.round(totalWeightedScore / totalWeight) : 0;
+      baseResult.overallScore =
+        totalWeight > 0 ? Math.round(totalWeightedScore / totalWeight) : 0;
 
       // Apply ZTP
       if (hasFatalFailure) {
-        this.logger.warn('ZTP Applied (Batch Merged): Fatal parameter scored below 50%');
+        this.logger.warn(
+          'ZTP Applied (Batch Merged): Fatal parameter scored below 50%',
+        );
         baseResult.overallScore = 0;
       }
 
@@ -213,9 +232,10 @@ export class AiService {
       baseResult.timing.processingDurationMs = Date.now() - startTime.getTime();
       baseResult.timeout = false; // Explicit success
 
-      this.logger.log(`Batch audit completed. Total Params: ${baseResult.auditResults.length}, Score: ${baseResult.overallScore}`);
+      this.logger.log(
+        `Batch audit completed. Total Params: ${baseResult.auditResults.length}, Score: ${baseResult.overallScore}`,
+      );
       return baseResult;
-
     } else {
       // STANDARD FLOW (<= 5 Parameters)
       try {
@@ -226,7 +246,11 @@ export class AiService {
         const response = await this.callGemini(prompt);
 
         // Parse the response with timing
-        const result = this.parseAuditResponse(response, request.parameters, startTime);
+        const result = this.parseAuditResponse(
+          response,
+          request.parameters,
+          startTime,
+        );
 
         this.logger.log(
           `Audit completed in ${result.timing.processingDurationMs}ms, score: ${result.overallScore}, confidence: ${result.overallConfidence}%`,
@@ -246,8 +270,8 @@ export class AiService {
    */
   async auditAudio(request: {
     audioDataUri?: string; // Base64 data URI: data:audio/mp3;base64,...
-    audioUrl?: string;     // URL to audio file (will be fetched)
-    transcript?: string;   // Optional: skip audio processing if provided
+    audioUrl?: string; // URL to audio file (will be fetched)
+    transcript?: string; // Optional: skip audio processing if provided
     parameters: AuditRequest['parameters'];
     sopContent?: string;
     language?: string;
@@ -255,16 +279,33 @@ export class AiService {
     callId?: string;
     campaignName?: string;
     transcriptionLanguage?: string;
-  }): Promise<AuditResult & { transcript: string; transcriptionInOriginalLanguage: string; englishTranslation?: string; additionalTranslation?: string; additionalTranslationLanguage?: string; callSummary?: string; rootCauseAnalysis?: string; identifiedAgentName?: string; campaignName?: string; agentUserId?: string }> {
+  }): Promise<
+    AuditResult & {
+      transcript: string;
+      transcriptionInOriginalLanguage: string;
+      englishTranslation?: string;
+      additionalTranslation?: string;
+      additionalTranslationLanguage?: string;
+      callSummary?: string;
+      rootCauseAnalysis?: string;
+      identifiedAgentName?: string;
+      campaignName?: string;
+      agentUserId?: string;
+    }
+  > {
     if (!this.apiKey) {
-      throw new BadRequestException('AI service not configured. Please set GEMINI_API_KEY.');
+      throw new BadRequestException(
+        'AI service not configured. Please set GEMINI_API_KEY.',
+      );
     }
 
     const startTime = Date.now();
 
     // Validate parameters
     if (!request.parameters || request.parameters.length === 0) {
-      throw new BadRequestException('QA parameters are required for audit. Please configure parameters first.');
+      throw new BadRequestException(
+        'QA parameters are required for audit. Please configure parameters first.',
+      );
     }
 
     // If transcript is provided, use the existing auditCall method
@@ -308,26 +349,32 @@ export class AiService {
         const buffer = await response.arrayBuffer();
         audioBase64 = Buffer.from(buffer).toString('base64');
       } catch (error: any) {
-        throw new BadRequestException(`Failed to fetch audio from URL: ${error.message}`);
+        throw new BadRequestException(
+          `Failed to fetch audio from URL: ${error.message}`,
+        );
       }
     } else {
-      throw new BadRequestException('Either audioDataUri, audioUrl, or transcript must be provided');
+      throw new BadRequestException(
+        'Either audioDataUri, audioUrl, or transcript must be provided',
+      );
     }
 
     // Build parameters description for the prompt
     // Build parameters description for the prompt - handling groups if present
-    const parametersDesc = request.parameters.map((param) => {
-      // Check if this is a group with sub-parameters
-      if (param.subParameters && param.subParameters.length > 0) {
-        const subParams = param.subParameters
-          .map((sp) => `    - "${sp.name}" - ${sp.weight}% (Non-Fatal)`) // Defaulting sub-params to Non-Fatal as per interface
-          .join('\n');
-        return `  - **Group: "${param.name}"**\n${subParams}`;
-      } else {
-        // Flat parameter
-        return `  - "${param.name}" - ${param.weight}% (${param.type || 'Non-Fatal'})`;
-      }
-    }).join('\n');
+    const parametersDesc = request.parameters
+      .map((param) => {
+        // Check if this is a group with sub-parameters
+        if (param.subParameters && param.subParameters.length > 0) {
+          const subParams = param.subParameters
+            .map((sp) => `    - "${sp.name}" - ${sp.weight}% (Non-Fatal)`) // Defaulting sub-params to Non-Fatal as per interface
+            .join('\n');
+          return `  - **Group: "${param.name}"**\n${subParams}`;
+        } else {
+          // Flat parameter
+          return `  - "${param.name}" - ${param.weight}% (${param.type || 'Non-Fatal'})`;
+        }
+      })
+      .join('\n');
 
     // Check if large audio (>10MB) - use two-step approach for reliability
     const audioSizeBytes = audioBase64.length * 0.75;
@@ -345,13 +392,22 @@ export class AiService {
         // 2. Audit (text-based, batched if needed)
         // =====================================================
 
-        this.logger.log(`Using two-step approach: Large Audio=${isLargeAudio}, Complex Audit=${isComplexAudit} (${request.parameters.length} params)`);
+        this.logger.log(
+          `Using two-step approach: Large Audio=${isLargeAudio}, Complex Audit=${isComplexAudit} (${request.parameters.length} params)`,
+        );
 
         // Step 1: Transcribe
         this.logger.log('Step 1: Transcribing audio...');
-        const transcriptionResult = await this.transcribeWithGemini(audioBase64, mimeType, request.language, request.transcriptionLanguage);
+        const transcriptionResult = await this.transcribeWithGemini(
+          audioBase64,
+          mimeType,
+          request.language,
+          request.transcriptionLanguage,
+        );
 
-        this.logger.log(`Transcription complete: ${transcriptionResult.transcript.length} chars, language: ${transcriptionResult.detectedLanguage}`);
+        this.logger.log(
+          `Transcription complete: ${transcriptionResult.transcript.length} chars, language: ${transcriptionResult.detectedLanguage}`,
+        );
 
         // Step 2: Audit the transcript
         this.logger.log('Step 2: Auditing transcript...');
@@ -359,12 +415,15 @@ export class AiService {
           transcript: transcriptionResult.transcript,
           parameters: request.parameters,
           sopContent: request.sopContent,
-          language: transcriptionResult.detectedLanguage || request.language || 'en',
+          language:
+            transcriptionResult.detectedLanguage || request.language || 'en',
         });
 
         // Calculate total processing time
         const processingDurationMs = Date.now() - startTime;
-        this.logger.log(`Two-step audit completed in ${processingDurationMs}ms, score: ${auditResult.overallScore}`);
+        this.logger.log(
+          `Two-step audit completed in ${processingDurationMs}ms, score: ${auditResult.overallScore}`,
+        );
 
         // Return combined result
         return {
@@ -374,8 +433,10 @@ export class AiService {
           englishTranslation: transcriptionResult.englishTranslation,
           additionalTranslation: transcriptionResult.additionalTranslation,
           additionalTranslationLanguage: request.transcriptionLanguage,
-          callSummary: transcriptionResult.callSummary || auditResult.callSummary,
-          identifiedAgentName: transcriptionResult.identifiedAgentName || 'Unknown',
+          callSummary:
+            transcriptionResult.callSummary || auditResult.callSummary,
+          identifiedAgentName:
+            transcriptionResult.identifiedAgentName || 'Unknown',
           campaignName: request.campaignName,
           agentUserId: request.agentName,
           rootCauseAnalysis: auditResult.callSummary,
@@ -392,7 +453,9 @@ export class AiService {
       // Combined transcription + audit in one call (faster)
       // =====================================================
 
-      this.logger.log(`Small audio (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using single-step approach`);
+      this.logger.log(
+        `Small audio (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using single-step approach`,
+      );
 
       // Build the comprehensive prompt for combined transcription + audit
       const textPrompt = `You are an expert QA auditor for call centers. Analyze the attached audio call recording.
@@ -467,7 +530,11 @@ ${parametersDesc}
 CRITICAL: Score using EXACT parameter names listed above.`;
 
       // Call Gemini with multimodal content (audio + text)
-      const response = await this.callGeminiWithAudio(textPrompt, audioBase64, mimeType);
+      const response = await this.callGeminiWithAudio(
+        textPrompt,
+        audioBase64,
+        mimeType,
+      );
 
       // Parse the JSON response with robust error handling
       let jsonText = response.trim();
@@ -482,7 +549,9 @@ CRITICAL: Score using EXACT parameter names listed above.`;
       try {
         output = JSON.parse(jsonText);
       } catch (parseError: any) {
-        this.logger.warn(`Initial JSON parse failed: ${parseError.message}. Attempting repair...`);
+        this.logger.warn(
+          `Initial JSON parse failed: ${parseError.message}. Attempting repair...`,
+        );
 
         // Try to repair truncated JSON
         const repairedJson = this.repairTruncatedJson(jsonText);
@@ -491,7 +560,9 @@ CRITICAL: Score using EXACT parameter names listed above.`;
           this.logger.log('JSON repair successful');
         } catch (repairError: any) {
           // Extract what we can from the partial response
-          this.logger.warn(`JSON repair failed: ${repairError.message}. Extracting partial data...`);
+          this.logger.warn(
+            `JSON repair failed: ${repairError.message}. Extracting partial data...`,
+          );
           output = this.extractPartialData(jsonText, request.parameters);
         }
       }
@@ -501,14 +572,16 @@ CRITICAL: Score using EXACT parameter names listed above.`;
 
       // Log raw audit results for debugging
       if (output.auditResults) {
-        this.logger.log(`Raw AI Audit Results (Sample): ${JSON.stringify(output.auditResults[0])}`);
+        this.logger.log(
+          `Raw AI Audit Results (Sample): ${JSON.stringify(output.auditResults[0])}`,
+        );
       }
 
       // Apply ZTP (Zero Tolerance Policy) if Fatal parameter failed
       let finalOverallScore = output.overallScore || 0;
       if (output.auditResults && Array.isArray(output.auditResults)) {
         const hasFatalFailure = output.auditResults.some(
-          (r: any) => r.type === 'Fatal' && r.score < 50
+          (r: any) => r.type === 'Fatal' && r.score < 50,
         );
         if (hasFatalFailure) {
           this.logger.warn('ZTP Applied: Fatal parameter scored below 50%');
@@ -521,11 +594,14 @@ CRITICAL: Score using EXACT parameter names listed above.`;
         // Debug individual item mapping if needed (optional)
         // console.log('Mapping item:', r);
         // Ensure scores are numbers
-        const score = typeof r.score === 'string' ? parseFloat(r.score) : (r.score || 0);
-        const weight = typeof r.weight === 'string' ? parseFloat(r.weight) : (r.weight || 0);
+        const score =
+          typeof r.score === 'string' ? parseFloat(r.score) : r.score || 0;
+        const weight =
+          typeof r.weight === 'string' ? parseFloat(r.weight) : r.weight || 0;
 
         return {
-          parameterId: r.parameterId || r.parameter || r.parameterName || r.name,
+          parameterId:
+            r.parameterId || r.parameter || r.parameterName || r.name,
           parameterName: r.parameter || r.parameterName || r.name || 'Unknown',
           score: isNaN(score) ? 0 : score,
           weight: isNaN(weight) ? 0 : weight,
@@ -537,7 +613,7 @@ CRITICAL: Score using EXACT parameter names listed above.`;
       });
 
       this.logger.log(
-        `Audio audit completed in ${processingDurationMs}ms, score: ${finalOverallScore}`
+        `Audio audit completed in ${processingDurationMs}ms, score: ${finalOverallScore}`,
       );
 
       return {
@@ -545,32 +621,51 @@ CRITICAL: Score using EXACT parameter names listed above.`;
         auditResults,
         overallScore: finalOverallScore,
         overallConfidence: 85,
-        sentiment: output.sentiment || { overall: 'neutral', customerScore: 0, agentScore: 0, escalationRisk: 'low' },
+        sentiment: output.sentiment || {
+          overall: 'neutral',
+          customerScore: 0,
+          agentScore: 0,
+          escalationRisk: 'low',
+        },
         metrics: output.metrics || {},
-        compliance: output.compliance || { keywordsDetected: [], violations: [], complianceScore: 100 },
+        compliance: output.compliance || {
+          keywordsDetected: [],
+          violations: [],
+          complianceScore: 100,
+        },
         timing: {
           startTime: new Date(startTime).toISOString(),
           endTime: new Date().toISOString(),
           processingDurationMs,
         },
-        tokenUsage: output.tokenUsage || { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        tokenUsage: output.tokenUsage || {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+        },
         coaching: output.coaching || {
           strengths: [],
           improvements: [],
           suggestedActions: [],
         },
-        transcript: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
-        transcriptionInOriginalLanguage: output.transcriptionInOriginalLanguage || output.englishTranslation || '',
+        transcript:
+          output.transcriptionInOriginalLanguage ||
+          output.englishTranslation ||
+          '',
+        transcriptionInOriginalLanguage:
+          output.transcriptionInOriginalLanguage ||
+          output.englishTranslation ||
+          '',
         englishTranslation: output.englishTranslation,
         additionalTranslation: output.additionalTranslation,
         additionalTranslationLanguage: request.transcriptionLanguage,
         rootCauseAnalysis: output.rootCauseAnalysis,
         // Add agent identification and campaign info
-        identifiedAgentName: output.identifiedAgentName || request.agentName || 'Unknown',
+        identifiedAgentName:
+          output.identifiedAgentName || request.agentName || 'Unknown',
         campaignName: request.campaignName,
         agentUserId: request.agentName,
       };
-
     } catch (error: any) {
       this.logger.error(`Audio audit failed: ${error.message}`);
       throw new BadRequestException(`AI audit failed: ${error.message}`);
@@ -586,7 +681,7 @@ CRITICAL: Score using EXACT parameter names listed above.`;
     audioBase64: string,
     mimeType: string,
     language?: string,
-    targetTranslationLanguage?: string
+    targetTranslationLanguage?: string,
   ): Promise<{
     transcript: string;
     englishTranslation: string;
@@ -639,7 +734,11 @@ CRITICAL: Score using EXACT parameter names listed above.`;
 
 IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
 
-    const response = await this.callGeminiWithAudio(transcriptionPrompt, audioBase64, mimeType);
+    const response = await this.callGeminiWithAudio(
+      transcriptionPrompt,
+      audioBase64,
+      mimeType,
+    );
 
     // Parse the response
     let jsonText = response.trim();
@@ -652,20 +751,31 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     try {
       const parsed = JSON.parse(jsonText);
       return {
-        transcript: parsed.transcriptionInOriginalLanguage || parsed.englishTranslation || '',
-        englishTranslation: parsed.englishTranslation || parsed.transcriptionInOriginalLanguage || '',
+        transcript:
+          parsed.transcriptionInOriginalLanguage ||
+          parsed.englishTranslation ||
+          '',
+        englishTranslation:
+          parsed.englishTranslation ||
+          parsed.transcriptionInOriginalLanguage ||
+          '',
         additionalTranslation: parsed.additionalTranslation,
         callSummary: parsed.callSummary || '',
         identifiedAgentName: parsed.identifiedAgentName || 'Unknown',
         detectedLanguage: parsed.detectedLanguage || language || 'en',
       };
     } catch (parseError: any) {
-      this.logger.warn(`Transcription JSON parse failed: ${parseError.message}. Attempting repair...`);
+      this.logger.warn(
+        `Transcription JSON parse failed: ${parseError.message}. Attempting repair...`,
+      );
       const repairedJson = this.repairTruncatedJson(jsonText);
       try {
         const parsed = JSON.parse(repairedJson);
         return {
-          transcript: parsed.transcriptionInOriginalLanguage || parsed.englishTranslation || '',
+          transcript:
+            parsed.transcriptionInOriginalLanguage ||
+            parsed.englishTranslation ||
+            '',
           englishTranslation: parsed.englishTranslation || '',
           additionalTranslation: parsed.additionalTranslation,
           callSummary: parsed.callSummary || '',
@@ -674,10 +784,16 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
         };
       } catch {
         // Extract transcript via regex as fallback
-        const transcriptMatch = jsonText.match(/"transcriptionInOriginalLanguage"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        const translationMatch = jsonText.match(/"englishTranslation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        const transcriptMatch = jsonText.match(
+          /"transcriptionInOriginalLanguage"\s*:\s*"((?:[^"\\]|\\.)*)"/,
+        );
+        const translationMatch = jsonText.match(
+          /"englishTranslation"\s*:\s*"((?:[^"\\]|\\.)*)"/,
+        );
         return {
-          transcript: transcriptMatch ? transcriptMatch[1] : 'Transcription failed - please retry',
+          transcript: transcriptMatch
+            ? transcriptMatch[1]
+            : 'Transcription failed - please retry',
           englishTranslation: translationMatch ? translationMatch[1] : '',
           callSummary: 'Transcription partially completed',
           identifiedAgentName: 'Unknown',
@@ -691,7 +807,11 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
    * Call Gemini API with audio content (multimodal)
    * Supports both inline data (for small files <10MB) and File API (for large files)
    */
-  private async callGeminiWithAudio(prompt: string, audioBase64: string, mimeType: string): Promise<string> {
+  private async callGeminiWithAudio(
+    prompt: string,
+    audioBase64: string,
+    mimeType: string,
+  ): Promise<string> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     // Calculate audio size (base64 * 0.75 = actual bytes)
@@ -705,48 +825,56 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     try {
       if (isLargeFile) {
         // Use File API for large files
-        this.logger.log(`Large audio detected (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using File API`);
+        this.logger.log(
+          `Large audio detected (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using File API`,
+        );
         fileUri = await this.uploadToFileApi(audioBase64, mimeType);
 
         requestBody = {
-          contents: [{
-            parts: [
-              { text: prompt },
-              {
-                file_data: {
-                  mime_type: mimeType,
-                  file_uri: fileUri,
-                }
-              }
-            ]
-          }],
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                {
+                  file_data: {
+                    mime_type: mimeType,
+                    file_uri: fileUri,
+                  },
+                },
+              ],
+            },
+          ],
           generationConfig: {
             maxOutputTokens: 65536, // Max for Gemini 2.0 Flash - supports full 1hr transcription
             temperature: 0.2,
             responseMimeType: 'application/json',
-          }
+          },
         };
       } else {
         // Use inline data for small files (faster, no upload needed)
-        this.logger.log(`Small audio (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using inline data`);
+        this.logger.log(
+          `Small audio (${(audioSizeBytes / 1024 / 1024).toFixed(2)}MB), using inline data`,
+        );
 
         requestBody = {
-          contents: [{
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: audioBase64,
-                }
-              }
-            ]
-          }],
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: audioBase64,
+                  },
+                },
+              ],
+            },
+          ],
           generationConfig: {
             maxOutputTokens: 65536, // Max output for full transcription
             temperature: 0.2,
             responseMimeType: 'application/json',
-          }
+          },
         };
       }
 
@@ -762,7 +890,9 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
 
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+            throw new Error(
+              `Gemini API error: ${response.status} - ${errorText}`,
+            );
           }
 
           const data = await response.json();
@@ -774,9 +904,11 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
 
           return text;
         } catch (error: any) {
-          this.logger.warn(`Gemini multimodal call attempt ${attempt} failed: ${error.message}`);
+          this.logger.warn(
+            `Gemini multimodal call attempt ${attempt} failed: ${error.message}`,
+          );
           if (attempt < maxRetries) {
-            await new Promise(r => setTimeout(r, 1000 * attempt));
+            await new Promise((r) => setTimeout(r, 1000 * attempt));
           } else {
             throw error;
           }
@@ -787,8 +919,8 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     } finally {
       // Cleanup: Delete uploaded file if using File API
       if (fileUri) {
-        this.deleteFromFileApi(fileUri).catch(err =>
-          this.logger.warn(`Failed to cleanup file: ${err.message}`)
+        this.deleteFromFileApi(fileUri).catch((err) =>
+          this.logger.warn(`Failed to cleanup file: ${err.message}`),
         );
       }
     }
@@ -800,8 +932,10 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
    */
   // ... existing upload code ...
 
-
-  private async uploadToFileApi(audioBase64: string, mimeType: string): Promise<string> {
+  private async uploadToFileApi(
+    audioBase64: string,
+    mimeType: string,
+  ): Promise<string> {
     const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${this.apiKey}`;
 
     // Convert base64 to binary
@@ -823,13 +957,15 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
           'X-Goog-Upload-Header-Content-Type': mimeType,
         },
         body: JSON.stringify({
-          file: { displayName }
+          file: { displayName },
         }),
       });
 
       if (!startResponse.ok) {
         const errorText = await startResponse.text();
-        throw new Error(`Failed to start upload: ${startResponse.status} - ${errorText}`);
+        throw new Error(
+          `Failed to start upload: ${startResponse.status} - ${errorText}`,
+        );
       }
 
       const uploadUri = startResponse.headers.get('X-Goog-Upload-URL');
@@ -850,7 +986,9 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
 
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
-        throw new Error(`Failed to upload file: ${uploadResponse.status} - ${errorText}`);
+        throw new Error(
+          `Failed to upload file: ${uploadResponse.status} - ${errorText}`,
+        );
       }
 
       const fileData = await uploadResponse.json();
@@ -868,7 +1006,9 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
       return fileUri;
     } catch (error: any) {
       this.logger.error(`File API upload failed: ${error.message}`);
-      throw new BadRequestException(`Failed to upload audio file: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to upload audio file: ${error.message}`,
+      );
     }
   }
 
@@ -883,7 +1023,7 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     while (Date.now() - startTime < maxWaitMs) {
       try {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${this.apiKey}`
+          `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${this.apiKey}`,
         );
 
         if (response.ok) {
@@ -892,18 +1032,22 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
             this.logger.log(`File ${fileName} is ready for processing`);
             return;
           } else if (fileInfo.state === 'FAILED') {
-            throw new Error(`File processing failed: ${fileInfo.error?.message || 'Unknown error'}`);
+            throw new Error(
+              `File processing failed: ${fileInfo.error?.message || 'Unknown error'}`,
+            );
           }
         }
       } catch (error: any) {
         // Ignore errors during polling, just continue
       }
 
-      await new Promise(r => setTimeout(r, pollIntervalMs));
+      await new Promise((r) => setTimeout(r, pollIntervalMs));
     }
 
     // If we timeout, proceed anyway - the file might still work
-    this.logger.warn(`File processing timeout for ${fileName}, proceeding anyway`);
+    this.logger.warn(
+      `File processing timeout for ${fileName}, proceeding anyway`,
+    );
   }
 
   /**
@@ -936,8 +1080,10 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     let repaired = jsonText;
 
     // Count brackets to find imbalance
-    let openBraces = 0, closeBraces = 0;
-    let openBrackets = 0, closeBrackets = 0;
+    let openBraces = 0,
+      closeBraces = 0;
+    let openBrackets = 0,
+      closeBrackets = 0;
     let inString = false;
     let escapeNext = false;
 
@@ -997,12 +1143,18 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
   private extractPartialData(jsonText: string, parameters: any[]): any {
     const result: any = {
       identifiedAgentName: 'Unknown',
-      transcriptionInOriginalLanguage: 'Transcription unavailable - response was truncated',
+      transcriptionInOriginalLanguage:
+        'Transcription unavailable - response was truncated',
       englishTranslation: 'Translation unavailable',
       callSummary: 'Audit partially completed - response was truncated',
       auditResults: [],
       overallScore: 0,
-      sentiment: { overall: 'neutral', customerScore: 0, agentScore: 0, escalationRisk: 'unknown' }
+      sentiment: {
+        overall: 'neutral',
+        customerScore: 0,
+        agentScore: 0,
+        escalationRisk: 'unknown',
+      },
     };
 
     // Try to extract agent name
@@ -1010,15 +1162,22 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     if (agentMatch) result.identifiedAgentName = agentMatch[1];
 
     // Try to extract transcript
-    const transcriptMatch = jsonText.match(/"transcriptionInOriginalLanguage"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-    if (transcriptMatch) result.transcriptionInOriginalLanguage = transcriptMatch[1];
+    const transcriptMatch = jsonText.match(
+      /"transcriptionInOriginalLanguage"\s*:\s*"((?:[^"\\]|\\.)*)"/,
+    );
+    if (transcriptMatch)
+      result.transcriptionInOriginalLanguage = transcriptMatch[1];
 
     // Try to extract English translation
-    const translationMatch = jsonText.match(/"englishTranslation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    const translationMatch = jsonText.match(
+      /"englishTranslation"\s*:\s*"((?:[^"\\]|\\.)*)"/,
+    );
     if (translationMatch) result.englishTranslation = translationMatch[1];
 
     // Try to extract call summary
-    const summaryMatch = jsonText.match(/"callSummary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    const summaryMatch = jsonText.match(
+      /"callSummary"\s*:\s*"((?:[^"\\]|\\.)*)"/,
+    );
     if (summaryMatch) result.callSummary = summaryMatch[1];
 
     // Try to extract overall score
@@ -1026,11 +1185,14 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
     if (scoreMatch) result.overallScore = parseFloat(scoreMatch[1]);
 
     // Try to extract individual audit results using regex - Support both parameterName and parameter
-    const auditResultsSection = jsonText.match(/"auditResults"\s*:\s*\[([\s\S]*?)(?:\]|$)/);
+    const auditResultsSection = jsonText.match(
+      /"auditResults"\s*:\s*\[([\s\S]*?)(?:\]|$)/,
+    );
     if (auditResultsSection) {
       // Regex that matches "parameterName": "..." OR "parameter": "..." followed eventually by score
       // Note: This is simplified and might miss complex cases but handles the standard format
-      const resultPattern = /"(?:parameterName|parameter)"\s*:\s*"([^"]+)".*?"score"\s*:\s*(\d+)/g;
+      const resultPattern =
+        /"(?:parameterName|parameter)"\s*:\s*"([^"]+)".*?"score"\s*:\s*(\d+)/g;
       let match;
       while ((match = resultPattern.exec(auditResultsSection[1])) !== null) {
         result.auditResults.push({
@@ -1058,7 +1220,9 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
       }));
     }
 
-    this.logger.log(`Extracted partial data: ${result.auditResults.length} results, score: ${result.overallScore}`);
+    this.logger.log(
+      `Extracted partial data: ${result.auditResults.length} results, score: ${result.overallScore}`,
+    );
     return result;
   }
 
@@ -1070,7 +1234,9 @@ IMPORTANT: Focus ONLY on transcription. Do NOT score or evaluate content.`;
       throw new BadRequestException('AI service not configured');
     }
 
-    const contextStr = context ? `\nContext:\n${JSON.stringify(context, null, 2)}` : '';
+    const contextStr = context
+      ? `\nContext:\n${JSON.stringify(context, null, 2)}`
+      : '';
     const prompt = `You are an AI assistant for Call Center Quality Assurance.
 ${contextStr}
 
@@ -1097,24 +1263,50 @@ Explanation:`;
   }
 
   /**
-   * Transcribe audio (placeholder for future integration)
+   * Transcribe audio from URL using Gemini multimodal
    */
-  async transcribeAudio(audioUrl: string): Promise<{ transcript: string; language: string }> {
-    // TODO: Integrate with Google Speech-to-Text or similar
-    // For now, return a mock transcript if in dev mode
-    if (process.env.NODE_ENV !== 'production') {
-      return {
-        transcript: "This is a simulated transcript for development purposes. The actual transcription service is not yet connected.",
-        language: "en-US"
-      };
+  async transcribeAudio(
+    audioUrl: string,
+  ): Promise<{ transcript: string; language: string }> {
+    if (!this.apiKey) {
+      throw new BadRequestException(
+        'AI service not configured. Please set GEMINI_API_KEY.',
+      );
     }
-    throw new BadRequestException('Audio transcription not yet implemented');
+
+    try {
+      // Fetch audio from URL
+      const response = await fetch(audioUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${response.statusText}`);
+      }
+      const contentType = response.headers.get('content-type') || 'audio/wav';
+      const mimeType = contentType.split(';')[0];
+      const buffer = await response.arrayBuffer();
+      const audioBase64 = Buffer.from(buffer).toString('base64');
+
+      // Use Gemini multimodal transcription
+      const result = await this.transcribeWithGemini(audioBase64, mimeType);
+
+      return {
+        transcript: result.transcript,
+        language: result.detectedLanguage || 'en-US',
+      };
+    } catch (error: any) {
+      this.logger.error(`Audio transcription failed: ${error.message}`);
+      throw new BadRequestException(
+        `Audio transcription failed: ${error.message}`,
+      );
+    }
   }
 
   /**
    * Build the audit prompt
    */
-  private buildAuditPrompt(request: AuditRequest, targetParams?: AuditRequest['parameters']): string {
+  private buildAuditPrompt(
+    request: AuditRequest,
+    targetParams?: AuditRequest['parameters'],
+  ): string {
     // Use specific batch of params if provided, otherwise all
     const paramsToScore = targetParams || request.parameters;
     const parametersJson = JSON.stringify(paramsToScore, null, 2);
@@ -1206,7 +1398,10 @@ Respond ONLY with valid JSON in this exact format:
   /**
    * Build a lightweight prompt for subsequent batches (Score Only)
    */
-  private buildPartialAuditPrompt(transcript: string, targetParams: AuditRequest['parameters']): string {
+  private buildPartialAuditPrompt(
+    transcript: string,
+    targetParams: AuditRequest['parameters'],
+  ): string {
     const parametersJson = JSON.stringify(targetParams, null, 2);
 
     return `You are an expert QA auditor. Review the call transcript and SCORE ONLY the following parameters.
@@ -1243,7 +1438,10 @@ ${parametersJson}
   /**
    * Call Gemini API with retry logic
    */
-  private async callGemini(prompt: string, retries = LIMITS.MAX_RETRIES): Promise<string> {
+  private async callGemini(
+    prompt: string,
+    retries = LIMITS.MAX_RETRIES,
+  ): Promise<string> {
     const url = `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -1275,7 +1473,10 @@ ${parametersJson}
           throw error;
         }
         // Exponential backoff
-        await this.sleep(LIMITS.RETRY_DELAY_MS * Math.pow(LIMITS.RETRY_BACKOFF_MULTIPLIER, attempt - 1));
+        await this.sleep(
+          LIMITS.RETRY_DELAY_MS *
+            Math.pow(LIMITS.RETRY_BACKOFF_MULTIPLIER, attempt - 1),
+        );
       }
     }
 
@@ -1288,7 +1489,7 @@ ${parametersJson}
   private parseAuditResponse(
     response: string,
     parameters: AuditRequest['parameters'],
-    startTime: Date
+    startTime: Date,
   ): AuditResult {
     const endTime = new Date();
     const processingDurationMs = endTime.getTime() - startTime.getTime();
@@ -1319,7 +1520,9 @@ ${parametersJson}
     try {
       parsed = JSON.parse(jsonStr);
     } catch (parseError: any) {
-      this.logger.warn(`Initial audit JSON parse failed: ${parseError.message}. Attempting repair...`);
+      this.logger.warn(
+        `Initial audit JSON parse failed: ${parseError.message}. Attempting repair...`,
+      );
 
       // Try to repair truncated JSON
       const repairedJson = this.repairTruncatedJson(jsonStr);
@@ -1327,7 +1530,9 @@ ${parametersJson}
         parsed = JSON.parse(repairedJson);
         this.logger.log('Audit JSON repair successful');
       } catch (repairError: any) {
-        this.logger.warn(`Audit JSON repair failed: ${repairError.message}. Extracting partial data...`);
+        this.logger.warn(
+          `Audit JSON repair failed: ${repairError.message}. Extracting partial data...`,
+        );
         parsed = this.extractPartialData(jsonStr, parameters);
       }
     }
@@ -1343,25 +1548,34 @@ ${parametersJson}
       confidence: result.confidence ?? 80, // Default 80% if not provided
       evidence: Array.isArray(result.evidence)
         ? result.evidence
-        : (result.evidence ? [{ text: result.evidence }] : []), // Normalize string to array
-      subResults: result.subResults?.map((sub: any) => ({
-        subParameterId: sub.subParameterId || '',
-        subParameterName: sub.subParameterName || '',
-        score: sub.score ?? 0,
-        weight: sub.weight ?? 1,
-        comments: sub.comments || '',
-        confidence: sub.confidence ?? 80,
-        evidence: Array.isArray(sub.evidence)
-          ? sub.evidence
-          : (sub.evidence ? [{ text: sub.evidence }] : []),
-      })) || [],
+        : result.evidence
+          ? [{ text: result.evidence }]
+          : [], // Normalize string to array
+      subResults:
+        result.subResults?.map((sub: any) => ({
+          subParameterId: sub.subParameterId || '',
+          subParameterName: sub.subParameterName || '',
+          score: sub.score ?? 0,
+          weight: sub.weight ?? 1,
+          comments: sub.comments || '',
+          confidence: sub.confidence ?? 80,
+          evidence: Array.isArray(sub.evidence)
+            ? sub.evidence
+            : sub.evidence
+              ? [{ text: sub.evidence }]
+              : [],
+        })) || [],
     }));
 
     // Calculate overall confidence as average of parameter confidences
     const confidences = auditResults.map((r: any) => r.confidence);
-    const overallConfidence = confidences.length > 0
-      ? Math.round(confidences.reduce((a: number, b: number) => a + b, 0) / confidences.length)
-      : 80;
+    const overallConfidence =
+      confidences.length > 0
+        ? Math.round(
+            confidences.reduce((a: number, b: number) => a + b, 0) /
+              confidences.length,
+          )
+        : 80;
 
     // Ensure all required fields exist with defaults
     return {

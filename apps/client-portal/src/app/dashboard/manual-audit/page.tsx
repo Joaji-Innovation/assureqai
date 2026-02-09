@@ -86,7 +86,7 @@ export default function ManualAuditPage() {
     useState<string>('');
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('none');
 
   // Default parameters if no parameter set selected
   const defaultParameters: AuditParameter[] = [
@@ -152,12 +152,10 @@ export default function ManualAuditPage() {
       try {
         const [paramData, campaignData] = await Promise.all([
           qaParameterApi.list(),
-          campaignApi
-            .list(1, 100)
-            .catch(() => ({
-              data: [],
-              pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
-            })),
+          campaignApi.list(1, 100).catch(() => ({
+            data: [],
+            pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+          })),
         ]);
         if (paramData && Array.isArray(paramData)) {
           setParameterSets(paramData);
@@ -285,7 +283,8 @@ export default function ManualAuditPage() {
         auditType: 'manual' as const,
         qaParameterSetId: selectedParameterSetId || undefined,
         qaParameterSetName: selectedParamSet?.name || undefined,
-        campaignId: selectedCampaignId || undefined,
+        campaignId:
+          selectedCampaignId === 'none' ? undefined : selectedCampaignId,
         campaignName: selectedCampaign?.name || undefined,
         auditResults,
         overallScore: calculateOverallScore(),
@@ -402,7 +401,7 @@ export default function ManualAuditPage() {
                   <SelectValue placeholder="No campaign — standalone audit" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Standalone)</SelectItem>
+                  <SelectItem value="none">None (Standalone)</SelectItem>
                   {campaigns.map((c) => (
                     <SelectItem key={c._id} value={c._id}>
                       {c.name}

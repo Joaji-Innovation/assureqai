@@ -91,15 +91,33 @@ export const authApi = {
 
 export interface AuditStats {
   total: number;
+  totalAudits: number;
   aiAudits: number;
   manualAudits: number;
   avgScore: number;
+  overallQAScore?: number;
   passRate: number;
-  totalTokens: number;
-  sentimentBreakdown: {
+  passCount?: number;
+  failRate?: number;
+  fatalRate?: number;
+  totalFatalErrors?: number;
+  ztpCount?: number;
+  ztpRate?: number;
+  sentimentBreakdown?: {
     positive: number;
     neutral: number;
     negative: number;
+  };
+  agentPerformance?: {
+    topAgents: { id: string; name: string; score: number; audits: number }[];
+    underperformingAgents: { id: string; name: string; score: number; audits: number }[];
+  };
+  campaignPerformance?: { name: string; score: number; audits: number }[];
+  callMetrics?: {
+    avgTalkRatio: number;
+    avgSilence: number;
+    avgResponseTime: number;
+    avgInterruptions: number;
   };
 }
 
@@ -243,9 +261,41 @@ export interface Audit {
   agentUserId?: string;
   auditType: 'ai' | 'manual' | 'bulk';
   campaignName?: string;
+  campaignId?: string;
+  projectId?: string;
   qaParameterSetName?: string;
   overallScore?: number;
-  auditResults?: any[];
+  auditResults?: {
+    parameterId?: string;
+    parameterName?: string;
+    score?: number;
+    weight?: number;
+    type?: string;
+    comments?: string;
+    confidence?: number;
+    evidence?: { text: string; lineNumber?: number }[];
+    subResults?: {
+      subParameterName?: string;
+      score?: number;
+      comments?: string;
+    }[];
+  }[];
+  tokenUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+  sentiment?: {
+    overall: 'positive' | 'neutral' | 'negative';
+    customerScore?: number;
+    agentScore?: number;
+  };
+  transcript?: string;
+  callSummary?: string;
+  audioUrl?: string;
+  overallConfidence?: number;
+  disputeStatus?: string;
+  acknowledged?: boolean;
   createdAt: string;
   auditDate?: string;
 }

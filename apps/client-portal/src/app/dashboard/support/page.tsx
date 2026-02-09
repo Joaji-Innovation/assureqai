@@ -1,7 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -87,11 +93,20 @@ export default function SupportPage() {
   // Client-side pagination
   const totalTickets = tickets.length;
   const totalPages = Math.ceil(totalTickets / TICKETS_PER_PAGE) || 1;
-  const paginatedTickets = tickets.slice((page - 1) * TICKETS_PER_PAGE, page * TICKETS_PER_PAGE);
+  const paginatedTickets = tickets.slice(
+    (page - 1) * TICKETS_PER_PAGE,
+    page * TICKETS_PER_PAGE,
+  );
 
   // Reset page when filters change
-  const handleStatusChange = (val: string) => { setStatusFilter(val); setPage(1); };
-  const handleSearchChange = (val: string) => { setSearchQuery(val); setPage(1); };
+  const handleStatusChange = (val: string) => {
+    setStatusFilter(val);
+    setPage(1);
+  };
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setPage(1);
+  };
 
   const { data: stats } = useQuery({
     queryKey: ['ticket-stats'],
@@ -153,11 +168,15 @@ export default function SupportPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Awaiting Reply</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Awaiting Reply
+              </CardTitle>
               <MessageSquare className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingCustomer || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats.pendingCustomer || 0}
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -225,89 +244,97 @@ export default function SupportPage() {
             </div>
           ) : (
             <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ticket</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Replies</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedTickets.map((ticket) => (
-                  <TableRow
-                    key={ticket._id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => window.location.href = `/dashboard/support/${ticket._id}`}
-                  >
-                    <TableCell className="font-mono text-sm">
-                      {ticket.ticketNumber}
-                    </TableCell>
-                    <TableCell className="font-medium max-w-[300px] truncate">
-                      {ticket.subject}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {categoryLabels[ticket.category] || ticket.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={priorityColors[ticket.priority]}>
-                        {ticket.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${statusColors[ticket.status]} flex items-center gap-1 w-fit`}>
-                        {getStatusIcon(ticket.status)}
-                        {statusLabels[ticket.status] || ticket.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(ticket.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="secondary">
-                        {ticket.messages?.length || 0}
-                      </Badge>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ticket</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Replies</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedTickets.map((ticket) => (
+                    <TableRow
+                      key={ticket._id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() =>
+                        (window.location.href = `/dashboard/support/${ticket._id}`)
+                      }
+                    >
+                      <TableCell className="font-mono text-sm">
+                        {ticket.ticketNumber}
+                      </TableCell>
+                      <TableCell className="font-medium max-w-[300px] truncate">
+                        {ticket.subject}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {categoryLabels[ticket.category] || ticket.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={priorityColors[ticket.priority]}>
+                          {ticket.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={`${statusColors[ticket.status]} flex items-center gap-1 w-fit`}
+                        >
+                          {getStatusIcon(ticket.status)}
+                          {statusLabels[ticket.status] || ticket.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(ticket.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">
+                          {ticket.messages?.length || 0}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  Showing {(page - 1) * TICKETS_PER_PAGE + 1}–{Math.min(page * TICKETS_PER_PAGE, totalTickets)} of {totalTickets} tickets
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm font-medium px-2">
-                    Page {page} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(page - 1) * TICKETS_PER_PAGE + 1}–
+                    {Math.min(page * TICKETS_PER_PAGE, totalTickets)} of{' '}
+                    {totalTickets} tickets
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium px-2">
+                      Page {page} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={page >= totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             </>
           )}
         </CardContent>

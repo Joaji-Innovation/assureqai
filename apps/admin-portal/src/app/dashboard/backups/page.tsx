@@ -1,7 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HardDrive, Search, Plus, Trash2, Download, RotateCcw, Clock, CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  HardDrive,
+  Search,
+  Plus,
+  Trash2,
+  Download,
+  RotateCcw,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 import api from '@/lib/api';
 
 interface Backup {
@@ -16,13 +28,6 @@ interface Backup {
   createdAt: string;
   completedAt?: string;
 }
-
-const mockBackups: Backup[] = [
-  { id: '1', instanceId: 'inst-1', instanceName: 'Acme Corp', filename: 'backup-inst-1-2026-01-17T10-00-00.gz', sizeBytes: 125000000, status: 'completed', type: 'manual', createdAt: '2026-01-17T10:00:00Z', completedAt: '2026-01-17T10:05:00Z' },
-  { id: '2', instanceId: 'inst-2', instanceName: 'Beta Inc', filename: 'backup-inst-2-2026-01-16T08-00-00.gz', sizeBytes: 89000000, status: 'completed', type: 'scheduled', createdAt: '2026-01-16T08:00:00Z', completedAt: '2026-01-16T08:03:00Z' },
-  { id: '3', instanceId: 'inst-1', instanceName: 'Acme Corp', filename: 'backup-inst-1-2026-01-15T10-00-00.gz', sizeBytes: 123000000, status: 'completed', type: 'scheduled', createdAt: '2026-01-15T10:00:00Z', completedAt: '2026-01-15T10:04:00Z' },
-  { id: '4', instanceId: 'inst-3', instanceName: 'Gamma LLC', filename: 'backup-inst-3-2026-01-17T09-00-00.gz', sizeBytes: 0, status: 'failed', type: 'manual', error: 'Connection timeout', createdAt: '2026-01-17T09:00:00Z' },
-];
 
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -58,7 +63,7 @@ export default function BackupsPage() {
             instanceName: inst.name, // Augment with instance name
             status: b.status || 'completed', // Fallback
             sizeBytes: b.size || 0,
-            filename: b.filename || `backup-${b._id}`
+            filename: b.filename || `backup-${b._id}`,
           }));
         } catch (e) {
           console.error(`Failed to fetch backups for ${inst.name}`, e);
@@ -67,9 +72,12 @@ export default function BackupsPage() {
       });
 
       const results = await Promise.all(backupPromises);
-      const allBackups = results.flat().sort((a: Backup, b: Backup) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      const allBackups = results
+        .flat()
+        .sort(
+          (a: Backup, b: Backup) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
 
       setBackups(allBackups);
     } catch (error) {
@@ -79,15 +87,21 @@ export default function BackupsPage() {
     }
   };
 
-  const filteredBackups = backups.filter(b => {
-    const matchesSearch = b.instanceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredBackups = backups.filter((b) => {
+    const matchesSearch =
+      b.instanceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.filename.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const handleRestore = async (id: string) => {
-    if (!confirm('Are you sure you want to restore this backup? This will overwrite current data.')) return;
+    if (
+      !confirm(
+        'Are you sure you want to restore this backup? This will overwrite current data.',
+      )
+    )
+      return;
     setRestoring(id);
     try {
       await api.backup.restore(id);
@@ -106,7 +120,7 @@ export default function BackupsPage() {
     setDeleting(id);
     try {
       await api.backup.delete(id);
-      setBackups(prev => prev.filter(b => b.id !== id));
+      setBackups((prev) => prev.filter((b) => b.id !== id));
     } catch (error) {
       console.error('Delete failed', error);
       alert('Failed to delete backup');
@@ -117,28 +131,40 @@ export default function BackupsPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock className="h-4 w-4 text-muted-foreground" />;
-      case 'in_progress': return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
-      case 'completed': return <CheckCircle className="h-4 w-4 text-emerald-500" />;
-      case 'failed': return <XCircle className="h-4 w-4 text-red-500" />;
-      default: return null;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
+      case 'in_progress':
+        return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-emerald-500" />;
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return null;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-muted text-muted-foreground';
-      case 'in_progress': return 'bg-blue-500/10 text-blue-500';
-      case 'completed': return 'bg-emerald-500/10 text-emerald-500';
-      case 'failed': return 'bg-red-500/10 text-red-500';
-      default: return 'bg-muted text-muted-foreground';
+      case 'pending':
+        return 'bg-muted text-muted-foreground';
+      case 'in_progress':
+        return 'bg-blue-500/10 text-blue-500';
+      case 'completed':
+        return 'bg-emerald-500/10 text-emerald-500';
+      case 'failed':
+        return 'bg-red-500/10 text-red-500';
+      default:
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   const stats = {
-    totalBackups: backups.filter(b => b.status === 'completed').length,
-    totalSize: backups.filter(b => b.status === 'completed').reduce((a, b) => a + b.sizeBytes, 0),
-    failed: backups.filter(b => b.status === 'failed').length,
+    totalBackups: backups.filter((b) => b.status === 'completed').length,
+    totalSize: backups
+      .filter((b) => b.status === 'completed')
+      .reduce((a, b) => a + b.sizeBytes, 0),
+    failed: backups.filter((b) => b.status === 'failed').length,
   };
 
   return (
@@ -146,7 +172,9 @@ export default function BackupsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Backups</h2>
-          <p className="text-muted-foreground">MongoDB backup and restore management</p>
+          <p className="text-muted-foreground">
+            MongoDB backup and restore management
+          </p>
         </div>
       </div>
 
@@ -170,7 +198,9 @@ export default function BackupsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Size</p>
-              <p className="text-2xl font-bold">{formatBytes(stats.totalSize)}</p>
+              <p className="text-2xl font-bold">
+                {formatBytes(stats.totalSize)}
+              </p>
             </div>
           </div>
         </div>
@@ -216,28 +246,51 @@ export default function BackupsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">Instance</th>
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">Filename</th>
-              <th className="text-center py-3 px-4 font-medium text-muted-foreground">Size</th>
-              <th className="text-center py-3 px-4 font-medium text-muted-foreground">Type</th>
-              <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
-              <th className="text-center py-3 px-4 font-medium text-muted-foreground">Created</th>
-              <th className="text-right py-3 px-4 font-medium text-muted-foreground">Actions</th>
+              <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                Instance
+              </th>
+              <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                Filename
+              </th>
+              <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                Size
+              </th>
+              <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                Type
+              </th>
+              <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                Status
+              </th>
+              <th className="text-center py-3 px-4 font-medium text-muted-foreground">
+                Created
+              </th>
+              <th className="text-right py-3 px-4 font-medium text-muted-foreground">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {filteredBackups.map((backup) => (
-              <tr key={backup.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+              <tr
+                key={backup.id}
+                className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+              >
                 <td className="py-3 px-4">{backup.instanceName}</td>
                 <td className="py-3 px-4">
                   <span className="font-mono text-xs">{backup.filename}</span>
                 </td>
-                <td className="text-center py-3 px-4">{formatBytes(backup.sizeBytes)}</td>
                 <td className="text-center py-3 px-4">
-                  <span className="px-2 py-1 text-xs rounded-full bg-muted">{backup.type}</span>
+                  {formatBytes(backup.sizeBytes)}
                 </td>
                 <td className="text-center py-3 px-4">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full ${getStatusColor(backup.status)}`}>
+                  <span className="px-2 py-1 text-xs rounded-full bg-muted">
+                    {backup.type}
+                  </span>
+                </td>
+                <td className="text-center py-3 px-4">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full ${getStatusColor(backup.status)}`}
+                  >
                     {getStatusIcon(backup.status)}
                     {backup.status}
                   </span>

@@ -2,7 +2,12 @@
  * Queue Worker Service
  * Processes bulk audit jobs from the queue with retry logic
  */
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -12,9 +17,18 @@ import { join } from 'path';
 import { QueueService, QueueJob } from './queue.service';
 import { AiService } from '../ai/ai.service';
 import { UsageReporterService } from '../audit-report/usage-reporter.service';
-import { CallAudit, CallAuditDocument } from '../../database/schemas/call-audit.schema';
-import { Campaign, CampaignDocument } from '../../database/schemas/campaign.schema';
-import { QAParameter, QAParameterDocument } from '../../database/schemas/qa-parameter.schema';
+import {
+  CallAudit,
+  CallAuditDocument,
+} from '../../database/schemas/call-audit.schema';
+import {
+  Campaign,
+  CampaignDocument,
+} from '../../database/schemas/campaign.schema';
+import {
+  QAParameter,
+  QAParameterDocument,
+} from '../../database/schemas/qa-parameter.schema';
 import { LIMITS } from '@assureqai/common';
 
 interface JobResult {
@@ -39,23 +53,30 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
     private usageReporter: UsageReporterService,
     @InjectModel(CallAudit.name) private auditModel: Model<CallAuditDocument>,
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
-    @InjectModel(QAParameter.name) private qaParameterModel: Model<QAParameterDocument>,
+    @InjectModel(QAParameter.name)
+    private qaParameterModel: Model<QAParameterDocument>,
   ) {
     // Configurable concurrency (number of parallel jobs)
     this.concurrency = this.configService.get<number>('QUEUE_CONCURRENCY') || 3;
     // Poll interval in ms
-    this.pollIntervalMs = this.configService.get<number>('QUEUE_POLL_INTERVAL_MS') || 2000;
+    this.pollIntervalMs =
+      this.configService.get<number>('QUEUE_POLL_INTERVAL_MS') || 2000;
   }
 
   async onModuleInit() {
     // Only start worker if queue is available and not disabled
-    const workerEnabled = this.configService.get<string>('QUEUE_WORKER_ENABLED') !== 'false';
+    const workerEnabled =
+      this.configService.get<string>('QUEUE_WORKER_ENABLED') !== 'false';
 
     if (this.queueService.isAvailable() && workerEnabled) {
       this.startWorker();
-      this.logger.log(`Queue worker started (concurrency: ${this.concurrency})`);
+      this.logger.log(
+        `Queue worker started (concurrency: ${this.concurrency})`,
+      );
     } else {
-      this.logger.warn('Queue worker disabled (Redis not available or QUEUE_WORKER_ENABLED=false)');
+      this.logger.warn(
+        'Queue worker disabled (Redis not available or QUEUE_WORKER_ENABLED=false)',
+      );
     }
   }
 
@@ -68,7 +89,10 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
    */
   private startWorker() {
     this.isRunning = true;
-    this.processingInterval = setInterval(() => this.processQueue(), this.pollIntervalMs);
+    this.processingInterval = setInterval(
+      () => this.processQueue(),
+      this.pollIntervalMs,
+    );
   }
 
   /**
@@ -111,12 +135,16 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
     // Check campaign status first
     const campaign = await this.campaignModel.findById(job.campaignId).exec();
     if (!campaign) {
-      this.logger.error(`Campaign ${job.campaignId} not found for job ${job.id}`);
+      this.logger.error(
+        `Campaign ${job.campaignId} not found for job ${job.id}`,
+      );
       return;
     }
 
     if (campaign.status === 'paused') {
-      this.logger.log(`Campaign ${job.campaignId} is paused. Re-queuing job ${job.id}`);
+      this.logger.log(
+        `Campaign ${job.campaignId} is paused. Re-queuing job ${job.id}`,
+      );
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await this.queueService.returnJob(job);
       return;
@@ -125,21 +153,29 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
     // Rate Limiting Logic (RPM)
     const rpm = campaign.config?.rpm || 10; // Default 10 RPM
     const minIntervalMs = 60000 / rpm;
-    const lastStarted = campaign.usage?.lastJobStartedAt ? new Date(campaign.usage.lastJobStartedAt).getTime() : 0;
+    const lastStarted = campaign.usage?.lastJobStartedAt
+      ? new Date(campaign.usage.lastJobStartedAt).getTime()
+      : 0;
     const timeSinceLast = Date.now() - lastStarted;
 
     if (timeSinceLast < minIntervalMs) {
       const waitTime = minIntervalMs - timeSinceLast;
-      this.logger.debug(`Rate limit hit for campaign ${job.campaignId}. Re-queuing job ${job.id} (wait ${waitTime}ms)`);
-      await new Promise((resolve) => setTimeout(resolve, Math.min(waitTime, 2000))); // Wait briefly
+      this.logger.debug(
+        `Rate limit hit for campaign ${job.campaignId}. Re-queuing job ${job.id} (wait ${waitTime}ms)`,
+      );
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(waitTime, 2000)),
+      ); // Wait briefly
       await this.queueService.returnJob(job); // Put back to queue
       return;
     }
 
     // Update last usage time
-    await this.campaignModel.findByIdAndUpdate(job.campaignId, {
-      'usage.lastJobStartedAt': new Date()
-    }).exec();
+    await this.campaignModel
+      .findByIdAndUpdate(job.campaignId, {
+        'usage.lastJobStartedAt': new Date(),
+      })
+      .exec();
 
     this.logger.log(`Processing job ${job.id} (attempt ${job.attempts + 1})`);
 
@@ -148,77 +184,109 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
       await this.updateCampaignJobStatus(job.campaignId, job, 'processing');
 
       // Fetch the QA parameter set
-      const qaParameterSet = await this.qaParameterModel.findById(job.parameterId).exec();
+      const qaParameterSet = await this.qaParameterModel
+        .findById(job.parameterId)
+        .exec();
       if (!qaParameterSet) {
         throw new Error(`QA Parameter set ${job.parameterId} not found`);
       }
 
-      // Transcribe audio (or use mock for dev)
-      const { transcript, language } = await this.transcribeAudio(job.audioUrl);
-
-      // Perform AI audit
-      const auditResult = await this.aiService.auditCall({
-        transcript,
+      // Use the full auditAudio flow (handles audio fetching, Gemini transcription, and auditing)
+      const auditResult = await this.aiService.auditAudio({
+        audioUrl: job.audioUrl,
         parameters: qaParameterSet.parameters,
-        language,
+        agentName: job.agentName,
+        callId: job.callId,
       });
 
       // Save audit to database
-      const audit = await this.saveAudit(job, qaParameterSet, transcript, auditResult);
+      const audit = await this.saveAudit(
+        job,
+        qaParameterSet,
+        auditResult.transcript,
+        auditResult,
+      );
 
       // Update campaign with success
-      await this.updateCampaignJobStatus(job.campaignId, job, 'completed', audit._id.toString());
+      await this.updateCampaignJobStatus(
+        job.campaignId,
+        job,
+        'completed',
+        audit._id.toString(),
+      );
 
       const duration = Date.now() - startTime;
-      this.logger.log(`Job ${job.id} completed in ${duration}ms, score: ${auditResult.overallScore}`);
+      this.logger.log(
+        `Job ${job.id} completed in ${duration}ms, score: ${auditResult.overallScore}`,
+      );
 
       // Cleanup audio file
       await this.deleteAudioFile(job.audioUrl);
 
       // Report usage to admin panel (for isolated instances)
-      this.usageReporter.reportAudit({
-        auditId: audit._id.toString(),
-        agentName: job.agentName,
-        callId: job.callId,
-        auditType: 'bulk',
-        overallScore: auditResult.overallScore,
-        maxPossibleScore: 100,
-        processingDurationMs: duration,
-        inputTokens: auditResult.tokenUsage?.inputTokens || 0,
-        outputTokens: auditResult.tokenUsage?.outputTokens || 0,
-        totalTokens: auditResult.tokenUsage?.totalTokens || 0,
-        parametersCount: qaParameterSet.parameters.length,
-        sentiment: auditResult.sentiment,
-        passStatus: auditResult.overallScore >= 70 ? 'pass' : 'fail',
-      }).catch(() => { }); // Fire and forget
+      this.usageReporter
+        .reportAudit({
+          auditId: audit._id.toString(),
+          agentName: job.agentName,
+          callId: job.callId,
+          auditType: 'bulk',
+          overallScore: auditResult.overallScore,
+          maxPossibleScore: 100,
+          processingDurationMs: duration,
+          inputTokens: auditResult.tokenUsage?.inputTokens || 0,
+          outputTokens: auditResult.tokenUsage?.outputTokens || 0,
+          totalTokens: auditResult.tokenUsage?.totalTokens || 0,
+          parametersCount: qaParameterSet.parameters.length,
+          sentiment: auditResult.sentiment,
+          passStatus: auditResult.overallScore >= 70 ? 'pass' : 'fail',
+        })
+        .catch(() => {}); // Fire and forget
 
       // Check if campaign is complete
       await this.checkCampaignCompletion(job.campaignId);
-
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error';
-      this.logger.warn(`Job ${job.id} failed (attempt ${job.attempts + 1}): ${errorMessage}`);
+      this.logger.warn(
+        `Job ${job.id} failed (attempt ${job.attempts + 1}): ${errorMessage}`,
+      );
 
       const retryDelay = this.calculateRetryDelay(job.attempts);
 
       if (job.attempts + 1 < LIMITS.MAX_RETRIES) {
-        this.logger.log(`Scheduling retry for job ${job.id} in ${retryDelay}ms`);
+        this.logger.log(
+          `Scheduling retry for job ${job.id} in ${retryDelay}ms`,
+        );
         setTimeout(async () => {
           await this.queueService.returnJob(job);
         }, retryDelay);
       } else {
-        this.logger.error(`Job ${job.id} failed permanently after ${job.attempts + 1} attempts`);
-        await this.updateCampaignJobStatus(job.campaignId, job, 'failed', undefined, errorMessage);
+        this.logger.error(
+          `Job ${job.id} failed permanently after ${job.attempts + 1} attempts`,
+        );
+        await this.updateCampaignJobStatus(
+          job.campaignId,
+          job,
+          'failed',
+          undefined,
+          errorMessage,
+        );
 
         // Check Failure Threshold
-        const campaign = await this.campaignModel.findById(job.campaignId).exec();
+        const campaign = await this.campaignModel
+          .findById(job.campaignId)
+          .exec();
         if (campaign) {
-          const failedRate = ((campaign.failedJobs + 1) / campaign.totalJobs) * 100; // approximation since we just inc failed
+          const failedRate =
+            ((campaign.failedJobs + 1) / campaign.totalJobs) * 100; // approximation since we just inc failed
           const threshold = campaign.config?.failureThreshold || 20;
 
           if (campaign.totalJobs > 5 && failedRate > threshold) {
-            this.logger.warn(`Campaign ${job.campaignId} paused due to high failure rate (${failedRate.toFixed(1)}% > ${threshold}%)`);
-            await this.campaignModel.findByIdAndUpdate(job.campaignId, { status: 'paused' }).exec();
+            this.logger.warn(
+              `Campaign ${job.campaignId} paused due to high failure rate (${failedRate.toFixed(1)}% > ${threshold}%)`,
+            );
+            await this.campaignModel
+              .findByIdAndUpdate(job.campaignId, { status: 'paused' })
+              .exec();
           }
         }
 
@@ -257,33 +325,6 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
     const delay = baseDelay * Math.pow(multiplier, attempts);
     return Math.min(delay, maxDelay);
-  }
-
-  /**
-   * Transcribe audio (placeholder - would integrate with Speech-to-Text)
-   */
-  private async transcribeAudio(audioUrl: string): Promise<{ transcript: string; language: string }> {
-    // TODO: Integrate with Google Speech-to-Text or similar
-    // For now, return mock data in development
-    if (process.env.NODE_ENV !== 'production') {
-      return {
-        transcript: `[SIMULATED TRANSCRIPT for ${audioUrl}]
-Agent: Thank you for calling, how may I help you today?
-Customer: I have an issue with my order.
-Agent: I'd be happy to help you with that. Can you provide your order number?
-Customer: Yes, it's 12345.
-Agent: Thank you. I can see your order. What seems to be the issue?
-Customer: The item arrived damaged.
-Agent: I'm sorry to hear that. We'll send a replacement right away.
-Customer: Thank you for your help.
-Agent: You're welcome. Is there anything else I can help with?
-Customer: No, that's all.
-Agent: Thank you for calling. Have a great day!`,
-        language: 'en-US',
-      };
-    }
-
-    throw new Error('Audio transcription not yet implemented for production');
   }
 
   /**
@@ -381,21 +422,30 @@ Agent: Thank you for calling. Have a great day!`,
         .exec();
 
       const stats = {
-        avgScore: audits.length > 0
-          ? audits.reduce((sum, a) => sum + a.overallScore, 0) / audits.length
-          : 0,
-        totalTokens: audits.reduce((sum, a) => sum + (a.tokenUsage?.totalTokens || 0), 0),
-        avgDurationMs: audits.length > 0
-          ? audits.reduce((sum, a) => sum + (a.auditDurationMs || 0), 0) / audits.length
-          : 0,
+        avgScore:
+          audits.length > 0
+            ? audits.reduce((sum, a) => sum + a.overallScore, 0) / audits.length
+            : 0,
+        totalTokens: audits.reduce(
+          (sum, a) => sum + (a.tokenUsage?.totalTokens || 0),
+          0,
+        ),
+        avgDurationMs:
+          audits.length > 0
+            ? audits.reduce((sum, a) => sum + (a.auditDurationMs || 0), 0) /
+              audits.length
+            : 0,
       };
 
-      await this.campaignModel.findByIdAndUpdate(campaignId, {
-        status: campaign.failedJobs === campaign.totalJobs ? 'failed' : 'completed',
-        completedAt: new Date(),
-        processingJobs: 0,
-        stats,
-      }).exec();
+      await this.campaignModel
+        .findByIdAndUpdate(campaignId, {
+          status:
+            campaign.failedJobs === campaign.totalJobs ? 'failed' : 'completed',
+          completedAt: new Date(),
+          processingJobs: 0,
+          stats,
+        })
+        .exec();
 
       this.logger.log(
         `Campaign ${campaignId} completed: ${campaign.completedJobs} succeeded, ${campaign.failedJobs} failed`,
@@ -437,11 +487,13 @@ Agent: Thank you for calling. Have a great day!`,
         });
 
         // Reset job status
-        await this.campaignModel.findByIdAndUpdate(campaignId, {
-          [`jobs.${i}.status`]: 'pending',
-          [`jobs.${i}.error`]: null,
-          $inc: { failedJobs: -1 },
-        }).exec();
+        await this.campaignModel
+          .findByIdAndUpdate(campaignId, {
+            [`jobs.${i}.status`]: 'pending',
+            [`jobs.${i}.error`]: null,
+            $inc: { failedJobs: -1 },
+          })
+          .exec();
 
         retriedCount++;
       }
@@ -449,12 +501,16 @@ Agent: Thank you for calling. Have a great day!`,
 
     // Update campaign status
     if (retriedCount > 0) {
-      await this.campaignModel.findByIdAndUpdate(campaignId, {
-        status: 'processing',
-      }).exec();
+      await this.campaignModel
+        .findByIdAndUpdate(campaignId, {
+          status: 'processing',
+        })
+        .exec();
     }
 
-    this.logger.log(`Retried ${retriedCount} failed jobs for campaign ${campaignId}`);
+    this.logger.log(
+      `Retried ${retriedCount} failed jobs for campaign ${campaignId}`,
+    );
     return retriedCount;
   }
 }

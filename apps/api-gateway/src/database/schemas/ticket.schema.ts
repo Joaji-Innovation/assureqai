@@ -160,14 +160,23 @@ TicketSchema.index({ createdAt: -1 });
 // Pre-save hook to generate ticket number (atomic via findOneAndUpdate counter)
 TicketSchema.pre('save', async function () {
   if (this.isNew && !this.ticketNumber) {
-    const mongoose = require('mongoose');
-    const counter = await mongoose.connection.db
+    // Access the native DB connection from the document's model
+    const doc = this as any;
+    // Use the db instance from the document's connection
+    const db = doc.db.db;
+
+    // Find and increment the counter
+    const result = await db
       .collection('counters')
       .findOneAndUpdate(
         { _id: 'ticketNumber' },
         { $inc: { seq: 1 } },
-        { upsert: true, returnDocument: 'after' },
+        { upsert: true, returnDocument: 'after' }
       );
-    this.ticketNumber = `TKT-${String(counter.seq).padStart(6, '0')}`;
+
+    // Handle different driver versions return types (object with value or direct doc)
+    const seq = result.value ? result.value.seq : result.seq;
+
+    this.ticketNumber = `TKT-${String(seq).padStart(6, '0')}`;
   }
 });

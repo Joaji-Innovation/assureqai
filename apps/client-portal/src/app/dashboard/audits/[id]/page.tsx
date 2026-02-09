@@ -2,14 +2,23 @@
 
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Loader2, FileText, AlertCircle, Clock, User, ThumbsUp, ThumbsDown, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useAudit } from '@/lib/hooks';
+import ExpandableEvidence from '../../ExpandableEvidence';
+import { useState } from 'react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export default function AuditDetailPage() {
   const params = useParams();
   const auditId = params.id as string;
+  const [showTranscript, setShowTranscript] = useState(false);
 
   const { data: audit, isLoading, error } = useAudit(auditId);
 
@@ -57,6 +66,18 @@ export default function AuditDetailPage() {
   const sentiment = audit.sentiment || { overall: 'neutral' as const };
   const transcript = audit.transcript || '';
 
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'text-emerald-500';
+    if (score >= 80) return 'text-amber-500';
+    return 'text-red-500';
+  };
+
+  const getScoreBgColor = (score: number) => {
+    if (score >= 90) return 'bg-emerald-500/10 text-emerald-500';
+    if (score >= 80) return 'bg-amber-500/10 text-amber-500';
+    return 'bg-red-500/10 text-red-500';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -71,175 +92,166 @@ export default function AuditDetailPage() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Audit Details</h2>
             <p className="text-muted-foreground">
-              Audit ID: {auditId} {audit.callId && `• Call: ${audit.callId}`}
+              {audit.agentName} • {new Date(audit.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className={`px-3 py-1 text-sm rounded-full ${audit.overallScore >= 90 ? 'bg-emerald-500/10 text-emerald-500' :
-            audit.overallScore >= 80 ? 'bg-amber-500/10 text-amber-500' :
-              'bg-red-500/10 text-red-500'
-            }`}>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className={`text-sm px-3 py-1 ${getScoreBgColor(audit.overallScore)}`}>
             Score: {audit.overallScore}%
-          </span>
-          <span className={`px-3 py-1 text-sm rounded-full ${sentiment.overall === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
-            sentiment.overall === 'negative' ? 'bg-red-500/10 text-red-500' :
-              'bg-amber-500/10 text-amber-500'
+          </Badge>
+          <Badge variant="outline" className={`text-sm px-3 py-1 ${sentiment.overall === 'positive' ? 'bg-emerald-500/10 text-emerald-500' :
+              sentiment.overall === 'negative' ? 'bg-red-500/10 text-red-500' :
+                'bg-amber-500/10 text-amber-500'
             }`}>
-            {sentiment.overall.toUpperCase()}
-          </span>
+            {sentiment.overall?.toUpperCase() || 'NEUTRAL'}
+          </Badge>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Audit Info */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
-            <CardHeader>
-              <CardTitle>Audit Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Agent</p>
-                  <p className="font-medium">{audit.agentName}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Audit Type</p>
-                  <p className="font-medium capitalize">{audit.auditType}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium">{new Date(audit.createdAt).toLocaleDateString()}</p>
-                </div>
-                {audit.campaignName && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Campaign</p>
-                    <p className="font-medium">{audit.campaignName}</p>
-                  </div>
-                )}
-                {audit.auditDurationMs && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Audit Duration</p>
-                    <p className="font-medium">{(audit.auditDurationMs / 1000).toFixed(1)}s</p>
-                  </div>
-                )}
+      {/* Audit Info Summary */}
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardContent className="py-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Agent</p>
+              <p className="font-medium">{audit.agentName}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Audit Type</p>
+              <p className="font-medium capitalize">{audit.auditType}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Date</p>
+              <p className="font-medium">{new Date(audit.createdAt).toLocaleDateString()}</p>
+            </div>
+            {audit.campaignName && (
+              <div>
+                <p className="text-muted-foreground">Campaign</p>
+                <p className="font-medium">{audit.campaignName}</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Call Summary */}
-          {audit.callSummary && (
-            <Card className="bg-card/50 backdrop-blur border-border/50">
-              <CardHeader>
-                <CardTitle>Call Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{audit.callSummary}</p>
-              </CardContent>
-            </Card>
-          )}
+      {/* Call Summary */}
+      {audit.callSummary && (
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Call Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap text-muted-foreground">{audit.callSummary}</p>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Transcript */}
-          {transcript && (
-            <Card className="bg-card/50 backdrop-blur border-border/50">
-              <CardHeader>
-                <CardTitle>Transcript</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-[400px] overflow-y-auto pr-2">
-                  <p className="text-sm whitespace-pre-wrap">{transcript}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* No Transcript */}
-          {!transcript && (
-            <Card className="bg-card/50 backdrop-blur border-border/50">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-semibold text-muted-foreground">No Transcript Available</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  This audit does not have transcript data.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar - Parameter Scores */}
-        <div className="space-y-4">
-          {/* Overall Score */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-4xl font-bold mb-2" style={{
-                  color: audit.overallScore >= 90 ? 'rgb(16 185 129)' :
-                    audit.overallScore >= 80 ? 'rgb(245 158 11)' : 'rgb(239 68 68)'
-                }}>
-                  {audit.overallScore}%
-                </p>
-                <p className="text-sm text-muted-foreground">Overall Score</p>
+      {/* Parameter Scores with Evidence */}
+      {auditResults.length > 0 && (
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Parameter Scores</CardTitle>
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{auditResults.length}</span> parameters evaluated
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Parameter Scores */}
-          {auditResults.length > 0 && (
-            <Card className="bg-card/50 backdrop-blur border-border/50">
-              <CardHeader>
-                <CardTitle className="text-sm">Parameter Scores</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {auditResults.map((result, index) => (
-                    <div key={result.parameterId || index} className="p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">{result.parameterName}</span>
-                        <span className={`font-bold ${result.score >= 90 ? 'text-emerald-500' :
-                          result.score >= 80 ? 'text-amber-500' : 'text-red-500'
-                          }`}>
-                          {result.score}%
-                        </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {auditResults.map((result: any, index: number) => (
+                <div
+                  key={result.parameterId || index}
+                  className="p-4 rounded-lg border border-border/50 bg-muted/20 hover:bg-muted/30 transition-colors"
+                >
+                  {/* Parameter Header */}
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{result.parameterName}</span>
+                        {result.type && (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${result.type === 'Fatal' ? 'bg-red-500/10 text-red-500 border-red-500/30' :
+                                result.type === 'ZTP' ? 'bg-orange-500/10 text-orange-500 border-orange-500/30' :
+                                  'bg-muted text-muted-foreground'
+                              }`}
+                          >
+                            {result.type}
+                          </Badge>
+                        )}
                       </div>
-                      {result.comments && (
-                        <p className="text-xs text-muted-foreground mt-1">{result.comments}</p>
-                      )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <div className={`text-lg font-bold ${getScoreColor(result.score)}`}>
+                      {result.score}%
+                    </div>
+                  </div>
 
-          {/* Token Usage */}
-          {audit.tokenUsage && (
-            <Card className="bg-card/50 backdrop-blur border-border/50">
-              <CardHeader>
-                <CardTitle className="text-sm">Token Usage</CardTitle>
+                  {/* Comments */}
+                  {result.comments && (
+                    <div className="mb-3">
+                      <p className="text-sm text-muted-foreground">{result.comments}</p>
+                    </div>
+                  )}
+
+                  {/* Evidence Citations */}
+                  {result.evidence && (
+                    <div className="mt-3 pt-3 border-t border-border/30">
+                      <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wide">
+                        Evidence from Transcript
+                      </p>
+                      <ExpandableEvidence evidence={result.evidence} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Transcript Section */}
+      {transcript ? (
+        <Collapsible open={showTranscript} onOpenChange={setShowTranscript}>
+          <Card className="bg-card/50 backdrop-blur border-border/50">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Full Transcript
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    {showTranscript ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
               <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Input Tokens</span>
-                    <span>{audit.tokenUsage.inputTokens.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Output Tokens</span>
-                    <span>{audit.tokenUsage.outputTokens.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="text-muted-foreground font-medium">Total</span>
-                    <span className="font-medium">{audit.tokenUsage.totalTokens.toLocaleString()}</span>
-                  </div>
+                <div className="max-h-[500px] overflow-y-auto pr-2 rounded-md bg-muted/30 p-4">
+                  <pre className="text-sm whitespace-pre-wrap font-mono">{transcript}</pre>
                 </div>
               </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      ) : (
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold text-muted-foreground">No Transcript Available</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              This audit does not have transcript data.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -85,7 +85,7 @@ export class TicketAttachment {
 
 @Schema({ timestamps: true })
 export class Ticket {
-  @Prop({ required: true, unique: true })
+  @Prop({ unique: true })
   ticketNumber: string; // Auto-generated: TKT-000001
 
   @Prop({ required: true, trim: true })

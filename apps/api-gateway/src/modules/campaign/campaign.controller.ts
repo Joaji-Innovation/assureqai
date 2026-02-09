@@ -89,7 +89,9 @@ export class CampaignController {
 
       fs.writeFileSync(filepath, file.buffer);
 
-      const audioUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${filename}`;
+      const audioUrl = process.env.NEXT_PUBLIC_API_URL
+        ? new URL(`/api/uploads/${filename}`, process.env.NEXT_PUBLIC_API_URL).toString()
+        : `/api/uploads/${filename}`;
 
       jobs.push({
         audioUrl,
@@ -151,7 +153,9 @@ export class CampaignController {
 
       fs.writeFileSync(filepath, file.buffer);
 
-      const audioUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${filename}`;
+      const audioUrl = process.env.NEXT_PUBLIC_API_URL
+        ? new URL(`/api/uploads/${filename}`, process.env.NEXT_PUBLIC_API_URL).toString()
+        : `/api/uploads/${filename}`;
 
       // Add job
       return await this.campaignService.addJob(id, {

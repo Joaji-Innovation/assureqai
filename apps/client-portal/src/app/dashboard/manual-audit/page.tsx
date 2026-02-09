@@ -17,6 +17,8 @@ import {
   AlertCircle,
   CheckCircle,
   Info,
+  Plus,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -87,6 +89,12 @@ export default function ManualAuditPage() {
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('none');
+
+  // Create new campaign inline
+  const [showNewCampaign, setShowNewCampaign] = useState(false);
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [newCampaignDesc, setNewCampaignDesc] = useState('');
+  const [creatingCampaign, setCreatingCampaign] = useState(false);
 
   // Default parameters if no parameter set selected
   const defaultParameters: AuditParameter[] = [
@@ -174,6 +182,54 @@ export default function ManualAuditPage() {
     };
     fetchData();
   }, [toast]);
+
+  const handleCampaignSelectChange = (value: string) => {
+    if (value === '__create_new__') {
+      setShowNewCampaign(true);
+    } else {
+      setSelectedCampaignId(value);
+      setShowNewCampaign(false);
+    }
+  };
+
+  const handleCreateCampaign = async () => {
+    if (!newCampaignName.trim()) {
+      toast({ title: 'Campaign name is required', variant: 'destructive' });
+      return;
+    }
+
+    setCreatingCampaign(true);
+    try {
+      const created = await campaignApi.create({
+        name: newCampaignName.trim(),
+        description: newCampaignDesc.trim() || undefined,
+        qaParameterSetId: selectedParameterSetId || 'default',
+        jobs: [],
+      });
+
+      // Add to local campaigns list and select it
+      setCampaigns((prev) => [created, ...prev]);
+      setSelectedCampaignId(created._id);
+      setShowNewCampaign(false);
+      setNewCampaignName('');
+      setNewCampaignDesc('');
+
+      toast({
+        title: 'Campaign Created',
+        description: `Campaign "${created.name}" has been created and selected.`,
+        className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500',
+      });
+    } catch (error: any) {
+      console.error('Failed to create campaign:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create campaign.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingCampaign(false);
+    }
+  };
 
   const handleParameterSetChange = (paramSetId: string) => {
     setSelectedParameterSetId(paramSetId);
@@ -395,7 +451,7 @@ export default function ManualAuditPage() {
               </label>
               <Select
                 value={selectedCampaignId}
-                onValueChange={setSelectedCampaignId}
+                onValueChange={handleCampaignSelectChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="No campaign — standalone audit" />
@@ -407,8 +463,71 @@ export default function ManualAuditPage() {
                       {c.name}
                     </SelectItem>
                   ))}
+                  <SelectItem value="__create_new__">
+                    <span className="flex items-center gap-1.5 text-primary">
+                      <Plus className="h-3.5 w-3.5" />
+                      Create New Campaign
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Inline Create Campaign Form */}
+              {showNewCampaign && (
+                <div className="mt-3 p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium flex items-center gap-1.5">
+                      <Plus className="h-4 w-4 text-primary" />
+                      New Campaign
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewCampaign(false);
+                        setSelectedCampaignId('none');
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Campaign Name *</label>
+                    <input
+                      type="text"
+                      value={newCampaignName}
+                      onChange={(e) => setNewCampaignName(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g. Q1 2026 Support Audit"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Description (Optional)</label>
+                    <input
+                      type="text"
+                      value={newCampaignDesc}
+                      onChange={(e) => setNewCampaignDesc(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="Brief description of this campaign"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleCreateCampaign}
+                    disabled={creatingCampaign || !newCampaignName.trim()}
+                    className="w-full"
+                  >
+                    {creatingCampaign ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Create Campaign
+                  </Button>
+                </div>
+              )}
+
               <p className="text-xs text-muted-foreground mt-1">
                 Optionally group this audit under a campaign for reporting.
               </p>

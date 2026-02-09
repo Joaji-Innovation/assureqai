@@ -47,11 +47,11 @@ function BillingContent() {
         setCurrentUsage(stats.total || 0);
       })
       .catch(() => {});
-    api.settings
-      .get()
-      .then((settings: any) => {
+    api.audit
+      .getStats()
+      .then((stats: any) => {
         setUsageLimit(
-          settings.credits?.totalAudits || settings.limits?.maxAudits || 0,
+          stats.usageLimit || stats.maxAudits || stats.total || 0,
         );
       })
       .catch(() => {});

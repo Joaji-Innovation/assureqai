@@ -45,7 +45,7 @@ export default function ClientsPage() {
         plan: (inst.plan as any) || 'pro',
         status: inst.status === 'running' ? 'active' : inst.status === 'provisioning' ? 'pending' : 'suspended',
         users: inst.usage?.activeUsers || 0,
-        auditsThisMonth: inst.usage?.auditsThisMonth || 0
+        auditsThisMonth: inst.usage?.auditsThisMonth || 0,
         instanceId: inst._id,
         domain: inst.domain?.customDomain || `${inst.domain?.subdomain}.assureqai.com`,
         createdAt: new Date(inst.createdAt).toISOString().split('T')[0],

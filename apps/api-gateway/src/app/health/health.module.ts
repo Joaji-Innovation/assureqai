@@ -3,11 +3,11 @@
  */
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
-import { MongooseModule } from '@nestjs/mongoose';
 import { HealthController } from './health.controller';
+import { EmailModule } from '../../modules/email/email.module';
 
 @Module({
-  imports: [TerminusModule],
+  imports: [TerminusModule, EmailModule],
   controllers: [HealthController],
 })
 export class HealthModule {}

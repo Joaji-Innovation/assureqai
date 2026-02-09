@@ -10,9 +10,16 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
+  XCircle,
+  Mail,
+  Database,
+  Cpu,
+  Wifi,
+  RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import type { ConnectivityResult, ServiceStatus } from '@/lib/api';
 
 // Initial platform stats (fallback zeros while loading)
 const initialStats = {
@@ -28,15 +35,32 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState(initialStats);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<any[]>([]);
+  const [connectivity, setConnectivity] = useState<ConnectivityResult | null>(null);
+  const [connectivityLoading, setConnectivityLoading] = useState(false);
   const [health, setHealth] = useState([
     { service: 'API Gateway', status: 'checking', latency: '-' },
     { service: 'Database', status: 'checking', latency: '-' },
+    { service: 'SMTP Email', status: 'checking', latency: '-' },
     { service: 'AI Engine', status: 'checking', latency: '-' },
   ]);
 
+  const fetchConnectivity = async () => {
+    setConnectivityLoading(true);
+    try {
+      const result = await api.health.connectivity();
+      setConnectivity(result);
+      return result;
+    } catch (e) {
+      console.warn('Connectivity check failed', e);
+      return null;
+    } finally {
+      setConnectivityLoading(false);
+    }
+  };
+
   useEffect(() => {
     async function fetchData() {
-      const healthStatus = { api: 'healthy', db: 'healthy', ai: 'healthy' };
+      const healthStatus = { api: 'healthy', db: 'healthy', smtp: 'healthy', ai: 'healthy' };
 
       try {
         setLoading(true);
@@ -104,33 +128,71 @@ export default function AdminDashboardPage() {
           if (healthRes.status === 'ok' || healthRes.status === 'healthy') {
             healthStatus.api = 'healthy';
           }
-          // Use measured latency for API Gateway
-          // DB and AI latencies are derived from the health check if available
-          setHealth([
-            {
-              service: 'API Gateway',
-              status: healthStatus.api,
-              latency: `${apiLatency}ms`,
-            },
-            {
-              service: 'Database',
-              status: healthStatus.db,
-              latency:
-                healthStatus.db === 'healthy'
-                  ? `~${Math.round(apiLatency * 0.4)}ms`
-                  : '-',
-            },
-            {
-              service: 'AI Engine',
-              status: healthStatus.ai,
-              latency: healthStatus.ai === 'healthy' ? 'OK' : '-',
-            },
-          ]);
+
+          // Fetch real connectivity status for all services
+          const conn = await fetchConnectivity();
+
+          if (conn) {
+            const dbConn = conn.services.database;
+            const smtpConn = conn.services.smtp;
+            const aiConn = conn.services.ai;
+
+            healthStatus.db = dbConn.status === 'connected' ? 'healthy' : 'degraded';
+            healthStatus.smtp = smtpConn.status === 'connected' ? 'healthy' : 'degraded';
+            healthStatus.ai = aiConn.status === 'connected' ? 'healthy' : 'degraded';
+
+            setHealth([
+              {
+                service: 'API Gateway',
+                status: healthStatus.api,
+                latency: `${apiLatency}ms`,
+              },
+              {
+                service: 'Database',
+                status: healthStatus.db,
+                latency: dbConn.latency ? `${dbConn.latency}ms` : '-',
+              },
+              {
+                service: 'SMTP Email',
+                status: healthStatus.smtp,
+                latency: smtpConn.latency ? `${smtpConn.latency}ms` : '-',
+              },
+              {
+                service: 'AI Engine',
+                status: healthStatus.ai,
+                latency: aiConn.latency ? `${aiConn.latency}ms` : 'OK',
+              },
+            ]);
+          } else {
+            setHealth([
+              {
+                service: 'API Gateway',
+                status: healthStatus.api,
+                latency: `${apiLatency}ms`,
+              },
+              {
+                service: 'Database',
+                status: healthStatus.db,
+                latency: healthStatus.db === 'healthy' ? `~${Math.round(apiLatency * 0.4)}ms` : '-',
+              },
+              {
+                service: 'SMTP Email',
+                status: 'degraded',
+                latency: '-',
+              },
+              {
+                service: 'AI Engine',
+                status: healthStatus.ai,
+                latency: healthStatus.ai === 'healthy' ? 'OK' : '-',
+              },
+            ]);
+          }
         } catch (e) {
           console.warn('Health check failed', e);
           setHealth([
             { service: 'API Gateway', status: healthStatus.api, latency: '-' },
             { service: 'Database', status: healthStatus.db, latency: '-' },
+            { service: 'SMTP Email', status: 'degraded', latency: '-' },
             { service: 'AI Engine', status: healthStatus.ai, latency: '-' },
           ]);
         }
@@ -146,6 +208,78 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Connection Failure Alerts */}
+      {connectivity && connectivity.overall !== 'healthy' && (
+        <div className={`rounded-xl border p-4 ${
+          connectivity.overall === 'critical'
+            ? 'bg-red-500/10 border-red-500/30'
+            : 'bg-amber-500/10 border-amber-500/30'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className={`h-5 w-5 ${
+                connectivity.overall === 'critical' ? 'text-red-500' : 'text-amber-500'
+              }`} />
+              <h3 className={`font-semibold ${
+                connectivity.overall === 'critical' ? 'text-red-500' : 'text-amber-500'
+              }`}>
+                {connectivity.overall === 'critical'
+                  ? 'Critical: Multiple Service Connections Failed'
+                  : 'Warning: Service Connection Issue Detected'}
+              </h3>
+            </div>
+            <button
+              onClick={fetchConnectivity}
+              disabled={connectivityLoading}
+              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg border border-border hover:bg-background/50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3 w-3 ${connectivityLoading ? 'animate-spin' : ''}`} />
+              Recheck
+            </button>
+          </div>
+          <div className="space-y-2">
+            {Object.entries(connectivity.services).map(([key, svc]) => {
+              if (svc.status === 'connected') return null;
+              const icons: Record<string, React.ElementType> = {
+                database: Database,
+                smtp: Mail,
+                ai: Cpu,
+              };
+              const labels: Record<string, string> = {
+                database: 'Database',
+                smtp: 'SMTP Email',
+                ai: 'AI Engine',
+              };
+              const Icon = icons[key] || Wifi;
+              return (
+                <div
+                  key={key}
+                  className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border"
+                >
+                  <XCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium text-sm">{labels[key] || key}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                        svc.status === 'disconnected'
+                          ? 'bg-red-500/10 text-red-500'
+                          : 'bg-amber-500/10 text-amber-500'
+                      }`}>
+                        {svc.status === 'disconnected' ? 'Disconnected' : 'Not Configured'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 break-words">
+                      {svc.message}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
@@ -245,19 +379,30 @@ export default function AdminDashboardPage() {
         <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">System Health</h2>
-            <span
-              className={`flex items-center gap-1 text-sm ${health.every((s) => s.status === 'healthy') ? 'text-emerald-500' : 'text-yellow-500'}`}
-            >
-              {health.every((s) => s.status === 'healthy') ? (
-                <>
-                  <CheckCircle className="h-4 w-4" /> All Systems Operational
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="h-4 w-4" /> Degraded Performance
-                </>
-              )}
-            </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchConnectivity}
+                disabled={connectivityLoading}
+                className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg border border-border hover:bg-background/50 transition-colors disabled:opacity-50"
+                title="Recheck all connections"
+              >
+                <RefreshCw className={`h-3 w-3 ${connectivityLoading ? 'animate-spin' : ''}`} />
+                Recheck
+              </button>
+              <span
+                className={`flex items-center gap-1 text-sm ${health.every((s) => s.status === 'healthy') ? 'text-emerald-500' : 'text-yellow-500'}`}
+              >
+                {health.every((s) => s.status === 'healthy') ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" /> All Systems Operational
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4" /> Degraded Performance
+                  </>
+                )}
+              </span>
+            </div>
           </div>
           <div className="space-y-3">
             {health.map((service) => (

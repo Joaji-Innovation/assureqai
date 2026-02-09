@@ -8,8 +8,8 @@ import * as nodemailer from 'nodemailer';
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: nodemailer.Transporter;
-  private isConfigured: boolean = false;
+  readonly transporter: nodemailer.Transporter;
+  readonly isConfigured: boolean = false;
 
   constructor(private configService: ConfigService) {
     const smtpPassword = this.configService.get('SMTP_PASSWORD', '');

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, Database, Mail, Shield, Bell, Globe } from 'lucide-react';
+import { Settings, Save, Loader2, Database, Mail, Shield, Bell, Globe, CheckCircle, XCircle, Wifi } from 'lucide-react';
 
-import { settingsApi } from '@/lib/api';
+import { settingsApi, healthApi } from '@/lib/api';
 
 interface PlatformSettings {
   platformName: string;
@@ -26,6 +26,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [smtpTesting, setSmtpTesting] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const [settings, setSettings] = useState<PlatformSettings>({
     platformName: 'AssureQai',
@@ -71,6 +76,26 @@ export default function SettingsPage() {
       alert('Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    setSmtpTesting(true);
+    setSmtpTestResult(null);
+    try {
+      const conn = await healthApi.connectivity();
+      const smtpStatus = conn.services.smtp;
+      setSmtpTestResult({
+        success: smtpStatus.status === 'connected',
+        message: smtpStatus.message,
+      });
+    } catch (error: any) {
+      setSmtpTestResult({
+        success: false,
+        message: error?.message || 'Failed to check SMTP connectivity',
+      });
+    } finally {
+      setSmtpTesting(false);
     }
   };
 
@@ -258,6 +283,34 @@ export default function SettingsPage() {
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={handleTestSmtp}
+            disabled={smtpTesting}
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-primary/5 hover:border-primary/50 transition-colors disabled:opacity-50"
+          >
+            {smtpTesting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Wifi className="h-4 w-4" />
+            )}
+            Test SMTP Connection
+          </button>
+          {smtpTestResult && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+              smtpTestResult.success
+                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                : 'bg-red-500/10 text-red-500 border border-red-500/20'
+            }`}>
+              {smtpTestResult.success ? (
+                <CheckCircle className="h-4 w-4 shrink-0" />
+              ) : (
+                <XCircle className="h-4 w-4 shrink-0" />
+              )}
+              <span className="break-words">{smtpTestResult.message}</span>
+            </div>
+          )}
         </div>
       </SettingsSection>
     </div>

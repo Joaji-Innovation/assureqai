@@ -527,11 +527,34 @@ export const settingsApi = {
     }),
 };
 
+export interface ServiceStatus {
+  status: 'connected' | 'disconnected' | 'not_configured';
+  message: string;
+  latency?: number;
+}
+
+export interface ConnectivityResult {
+  overall: 'healthy' | 'degraded' | 'critical';
+  timestamp: string;
+  services: {
+    database: ServiceStatus;
+    smtp: ServiceStatus;
+    ai: ServiceStatus;
+  };
+}
+
 export const healthApi = {
   check: () =>
     request<{ status: string; info: any; error: any; details: any }>(
       '/api/health',
     ),
+  connectivity: () =>
+    request<ConnectivityResult>('/api/health/connectivity'),
+  testSmtp: (email: string) =>
+    request<{ success: boolean; message: string }>('/api/notifications/email/test', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
 };
 
 // Lead interface and API

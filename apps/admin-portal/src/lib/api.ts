@@ -548,13 +548,15 @@ export const healthApi = {
     request<{ status: string; info: any; error: any; details: any }>(
       '/api/health',
     ),
-  connectivity: () =>
-    request<ConnectivityResult>('/api/health/connectivity'),
+  connectivity: () => request<ConnectivityResult>('/api/health/connectivity'),
   testSmtp: (email: string) =>
-    request<{ success: boolean; message: string }>('/api/notifications/email/test', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    }),
+    request<{ success: boolean; message: string }>(
+      '/api/notifications/email/test',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      },
+    ),
 };
 
 // Lead interface and API

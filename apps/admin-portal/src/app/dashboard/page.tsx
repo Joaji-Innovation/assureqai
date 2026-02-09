@@ -35,7 +35,9 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState(initialStats);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<any[]>([]);
-  const [connectivity, setConnectivity] = useState<ConnectivityResult | null>(null);
+  const [connectivity, setConnectivity] = useState<ConnectivityResult | null>(
+    null,
+  );
   const [connectivityLoading, setConnectivityLoading] = useState(false);
   const [health, setHealth] = useState([
     { service: 'API Gateway', status: 'checking', latency: '-' },
@@ -60,7 +62,12 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const healthStatus = { api: 'healthy', db: 'healthy', smtp: 'healthy', ai: 'healthy' };
+      const healthStatus = {
+        api: 'healthy',
+        db: 'healthy',
+        smtp: 'healthy',
+        ai: 'healthy',
+      };
 
       try {
         setLoading(true);
@@ -137,9 +144,12 @@ export default function AdminDashboardPage() {
             const smtpConn = conn.services.smtp;
             const aiConn = conn.services.ai;
 
-            healthStatus.db = dbConn.status === 'connected' ? 'healthy' : 'degraded';
-            healthStatus.smtp = smtpConn.status === 'connected' ? 'healthy' : 'degraded';
-            healthStatus.ai = aiConn.status === 'connected' ? 'healthy' : 'degraded';
+            healthStatus.db =
+              dbConn.status === 'connected' ? 'healthy' : 'degraded';
+            healthStatus.smtp =
+              smtpConn.status === 'connected' ? 'healthy' : 'degraded';
+            healthStatus.ai =
+              aiConn.status === 'connected' ? 'healthy' : 'degraded';
 
             setHealth([
               {
@@ -173,7 +183,10 @@ export default function AdminDashboardPage() {
               {
                 service: 'Database',
                 status: healthStatus.db,
-                latency: healthStatus.db === 'healthy' ? `~${Math.round(apiLatency * 0.4)}ms` : '-',
+                latency:
+                  healthStatus.db === 'healthy'
+                    ? `~${Math.round(apiLatency * 0.4)}ms`
+                    : '-',
               },
               {
                 service: 'SMTP Email',
@@ -210,19 +223,29 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Connection Failure Alerts */}
       {connectivity && connectivity.overall !== 'healthy' && (
-        <div className={`rounded-xl border p-4 ${
-          connectivity.overall === 'critical'
-            ? 'bg-red-500/10 border-red-500/30'
-            : 'bg-amber-500/10 border-amber-500/30'
-        }`}>
+        <div
+          className={`rounded-xl border p-4 ${
+            connectivity.overall === 'critical'
+              ? 'bg-red-500/10 border-red-500/30'
+              : 'bg-amber-500/10 border-amber-500/30'
+          }`}
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <AlertTriangle className={`h-5 w-5 ${
-                connectivity.overall === 'critical' ? 'text-red-500' : 'text-amber-500'
-              }`} />
-              <h3 className={`font-semibold ${
-                connectivity.overall === 'critical' ? 'text-red-500' : 'text-amber-500'
-              }`}>
+              <AlertTriangle
+                className={`h-5 w-5 ${
+                  connectivity.overall === 'critical'
+                    ? 'text-red-500'
+                    : 'text-amber-500'
+                }`}
+              />
+              <h3
+                className={`font-semibold ${
+                  connectivity.overall === 'critical'
+                    ? 'text-red-500'
+                    : 'text-amber-500'
+                }`}
+              >
                 {connectivity.overall === 'critical'
                   ? 'Critical: Multiple Service Connections Failed'
                   : 'Warning: Service Connection Issue Detected'}
@@ -233,7 +256,9 @@ export default function AdminDashboardPage() {
               disabled={connectivityLoading}
               className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg border border-border hover:bg-background/50 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`h-3 w-3 ${connectivityLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-3 w-3 ${connectivityLoading ? 'animate-spin' : ''}`}
+              />
               Recheck
             </button>
           </div>
@@ -260,13 +285,19 @@ export default function AdminDashboardPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{labels[key] || key}</span>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        svc.status === 'disconnected'
-                          ? 'bg-red-500/10 text-red-500'
-                          : 'bg-amber-500/10 text-amber-500'
-                      }`}>
-                        {svc.status === 'disconnected' ? 'Disconnected' : 'Not Configured'}
+                      <span className="font-medium text-sm">
+                        {labels[key] || key}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 text-xs rounded-full ${
+                          svc.status === 'disconnected'
+                            ? 'bg-red-500/10 text-red-500'
+                            : 'bg-amber-500/10 text-amber-500'
+                        }`}
+                      >
+                        {svc.status === 'disconnected'
+                          ? 'Disconnected'
+                          : 'Not Configured'}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 break-words">
@@ -386,7 +417,9 @@ export default function AdminDashboardPage() {
                 className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg border border-border hover:bg-background/50 transition-colors disabled:opacity-50"
                 title="Recheck all connections"
               >
-                <RefreshCw className={`h-3 w-3 ${connectivityLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-3 w-3 ${connectivityLoading ? 'animate-spin' : ''}`}
+                />
                 Recheck
               </button>
               <span

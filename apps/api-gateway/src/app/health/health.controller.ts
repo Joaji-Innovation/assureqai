@@ -97,7 +97,10 @@ export class HealthController {
   @Get('connectivity')
   @Public()
   @ApiOperation({ summary: 'Check connectivity of all services' })
-  @ApiResponse({ status: 200, description: 'Connectivity status for all services' })
+  @ApiResponse({
+    status: 200,
+    description: 'Connectivity status for all services',
+  })
   async connectivity(): Promise<ConnectivityResult> {
     const [dbStatus, smtpStatus, aiStatus] = await Promise.all([
       this.checkDatabase(),
@@ -109,7 +112,10 @@ export class HealthController {
     const statuses = [dbStatus.status, smtpStatus.status, aiStatus.status];
     let overall: 'healthy' | 'degraded' | 'critical' = 'healthy';
     if (statuses.includes('disconnected')) {
-      overall = statuses.filter(s => s === 'disconnected').length >= 2 ? 'critical' : 'degraded';
+      overall =
+        statuses.filter((s) => s === 'disconnected').length >= 2
+          ? 'critical'
+          : 'degraded';
     } else if (statuses.includes('not_configured')) {
       overall = 'degraded';
     }
@@ -148,7 +154,8 @@ export class HealthController {
     if (!this.emailService.isConfigured) {
       return {
         status: 'not_configured',
-        message: 'SMTP not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASSWORD environment variables.',
+        message:
+          'SMTP not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASSWORD environment variables.',
       };
     }
 
@@ -173,7 +180,8 @@ export class HealthController {
     if (!this.aiService.isAvailable()) {
       return {
         status: 'not_configured',
-        message: 'AI Engine not configured. Set GEMINI_API_KEY environment variable.',
+        message:
+          'AI Engine not configured. Set GEMINI_API_KEY environment variable.',
       };
     }
 

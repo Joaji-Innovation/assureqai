@@ -1,7 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, Database, Mail, Shield, Bell, Globe, CheckCircle, XCircle, Wifi } from 'lucide-react';
+import {
+  Settings,
+  Save,
+  Loader2,
+  Database,
+  Mail,
+  Shield,
+  Bell,
+  Globe,
+  CheckCircle,
+  XCircle,
+  Wifi,
+} from 'lucide-react';
 
 import { settingsApi, healthApi } from '@/lib/api';
 
@@ -57,7 +69,11 @@ export default function SettingsPage() {
     try {
       const data = await settingsApi.get();
       // Merge with default/existing state to prevent nulls if API returns partial data
-      if (data) setSettings(prev => ({ ...prev, ...(data as Partial<PlatformSettings>) }));
+      if (data)
+        setSettings((prev) => ({
+          ...prev,
+          ...(data as Partial<PlatformSettings>),
+        }));
     } catch (error) {
       console.error('Failed to fetch settings', error);
     } finally {
@@ -112,14 +128,20 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Platform Settings</h2>
-          <p className="text-muted-foreground">Configure global platform settings</p>
+          <p className="text-muted-foreground">
+            Configure global platform settings
+          </p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
           Save Changes
         </button>
       </div>
@@ -138,7 +160,9 @@ export default function SettingsPage() {
             <input
               type="text"
               value={settings.platformName}
-              onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, platformName: e.target.value })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -147,7 +171,9 @@ export default function SettingsPage() {
             <input
               type="email"
               value={settings.supportEmail}
-              onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, supportEmail: e.target.value })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -155,7 +181,9 @@ export default function SettingsPage() {
             <label className="text-sm font-medium">Default Plan</label>
             <select
               value={settings.defaultPlan}
-              onChange={(e) => setSettings({ ...settings, defaultPlan: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, defaultPlan: e.target.value })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="starter">Starter</option>
@@ -168,7 +196,12 @@ export default function SettingsPage() {
             <input
               type="number"
               value={settings.trialDays}
-              onChange={(e) => setSettings({ ...settings, trialDays: parseInt(e.target.value) })}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  trialDays: parseInt(e.target.value),
+                })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -181,33 +214,51 @@ export default function SettingsPage() {
           <label className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors">
             <div>
               <p className="font-medium">Enable Public Signups</p>
-              <p className="text-xs text-muted-foreground">Allow new clients to register</p>
+              <p className="text-xs text-muted-foreground">
+                Allow new clients to register
+              </p>
             </div>
             <input
               type="checkbox"
               checked={settings.enableSignups}
-              onChange={(e) => setSettings({ ...settings, enableSignups: e.target.checked })}
+              onChange={(e) =>
+                setSettings({ ...settings, enableSignups: e.target.checked })
+              }
               className="h-5 w-5 rounded accent-primary"
             />
           </label>
           <label className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors">
             <div>
               <p className="font-medium">Require Email Verification</p>
-              <p className="text-xs text-muted-foreground">Users must verify email before access</p>
+              <p className="text-xs text-muted-foreground">
+                Users must verify email before access
+              </p>
             </div>
             <input
               type="checkbox"
               checked={settings.requireEmailVerification}
-              onChange={(e) => setSettings({ ...settings, requireEmailVerification: e.target.checked })}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  requireEmailVerification: e.target.checked,
+                })
+              }
               className="h-5 w-5 rounded accent-primary"
             />
           </label>
           <div>
-            <label className="text-sm font-medium">Max Audits Per Minute (Rate Limit)</label>
+            <label className="text-sm font-medium">
+              Max Audits Per Minute (Rate Limit)
+            </label>
             <input
               type="number"
               value={settings.maxAuditsPerMinute}
-              onChange={(e) => setSettings({ ...settings, maxAuditsPerMinute: parseInt(e.target.value) })}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  maxAuditsPerMinute: parseInt(e.target.value),
+                })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -222,19 +273,28 @@ export default function SettingsPage() {
             <input
               type="number"
               value={settings.retentionDays}
-              onChange={(e) => setSettings({ ...settings, retentionDays: parseInt(e.target.value) })}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  retentionDays: parseInt(e.target.value),
+                })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <label className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors">
             <div>
               <p className="font-medium">Automatic Backups</p>
-              <p className="text-xs text-muted-foreground">Regular database backups</p>
+              <p className="text-xs text-muted-foreground">
+                Regular database backups
+              </p>
             </div>
             <input
               type="checkbox"
               checked={settings.backupEnabled}
-              onChange={(e) => setSettings({ ...settings, backupEnabled: e.target.checked })}
+              onChange={(e) =>
+                setSettings({ ...settings, backupEnabled: e.target.checked })
+              }
               className="h-5 w-5 rounded accent-primary"
             />
           </label>
@@ -242,7 +302,9 @@ export default function SettingsPage() {
             <label className="text-sm font-medium">Backup Schedule</label>
             <select
               value={settings.backupSchedule}
-              onChange={(e) => setSettings({ ...settings, backupSchedule: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, backupSchedule: e.target.value })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="hourly">Hourly</option>
@@ -261,7 +323,9 @@ export default function SettingsPage() {
             <input
               type="text"
               value={settings.smtpHost}
-              onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, smtpHost: e.target.value })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -270,7 +334,9 @@ export default function SettingsPage() {
             <input
               type="number"
               value={settings.smtpPort}
-              onChange={(e) => setSettings({ ...settings, smtpPort: parseInt(e.target.value) })}
+              onChange={(e) =>
+                setSettings({ ...settings, smtpPort: parseInt(e.target.value) })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -279,7 +345,9 @@ export default function SettingsPage() {
             <input
               type="text"
               value={settings.smtpUser}
-              onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, smtpUser: e.target.value })
+              }
               className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -298,11 +366,13 @@ export default function SettingsPage() {
             Test SMTP Connection
           </button>
           {smtpTestResult && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-              smtpTestResult.success
-                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                : 'bg-red-500/10 text-red-500 border border-red-500/20'
-            }`}>
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                smtpTestResult.success
+                  ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                  : 'bg-red-500/10 text-red-500 border border-red-500/20'
+              }`}
+            >
               {smtpTestResult.success ? (
                 <CheckCircle className="h-4 w-4 shrink-0" />
               ) : (
@@ -317,7 +387,15 @@ export default function SettingsPage() {
   );
 }
 
-function SettingsSection({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SettingsSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-6">
       <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">

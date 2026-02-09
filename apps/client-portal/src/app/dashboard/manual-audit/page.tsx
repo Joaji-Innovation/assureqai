@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Edit, ClipboardList, Save, Loader2, Play, AlertCircle } from 'lucide-react';
+import { Edit, ClipboardList, Save, Loader2, Play, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { qaParameterApi, type QAParameter } from '@/lib/api';
+import { qaParameterApi, campaignApi, auditApi, type QAParameter, type Campaign } from '@/lib/api';
 import { AudioUploadDropzone, type AudioUploadDropzoneRef } from '@/components/dashboard/AudioUploadDropzone';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -15,6 +15,7 @@ interface AuditParameter {
   weight: number;
   category: string;
   isFatal: boolean;
+  type?: string;
 }
 
 // Helper to convert API parameter format to UI format
@@ -29,7 +30,8 @@ const convertApiParamsToUi = (qaParams: any[]): AuditParameter[] => {
           name: sub.name,
           weight: sub.weight,
           category: group.name,
-          isFatal: sub.type === 'Fatal'
+          isFatal: sub.type === 'Fatal',
+          type: sub.type,
         });
       });
     }
@@ -48,10 +50,14 @@ export default function ManualAuditPage() {
     callType: 'Inbound Support',
   });
 
-  const [campaigns, setCampaigns] = useState<QAParameter[]>([]);
+  // Separate: Parameter Sets (scoring templates) vs Campaigns (grouping)
+  const [parameterSets, setParameterSets] = useState<QAParameter[]>([]);
+  const [selectedParameterSetId, setSelectedParameterSetId] = useState<string>('');
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
 
-  // Default parameters if no campaign selected
+  // Default parameters if no parameter set selected
   const defaultParameters: AuditParameter[] = [
     { id: '1', name: 'Greeting & Opening', weight: 10, category: 'Opening', isFatal: false },
     { id: '2', name: 'Problem Identification', weight: 15, category: 'Discovery', isFatal: false },
@@ -70,38 +76,44 @@ export default function ManualAuditPage() {
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const audioInputRef = useRef<AudioUploadDropzoneRef>(null);
 
-  // Fetch campaigns on mount
+  // Fetch parameter sets and campaigns on mount
   useEffect(() => {
-    const fetchCampaigns = async () => {
+    const fetchData = async () => {
       try {
-        const data = await qaParameterApi.list();
-        if (data && Array.isArray(data)) {
-          setCampaigns(data);
+        const [paramData, campaignData] = await Promise.all([
+          qaParameterApi.list(),
+          campaignApi.list(1, 100).catch(() => ({ data: [], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 } })),
+        ]);
+        if (paramData && Array.isArray(paramData)) {
+          setParameterSets(paramData);
+        }
+        if (campaignData?.data && Array.isArray(campaignData.data)) {
+          setCampaigns(campaignData.data);
         }
       } catch (error) {
-        console.error('Failed to fetch campaigns:', error);
+        console.error('Failed to fetch data:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load campaigns. Using default parameters.',
+          description: 'Failed to load data. Using default parameters.',
           variant: 'destructive',
         });
       }
     };
-    fetchCampaigns();
+    fetchData();
   }, [toast]);
 
-  const handleCampaignChange = (campaignId: string) => {
-    setSelectedCampaignId(campaignId);
-    const campaign = campaigns.find(c => c.id === campaignId || c._id === campaignId);
+  const handleParameterSetChange = (paramSetId: string) => {
+    setSelectedParameterSetId(paramSetId);
+    const paramSet = parameterSets.find(p => p.id === paramSetId || p._id === paramSetId);
 
-    if (campaign && campaign.parameters) {
-      const uiParams = convertApiParamsToUi(campaign.parameters);
+    if (paramSet && paramSet.parameters) {
+      const uiParams = convertApiParamsToUi(paramSet.parameters);
       if (uiParams.length > 0) {
         setParameters(uiParams);
-        setScores({}); // Reset scores when campaign changes
+        setScores({}); // Reset scores when parameter set changes
         toast({
-          title: 'Campaign Selected',
-          description: `Loaded parameters for ${campaign.name}`,
+          title: 'Parameter Set Loaded',
+          description: `Loaded scoring criteria from "${paramSet.name}"`,
         });
       }
     } else {
@@ -154,36 +166,60 @@ export default function ManualAuditPage() {
   };
 
   const handleSubmit = async (isDraft: boolean) => {
+    if (!isDraft && !formData.agentName) {
+      toast({ title: 'Agent name is required', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
-      // In a real implementation, you would upload the audio file first if present
-      // and then submit the audit data to the API.
-      // For now, we'll verify the data structure and simulate a save.
+      const selectedParamSet = parameterSets.find(p => p.id === selectedParameterSetId || p._id === selectedParameterSetId);
+      const selectedCampaign = campaigns.find(c => c._id === selectedCampaignId);
 
-      const auditData = {
-        ...formData,
-        campaignId: selectedCampaignId,
-        campaignName: campaigns.find(c => c.id === selectedCampaignId || c._id === selectedCampaignId)?.name || 'Manual Audit',
-        scores,
+      // Build auditResults in the format the backend expects
+      const auditResults = parameters.map(param => ({
+        parameterId: param.id,
+        parameterName: param.name,
+        score: scores[param.id]?.score || 0,
+        maxScore: 100,
+        weight: param.weight,
+        type: param.isFatal ? 'Fatal' : (param.type || 'Non-Fatal'),
+        comments: scores[param.id]?.comment || '',
+      }));
+
+      const auditPayload = {
+        callId: formData.callId || undefined,
+        agentName: formData.agentName,
+        auditType: 'manual' as const,
+        qaParameterSetId: selectedParameterSetId || undefined,
+        qaParameterSetName: selectedParamSet?.name || undefined,
+        campaignId: selectedCampaignId || undefined,
+        campaignName: selectedCampaign?.name || undefined,
+        auditResults,
         overallScore: calculateOverallScore(),
-        isDraft
+        auditDate: new Date(formData.callDate),
       };
 
-      console.log('Submitting audit:', auditData);
-
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await auditApi.create(auditPayload);
 
       toast({
         title: isDraft ? 'Draft Saved' : 'Audit Submitted',
-        description: isDraft ? 'Your progress has been saved.' : 'The audit has been submitted successfully.',
+        description: isDraft ? 'Your progress has been saved.' : 'The manual audit has been submitted successfully.',
         className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500',
       });
 
-    } catch (error) {
+      // Reset form on successful submit (not draft)
+      if (!isDraft) {
+        setFormData({ agentName: '', teamLead: '', callId: '', callDate: new Date().toISOString().split('T')[0], callType: 'Inbound Support' });
+        setScores({});
+        setAudioFile(null);
+        setAudioSrc(null);
+      }
+    } catch (error: any) {
       console.error('Error saving audit:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save audit. Please try again.',
+        description: error.message || 'Failed to save audit. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -219,25 +255,45 @@ export default function ManualAuditPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Campaign / Parameter Set</label>
-              <Select value={selectedCampaignId} onValueChange={handleCampaignChange}>
+              <label className="text-sm font-medium mb-1.5 block">Parameter Set (Scoring Template) *</label>
+              <Select value={selectedParameterSetId} onValueChange={handleParameterSetChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a campaign" />
+                  <SelectValue placeholder="Select a parameter set" />
                 </SelectTrigger>
                 <SelectContent>
-                  {campaigns.length > 0 ? (
-                    campaigns.map((campaign) => (
-                      <SelectItem key={campaign.id || campaign._id} value={campaign.id || campaign._id}>
-                        {campaign.name}
+                  {parameterSets.length > 0 ? (
+                    parameterSets.map((ps) => (
+                      <SelectItem key={ps.id || ps._id} value={ps.id || ps._id}>
+                        {ps.name}
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="default" disabled>No campaigns available</SelectItem>
+                    <SelectItem value="default" disabled>No parameter sets available</SelectItem>
                   )}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Selecting a campaign will load its specific audit parameters.
+                Defines the scoring criteria and weights for this audit.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Campaign (Optional)</label>
+              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No campaign — standalone audit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None (Standalone)</SelectItem>
+                  {campaigns.map((c) => (
+                    <SelectItem key={c._id} value={c._id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Optionally group this audit under a campaign for reporting.
               </p>
             </div>
 
@@ -348,9 +404,9 @@ export default function ManualAuditPage() {
             Evaluation Criteria
           </CardTitle>
           <CardDescription>
-            {selectedCampaignId
-              ? `Using parameters from selected campaign.`
-              : 'Using default parameters. Select a campaign to load specific criteria.'}
+            {selectedParameterSetId
+              ? `Using scoring criteria from selected parameter set.`
+              : 'Using default parameters. Select a parameter set to load specific criteria.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

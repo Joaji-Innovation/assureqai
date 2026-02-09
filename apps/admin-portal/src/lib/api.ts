@@ -169,11 +169,29 @@ export const instanceApi = {
   restart: (id: string) => request<{ success: boolean }>(`/api/admin/instances/${id}/restart`, { method: 'POST' }),
 };
 
+export interface Audit {
+  _id: string;
+  callId?: string;
+  agentName?: string;
+  agentUserId?: string;
+  auditType: 'ai' | 'manual' | 'bulk';
+  campaignName?: string;
+  qaParameterSetName?: string;
+  overallScore?: number;
+  auditResults?: any[];
+  createdAt: string;
+  auditDate?: string;
+}
+
 export const auditApi = {
   getStats: (filters?: Record<string, string | number | undefined>) =>
     request<AuditStats>('/api/audits/stats', { params: filters }),
-  list: (filters: { page?: number; limit?: number }) =>
-    request<{ pagination: { total: number } }>('/api/audits', { params: filters as any }),
+  list: (filters: { page?: number; limit?: number; auditType?: string; agentUserId?: string; startDate?: string; endDate?: string }) =>
+    request<{ data: Audit[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/audits', { params: filters as any }),
+  getById: (id: string) =>
+    request<Audit>(`/api/audits/${id}`),
+  getLeaderboard: (projectId?: string, limit = 10) =>
+    request<any[]>('/api/audits/leaderboard', { params: { projectId, limit } }),
 };
 
 export const alertsApi = {

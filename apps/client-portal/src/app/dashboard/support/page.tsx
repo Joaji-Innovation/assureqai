@@ -29,10 +29,14 @@ import {
   AlertCircle,
   Loader2,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ticketApi, Ticket as SupportTicket } from '@/lib/api';
+
+const TICKETS_PER_PAGE = 10;
 
 const statusColors: Record<string, string> = {
   open: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -68,6 +72,7 @@ const categoryLabels: Record<string, string> = {
 export default function SupportPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ['tickets', statusFilter, searchQuery],
@@ -78,6 +83,15 @@ export default function SupportPage() {
       return ticketApi.list(filters);
     },
   });
+
+  // Client-side pagination
+  const totalTickets = tickets.length;
+  const totalPages = Math.ceil(totalTickets / TICKETS_PER_PAGE) || 1;
+  const paginatedTickets = tickets.slice((page - 1) * TICKETS_PER_PAGE, page * TICKETS_PER_PAGE);
+
+  // Reset page when filters change
+  const handleStatusChange = (val: string) => { setStatusFilter(val); setPage(1); };
+  const handleSearchChange = (val: string) => { setSearchQuery(val); setPage(1); };
 
   const { data: stats } = useQuery({
     queryKey: ['ticket-stats'],
@@ -173,11 +187,11 @@ export default function SupportPage() {
               <Input
                 placeholder="Search tickets..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -223,7 +237,7 @@ export default function SupportPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tickets.map((ticket) => (
+                {paginatedTickets.map((ticket) => (
                   <TableRow
                     key={ticket._id}
                     className="cursor-pointer hover:bg-muted/50"
@@ -263,6 +277,36 @@ export default function SupportPage() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(page - 1) * TICKETS_PER_PAGE + 1}–{Math.min(page * TICKETS_PER_PAGE, totalTickets)} of {totalTickets} tickets
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium px-2">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           )}
         </CardContent>
       </Card>

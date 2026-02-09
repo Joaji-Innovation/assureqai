@@ -321,6 +321,48 @@ export class CampaignService {
   }
 
   /**
+   * Retry a single failed job by index
+   */
+  async retryJob(id: string, jobIndex: number): Promise<Campaign> {
+    const campaign = await this.campaignModel.findById(id).exec();
+    if (!campaign) throw new NotFoundException('Campaign not found');
+
+    if (!campaign.jobs || jobIndex < 0 || jobIndex >= campaign.jobs.length) {
+      throw new NotFoundException(`Job at index ${jobIndex} not found`);
+    }
+
+    const job = campaign.jobs[jobIndex];
+    if (job.status !== 'failed') {
+      throw new BadRequestException(`Job at index ${jobIndex} is not in failed state (current: ${job.status})`);
+    }
+
+    // Re-queue the single job
+    if (this.queueService.isAvailable()) {
+      await this.queueService.addJobs([{
+        campaignId: id,
+        audioUrl: job.audioUrl,
+        agentName: job.agentName,
+        callId: job.callId,
+        parameterId: campaign.qaParameterSetId.toString(),
+      }]);
+    }
+
+    // Reset job status
+    campaign.jobs[jobIndex].status = 'pending';
+    (campaign.jobs[jobIndex] as any).error = undefined;
+    campaign.failedJobs = Math.max(0, campaign.failedJobs - 1);
+
+    // Resume campaign if it was in completed/failed state
+    if (campaign.status === 'completed' || campaign.status === 'failed') {
+      campaign.status = 'processing';
+    }
+
+    await campaign.save();
+    this.logger.log(`Retried job ${jobIndex} for campaign ${id}`);
+    return campaign;
+  }
+
+  /**
    * Delete campaign
    */
   async delete(id: string): Promise<void> {

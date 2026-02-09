@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { FileText, Megaphone, HardDrive, Terminal, Coins, MessageSquare } from 'lucide-react';
+import { FileText, Megaphone, HardDrive, Terminal, Coins, MessageSquare, ClipboardCheck } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -27,10 +27,12 @@ const navItems = [
   { href: '/dashboard/instances', label: 'Instances', icon: Server },
   { href: '/dashboard/domains', label: 'Domains', icon: Globe },
   { href: '/dashboard/credits', label: 'Credits', icon: Coins },
+  { href: '/dashboard/audits', label: 'Audits', icon: ClipboardCheck },
   { href: '/dashboard/templates', label: 'Templates', icon: FileText },
   { href: '/dashboard/backups', label: 'Backups', icon: HardDrive },
   { href: '/dashboard/logs', label: 'Deploy Logs', icon: Terminal },
   { href: '/dashboard/usage', label: 'Usage & Limits', icon: BarChart2 },
+  { href: '/dashboard/tickets', label: 'Tickets', icon: FileText },
   { href: '/dashboard/announcements', label: 'Announcements', icon: Megaphone },
   { href: '/dashboard/users', label: 'Admin Users', icon: Users },
   { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },

@@ -1,14 +1,17 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Plus, Shield, Loader2, AlertCircle, Trash2, Edit, X } from 'lucide-react';
+import { Users, Plus, Shield, Loader2, AlertCircle, Trash2, Edit, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUsers, useCreateUser, useDeleteUser } from '@/lib/hooks';
 import type { User } from '@/lib/api';
 import { useState } from 'react';
 
+const USERS_PER_PAGE = 10;
+
 export default function AddUserPage() {
-  const { data: userData, isLoading, error } = useUsers(1, 50);
+  const [page, setPage] = useState(1);
+  const { data: userData, isLoading, error, isPlaceholderData } = useUsers(page, USERS_PER_PAGE);
   const createUserMutation = useCreateUser();
   const deleteUserMutation = useDeleteUser();
 
@@ -17,6 +20,8 @@ export default function AddUserPage() {
 
   // Get users from API
   const users: User[] = userData?.data || [];
+  const totalUsers = userData?.pagination?.total || 0;
+  const totalPages = Math.ceil(totalUsers / USERS_PER_PAGE) || 1;
 
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
@@ -188,7 +193,7 @@ export default function AddUserPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Team Members ({users.length})
+            Team Members ({totalUsers})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -197,7 +202,7 @@ export default function AddUserPage() {
               <div key={user._id} className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {(user.fullName || user.username).split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    {(user.fullName || user.username || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <p className="font-medium">{user.fullName || user.username}</p>
@@ -232,6 +237,36 @@ export default function AddUserPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {(page - 1) * USERS_PER_PAGE + 1}–{Math.min(page * USERS_PER_PAGE, totalUsers)} of {totalUsers} users
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium px-2">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || isPlaceholderData}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

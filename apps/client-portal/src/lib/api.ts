@@ -490,6 +490,9 @@ export const campaignApi = {
   retry: (id: string) =>
     request<Campaign>(`/api/campaigns/${id}/retry`, { method: 'POST' }),
 
+  retryJob: (id: string, jobIndex: number) =>
+    request<Campaign>(`/api/campaigns/${id}/jobs/${jobIndex}/retry`, { method: 'POST' }),
+
   updateConfig: (id: string, config: { rpm: number; failureThreshold: number }) =>
     request<Campaign>(`/api/campaigns/${id}/config`, { method: 'POST', body: JSON.stringify(config) }),
 };
@@ -513,7 +516,7 @@ export const userApi = {
 
   update: (id: string, data: Partial<User>) =>
     request<User>(`/api/users/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
 

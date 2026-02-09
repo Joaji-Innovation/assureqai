@@ -21,11 +21,14 @@ export class EmailService {
       this.transporter = nodemailer.createTransport({
         host: this.configService.get('SMTP_HOST', 'smtp.sendgrid.net'),
         port: this.configService.get('SMTP_PORT', 587),
-        secure: false,
+        secure: this.configService.get<number>('SMTP_PORT', 587) === 465,
         auth: {
           user: this.configService.get('SMTP_USER', 'apikey'),
           pass: smtpPassword,
         },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
       });
       this.isConfigured = true;
       this.logger.log(`Email service configured with host: ${this.configService.get('SMTP_HOST', 'smtp.sendgrid.net')}`);
@@ -56,14 +59,35 @@ export class EmailService {
   }
 
   async sendTestEmail(to: string): Promise<{ success: boolean; message: string }> {
+    if (!this.isConfigured) {
+      return {
+        success: false,
+        message: 'SMTP not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASSWORD environment variables.',
+      };
+    }
+
+    try {
+      // Verify SMTP connection first
+      await this.transporter.verify();
+    } catch (verifyError: any) {
+      const errorMsg = verifyError?.message || verifyError?.toString() || 'Unknown error';
+      this.logger.error(`SMTP connection verification failed: ${errorMsg}`);
+      return {
+        success: false,
+        message: `SMTP connection failed: ${errorMsg}. Check your SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASSWORD settings.`,
+      };
+    }
+
     const result = await this.sendEmail(
       to,
       'AssureQai - Test Email',
-      '<h1>Test Email</h1><p>This is a test email from AssureQai.</p>'
+      '<h1>Test Email</h1><p>This is a test email from AssureQai. Your email configuration is working correctly.</p>'
     );
     return {
       success: result.success,
-      message: result.success ? 'Test email sent successfully' : `Failed to send test email: ${result.error}`,
+      message: result.success
+        ? 'Test email sent successfully'
+        : `Failed to send test email: ${result.error}`,
     };
   }
 

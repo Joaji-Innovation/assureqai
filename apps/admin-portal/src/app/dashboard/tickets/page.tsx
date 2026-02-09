@@ -11,7 +11,10 @@ import {
   User,
   MessageSquare,
   ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
+
+const TICKETS_PER_PAGE = 15;
 import { ticketApi, userApi, Ticket as TicketType } from '@/lib/api';
 
 const statusColors: Record<string, string> = {
@@ -53,6 +56,7 @@ export default function AdminTicketsPage() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetchData();
@@ -72,6 +76,7 @@ export default function AdminTicketsPage() {
       ]);
       setTickets(ticketsData);
       setStats(statsData);
+      setPage(1); // Reset pagination on filter change
     } catch (error) {
       console.error('Failed to fetch tickets', error);
     } finally {
@@ -213,6 +218,7 @@ export default function AdminTicketsPage() {
           </p>
         </div>
       ) : (
+        <>
         <div className="bg-card/50 backdrop-blur rounded-xl border border-border overflow-hidden">
           <table className="w-full">
             <thead className="bg-muted/50">
@@ -228,7 +234,7 @@ export default function AdminTicketsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {tickets.map((ticket) => (
+              {tickets.slice((page - 1) * TICKETS_PER_PAGE, page * TICKETS_PER_PAGE).map((ticket) => (
                 <tr key={ticket._id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <span className="font-mono text-sm">{ticket.ticketNumber}</span>
@@ -282,6 +288,35 @@ export default function AdminTicketsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {tickets.length > TICKETS_PER_PAGE && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {(page - 1) * TICKETS_PER_PAGE + 1}–{Math.min(page * TICKETS_PER_PAGE, tickets.length)} of {tickets.length} tickets
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-medium px-2">
+                Page {page} of {Math.ceil(tickets.length / TICKETS_PER_PAGE)}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(Math.ceil(tickets.length / TICKETS_PER_PAGE), p + 1))}
+                disabled={page >= Math.ceil(tickets.length / TICKETS_PER_PAGE)}
+                className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

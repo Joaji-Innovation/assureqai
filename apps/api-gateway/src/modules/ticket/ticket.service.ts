@@ -7,25 +7,55 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Ticket, TicketDocument, TICKET_STATUSES, TicketStatus, TicketPriority } from '../../database/schemas/ticket.schema';
 import { ROLES } from '@assureqai/common';
+import { IsString, IsOptional, IsArray, IsNotEmpty, IsEnum } from 'class-validator';
 
 // DTOs
 export class CreateTicketDto {
+  @IsString()
+  @IsNotEmpty()
   subject: string;
+
+  @IsString()
+  @IsNotEmpty()
   description: string;
+
+  @IsString()
+  @IsOptional()
   category?: string;
+
+  @IsString()
+  @IsOptional()
   priority?: string;
+
+  @IsOptional()
+  @IsArray()
   attachments?: { name: string; url: string; type?: string; size?: number }[];
 }
 
 export class UpdateTicketDto {
+  @IsString()
+  @IsOptional()
   status?: TicketStatus;
+
+  @IsString()
+  @IsOptional()
   priority?: TicketPriority;
+
+  @IsString()
+  @IsOptional()
   assignedTo?: string;
+
+  @IsString()
+  @IsOptional()
   assignedToName?: string;
 }
 
 export class AddMessageDto {
+  @IsString()
+  @IsNotEmpty()
   content: string;
+
+  @IsOptional()
   isInternal?: boolean;
 }
 

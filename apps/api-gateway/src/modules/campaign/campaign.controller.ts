@@ -250,6 +250,21 @@ export class CampaignController {
     return this.campaignService.retry(id);
   }
 
+  /**
+   * Retry a single failed job by index
+   */
+  @Post(':id/jobs/:jobIndex/retry')
+  @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
+  @ApiOperation({ summary: 'Retry a single failed job by index' })
+  @ApiResponse({ status: 200, description: 'Job retried successfully' })
+  @ApiResponse({ status: 400, description: 'Job is not in failed state' })
+  @ApiResponse({ status: 404, description: 'Campaign or job not found' })
+  async retryJob(
+    @Param('id') id: string,
+    @Param('jobIndex') jobIndex: string,
+  ) {
+    return this.campaignService.retryJob(id, parseInt(jobIndex, 10));
+  }
 
   /**
    * Update campaign configuration

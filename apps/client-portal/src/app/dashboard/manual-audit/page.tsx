@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, ClipboardList, Save, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Edit, ClipboardList, Save, Loader2, Play, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { qaParameterApi, type QAParameter } from '@/lib/api';
+import { AudioUploadDropzone, type AudioUploadDropzoneRef } from '@/components/dashboard/AudioUploadDropzone';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AuditParameter {
   id: string;
@@ -13,27 +17,107 @@ interface AuditParameter {
   isFatal: boolean;
 }
 
+// Helper to convert API parameter format to UI format
+const convertApiParamsToUi = (qaParams: any[]): AuditParameter[] => {
+  const uiParams: AuditParameter[] = [];
+
+  qaParams.forEach((group: any) => {
+    if (group.subParameters && Array.isArray(group.subParameters)) {
+      group.subParameters.forEach((sub: any) => {
+        uiParams.push({
+          id: sub.id,
+          name: sub.name,
+          weight: sub.weight,
+          category: group.name,
+          isFatal: sub.type === 'Fatal'
+        });
+      });
+    }
+  });
+
+  return uiParams;
+};
+
 export default function ManualAuditPage() {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     agentName: '',
     teamLead: '',
     callId: '',
-    callDate: '',
+    callDate: new Date().toISOString().split('T')[0],
     callType: 'Inbound Support',
   });
 
-  const [parameters] = useState<AuditParameter[]>([
+  const [campaigns, setCampaigns] = useState<QAParameter[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
+
+  // Default parameters if no campaign selected
+  const defaultParameters: AuditParameter[] = [
     { id: '1', name: 'Greeting & Opening', weight: 10, category: 'Opening', isFatal: false },
     { id: '2', name: 'Problem Identification', weight: 15, category: 'Discovery', isFatal: false },
     { id: '3', name: 'Solution Provided', weight: 20, category: 'Resolution', isFatal: false },
     { id: '4', name: 'Tone & Professionalism', weight: 15, category: 'Soft Skills', isFatal: false },
     { id: '5', name: 'Closing & Wrap-up', weight: 10, category: 'Closing', isFatal: false },
     { id: '6', name: 'Data Protection Compliance', weight: 0, category: 'Compliance', isFatal: true },
-  ]);
+  ];
 
+  const [parameters, setParameters] = useState<AuditParameter[]>(defaultParameters);
   const [scores, setScores] = useState<Record<string, { score: number; comment: string }>>({});
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+
+  // Audio state
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const audioInputRef = useRef<AudioUploadDropzoneRef>(null);
+
+  // Fetch campaigns on mount
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const data = await qaParameterApi.list();
+        if (data && Array.isArray(data)) {
+          setCampaigns(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch campaigns:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load campaigns. Using default parameters.',
+          variant: 'destructive',
+        });
+      }
+    };
+    fetchCampaigns();
+  }, [toast]);
+
+  const handleCampaignChange = (campaignId: string) => {
+    setSelectedCampaignId(campaignId);
+    const campaign = campaigns.find(c => c.id === campaignId || c._id === campaignId);
+
+    if (campaign && campaign.parameters) {
+      const uiParams = convertApiParamsToUi(campaign.parameters);
+      if (uiParams.length > 0) {
+        setParameters(uiParams);
+        setScores({}); // Reset scores when campaign changes
+        toast({
+          title: 'Campaign Selected',
+          description: `Loaded parameters for ${campaign.name}`,
+        });
+      }
+    } else {
+      setParameters(defaultParameters);
+    }
+  };
+
+  const handleAudioSelected = (file: File | null) => {
+    setAudioFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setAudioSrc(url);
+    } else {
+      setAudioSrc(null);
+    }
+  };
 
   const handleScoreChange = (paramId: string, value: number) => {
     setScores(prev => ({
@@ -72,9 +156,36 @@ export default function ManualAuditPage() {
   const handleSubmit = async (isDraft: boolean) => {
     setSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      // In a real implementation, you would upload the audio file first if present
+      // and then submit the audit data to the API.
+      // For now, we'll verify the data structure and simulate a save.
+
+      const auditData = {
+        ...formData,
+        campaignId: selectedCampaignId,
+        campaignName: campaigns.find(c => c.id === selectedCampaignId || c._id === selectedCampaignId)?.name || 'Manual Audit',
+        scores,
+        overallScore: calculateOverallScore(),
+        isDraft
+      };
+
+      console.log('Submitting audit:', auditData);
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      toast({
+        title: isDraft ? 'Draft Saved' : 'Audit Submitted',
+        description: isDraft ? 'Your progress has been saved.' : 'The audit has been submitted successfully.',
+        className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500',
+      });
+
+    } catch (error) {
+      console.error('Error saving audit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save audit. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }
@@ -87,7 +198,7 @@ export default function ManualAuditPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Manual Audit Form</h2>
-          <p className="text-muted-foreground">Traditional quality assessment</p>
+          <p className="text-muted-foreground">Traditional quality assessment with optional audio playback</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Overall Score:</span>
@@ -97,71 +208,93 @@ export default function ManualAuditPage() {
         </div>
       </div>
 
-      {saved && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-500 text-sm flex items-center gap-2">
-          <Save className="h-4 w-4" />
-          Audit saved successfully!
-        </div>
-      )}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Call Details */}
+        <Card className="bg-card/50 backdrop-blur border-border/50 h-fit">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Audit Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Campaign / Parameter Set</label>
+              <Select value={selectedCampaignId} onValueChange={handleCampaignChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a campaign" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.length > 0 ? (
+                    campaigns.map((campaign) => (
+                      <SelectItem key={campaign.id || campaign._id} value={campaign.id || campaign._id}>
+                        {campaign.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="default" disabled>No campaigns available</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Selecting a campaign will load its specific audit parameters.
+              </p>
+            </div>
 
-      {/* Call Details */}
-      <Card className="bg-card/50 backdrop-blur border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Edit className="h-5 w-5" />
-            Audit Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium">Agent Name *</label>
-              <input
-                type="text"
-                value={formData.agentName}
-                onChange={(e) => setFormData({ ...formData, agentName: e.target.value })}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter agent name"
-                required
-              />
+            <div className="grid gap-4 grid-cols-2">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Agent Name *</label>
+                <input
+                  type="text"
+                  value={formData.agentName}
+                  onChange={(e) => setFormData({ ...formData, agentName: e.target.value })}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Enter agent name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Team Lead</label>
+                <input
+                  type="text"
+                  value={formData.teamLead}
+                  onChange={(e) => setFormData({ ...formData, teamLead: e.target.value })}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Enter team lead name"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">Team Lead</label>
-              <input
-                type="text"
-                value={formData.teamLead}
-                onChange={(e) => setFormData({ ...formData, teamLead: e.target.value })}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter team lead name"
-              />
+
+            <div className="grid gap-4 grid-cols-2">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Call ID *</label>
+                <input
+                  type="text"
+                  value={formData.callId}
+                  onChange={(e) => setFormData({ ...formData, callId: e.target.value })}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Enter call ID"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Call Date *</label>
+                <input
+                  type="date"
+                  value={formData.callDate}
+                  onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
             </div>
+
             <div>
-              <label className="text-sm font-medium">Call ID *</label>
-              <input
-                type="text"
-                value={formData.callId}
-                onChange={(e) => setFormData({ ...formData, callId: e.target.value })}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter call ID"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Call Date *</label>
-              <input
-                type="date"
-                value={formData.callDate}
-                onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Call Type</label>
+              <label className="text-sm font-medium mb-1.5 block">Call Type</label>
               <select
                 value={formData.callType}
                 onChange={(e) => setFormData({ ...formData, callType: e.target.value })}
-                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option>Inbound Support</option>
                 <option>Outbound Sales</option>
@@ -169,9 +302,43 @@ export default function ManualAuditPage() {
                 <option>Technical Support</option>
               </select>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Audio Upload */}
+        <Card className="bg-card/50 backdrop-blur border-border/50 h-fit">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5" />
+              Call Recording
+            </CardTitle>
+            <CardDescription>
+              Upload the call recording for reference while auditing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <AudioUploadDropzone
+              ref={audioInputRef}
+              onFileSelected={handleAudioSelected}
+            />
+            {audioSrc && (
+              <div className="p-3 bg-muted/30 rounded-lg border border-border">
+                <p className="text-xs font-medium mb-2 flex items-center gap-2">
+                  <Play className="h-3 w-3 text-primary" />
+                  Selected: {audioFile?.name}
+                </p>
+                <audio controls src={audioSrc} className="w-full h-8" />
+              </div>
+            )}
+            {!audioSrc && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs">
+                <AlertCircle className="h-4 w-4" />
+                No audio selected. You can still audit without audio.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Evaluation Criteria */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
@@ -180,11 +347,16 @@ export default function ManualAuditPage() {
             <ClipboardList className="h-5 w-5" />
             Evaluation Criteria
           </CardTitle>
+          <CardDescription>
+            {selectedCampaignId
+              ? `Using parameters from selected campaign.`
+              : 'Using default parameters. Select a campaign to load specific criteria.'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             {parameters.map((param) => (
-              <div key={param.id} className="p-4 rounded-lg border border-border">
+              <div key={param.id} className="p-4 rounded-lg border border-border bg-card/30">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className="font-medium">{param.name}</span>
@@ -193,12 +365,12 @@ export default function ManualAuditPage() {
                         FATAL
                       </span>
                     )}
-                    <span className="text-xs text-muted-foreground">
-                      ({param.category})
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      {param.category}
                     </span>
                   </div>
                   {!param.isFatal && (
-                    <span className="text-sm text-muted-foreground">Weight: {param.weight}%</span>
+                    <span className="text-sm text-muted-foreground font-mono">Weight: {param.weight}%</span>
                   )}
                 </div>
                 <div className="flex items-center gap-4 mb-3">
@@ -206,23 +378,22 @@ export default function ManualAuditPage() {
                     type="range"
                     min="0"
                     max="100"
+                    step="5"
                     value={scores[param.id]?.score || 0}
                     onChange={(e) => handleScoreChange(param.id, parseInt(e.target.value))}
                     className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                   />
-                  <span className={`text-lg font-bold min-w-[4rem] text-right ${
-                    (scores[param.id]?.score || 0) >= 80 ? 'text-emerald-500' : 
-                    (scores[param.id]?.score || 0) >= 60 ? 'text-amber-500' : 'text-red-500'
-                  }`}>
+                  <span className={`text-lg font-bold min-w-[4rem] text-right font-mono ${(scores[param.id]?.score || 0) >= 80 ? 'text-emerald-500' :
+                      (scores[param.id]?.score || 0) >= 60 ? 'text-amber-500' : 'text-red-500'
+                    }`}>
                     {scores[param.id]?.score || 0}%
                   </span>
                 </div>
                 <textarea
-                  placeholder="Add comment (optional)"
+                  placeholder="Add observation or feedback..."
                   value={scores[param.id]?.comment || ''}
                   onChange={(e) => handleCommentChange(param.id, e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  rows={2}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[60px]"
                 />
               </div>
             ))}
@@ -231,7 +402,7 @@ export default function ManualAuditPage() {
       </Card>
 
       {/* Actions */}
-      <div className="flex justify-end gap-4">
+      <div className="flex justify-end gap-4 pb-8">
         <Button variant="outline" onClick={() => handleSubmit(true)} disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Save Draft

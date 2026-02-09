@@ -224,6 +224,7 @@ export default function SupportPage() {
               </Link>
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -307,6 +308,7 @@ export default function SupportPage() {
                 </div>
               </div>
             )}
+            </>
           )}
         </CardContent>
       </Card>

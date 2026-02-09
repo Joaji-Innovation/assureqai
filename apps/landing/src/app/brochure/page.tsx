@@ -1,10 +1,16 @@
-"use client";
+'use client';
 
-import "@/app/landing.css";
-import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
-import { Navbar } from "@/components/landing/Navbar";
-import { CTASection } from "@/components/landing/CTASection";
-import { cn } from "@/lib/utils";
+import '@/app/landing.css';
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useSpring,
+} from 'framer-motion';
+import { Navbar } from '@/components/landing/Navbar';
+import { CTASection } from '@/components/landing/CTASection';
+import { cn } from '@/lib/utils';
 import {
   Check,
   ShieldCheck,
@@ -14,29 +20,50 @@ import {
   Users,
   Search,
   Lock,
-} from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRef } from "react";
-import { VisionPillarCard } from "@/components/landing/VisionPillarCard";
-import { ScrambleText } from "@/components/ui/scramble-text";
-import { IntelligenceStack } from "@/components/landing/IntelligenceStack";
-import { BrochureVideo } from "@/components/landing/BrochureVideo";
-import { BrainCircuit } from "lucide-react";
+} from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRef } from 'react';
+import { VisionPillarCard } from '@/components/landing/VisionPillarCard';
+import { ScrambleText } from '@/components/ui/scramble-text';
+import { IntelligenceStack } from '@/components/landing/IntelligenceStack';
+import { BrochureVideo } from '@/components/landing/BrochureVideo';
+import { BrainCircuit } from 'lucide-react';
 
 // --- Components ---
 
-function Section({ children, className, id }: { children: React.ReactNode; className?: string; id?: string }) {
+function Section({
+  children,
+  className,
+  id,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
-    <section id={id} className={cn("py-20 px-6 md:px-12 max-w-7xl mx-auto", className)}>
+    <section
+      id={id}
+      className={cn('py-20 px-6 md:px-12 max-w-7xl mx-auto', className)}
+    >
       {children}
     </section>
   );
 }
 
-function SectionHeader({ title, subtitle, align = "center" }: { title: string; subtitle?: string; align?: "left" | "center" }) {
+function SectionHeader({
+  title,
+  subtitle,
+  align = 'center',
+}: {
+  title: string;
+  subtitle?: string;
+  align?: 'left' | 'center';
+}) {
   return (
-    <div className={cn("mb-16", align === "center" ? "text-center" : "text-left")}>
+    <div
+      className={cn('mb-16', align === 'center' ? 'text-center' : 'text-left')}
+    >
       <motion.h2
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -60,7 +87,17 @@ function SectionHeader({ title, subtitle, align = "center" }: { title: string; s
   );
 }
 
-function FeatureCard({ icon: Icon, title, description, delay = 0 }: { icon: any; title: string; description: string; delay?: number }) {
+function FeatureCard({
+  icon: Icon,
+  title,
+  description,
+  delay = 0,
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  delay?: number;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -72,7 +109,9 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }: { icon: any;
       <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
         <Icon className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
       </div>
-      <h3 className="text-xl font-bold mb-3 text-neutral-900 dark:text-white">{title}</h3>
+      <h3 className="text-xl font-bold mb-3 text-neutral-900 dark:text-white">
+        {title}
+      </h3>
       <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed text-sm md:text-base">
         {description}
       </p>
@@ -81,15 +120,21 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }: { icon: any;
 }
 
 // Reuse TeamCard from About Page
-const TeamCard = ({ member, index }: { member: typeof TEAM[0], index: number }) => {
+const TeamCard = ({
+  member,
+  index,
+}: {
+  member: (typeof TEAM)[0];
+  index: number;
+}) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
   const mouseX = useSpring(x, { stiffness: 50, damping: 10 });
   const mouseY = useSpring(y, { stiffness: 50, damping: 10 });
 
-  const rotateX = useTransform(mouseY, [-0.5, 0.5], ["10deg", "-10deg"]);
-  const rotateY = useTransform(mouseX, [-0.5, 0.5], ["-10deg", "10deg"]);
+  const rotateX = useTransform(mouseY, [-0.5, 0.5], ['10deg', '-10deg']);
+  const rotateY = useTransform(mouseX, [-0.5, 0.5], ['-10deg', '10deg']);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -117,14 +162,15 @@ const TeamCard = ({ member, index }: { member: typeof TEAM[0], index: number }) 
       style={{
         rotateX,
         rotateY,
-        transformStyle: "preserve-3d",
+        transformStyle: 'preserve-3d',
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className="group relative h-auto perspective-[1000px]"
     >
-      <div className="relative h-auto overflow-hidden rounded-3xl bg-white dark:bg-white/[0.01] border border-neutral-200 dark:border-white/5 group-hover:border-neutral-300 dark:group-hover:border-white/10 transition-all duration-500 shadow-xl"
-        style={{ transform: "translateZ(20px)" }}
+      <div
+        className="relative h-auto overflow-hidden rounded-3xl bg-white dark:bg-white/[0.01] border border-neutral-200 dark:border-white/5 group-hover:border-neutral-300 dark:group-hover:border-white/10 transition-all duration-500 shadow-xl"
+        style={{ transform: 'translateZ(20px)' }}
       >
         {/* Scanline Effect */}
         <div className="absolute inset-0 bg-[linear-gradient(transparent_2px,rgba(0,0,0,0.1)_2px)] bg-[size:100%_4px] opacity-0 group-hover:opacity-50 transition-opacity pointer-events-none z-10" />
@@ -147,7 +193,11 @@ const TeamCard = ({ member, index }: { member: typeof TEAM[0], index: number }) 
               <div className="absolute inset-0 opacity-20 bg-[size:20px_20px] bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)]" />
 
               <span className="relative z-10 text-5xl font-bold text-neutral-300/20 group-hover:text-emerald-500/40 transition-colors uppercase select-none">
-                {member.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                {member.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .substring(0, 2)}
               </span>
             </div>
           )}
@@ -159,7 +209,10 @@ const TeamCard = ({ member, index }: { member: typeof TEAM[0], index: number }) 
           <div className="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-white/30 z-20" />
 
           {/* ID Badge Overlay */}
-          <div className="absolute top-4 left-4 z-20 flex gap-2" style={{ transform: "translateZ(30px)" }}>
+          <div
+            className="absolute top-4 left-4 z-20 flex gap-2"
+            style={{ transform: 'translateZ(30px)' }}
+          >
             <div className="px-2 py-1 rounded bg-black/50 backdrop-blur-md border border-white/10 text-[9px] font-mono text-white/70">
               ID: {member.id}
             </div>
@@ -168,23 +221,42 @@ const TeamCard = ({ member, index }: { member: typeof TEAM[0], index: number }) 
 
         {/* Info Section */}
         <div className="p-6 relative">
-          <div className="absolute -top-6 right-6 w-12 h-12 bg-[#0A0A0A] rounded-full flex items-center justify-center border border-white/10 z-20 group-hover:scale-110 transition-transform duration-300"
-            style={{ transform: "translateZ(30px)" }}
+          <div
+            className="absolute -top-6 right-6 w-12 h-12 bg-[#0A0A0A] rounded-full flex items-center justify-center border border-white/10 z-20 group-hover:scale-110 transition-transform duration-300"
+            style={{ transform: 'translateZ(30px)' }}
           >
             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
           </div>
 
-
-          <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors" style={{ transform: "translateZ(20px)" }}>{member.name}</h3>
-          <p className="text-xs font-mono text-emerald-500 dark:text-emerald-400 mb-4 uppercase tracking-wider" style={{ transform: "translateZ(15px)" }}>{member.role}</p>
-          <p className="text-sm text-neutral-600 dark:text-muted-foreground leading-relaxed mb-6" style={{ transform: "translateZ(10px)" }}>
+          <h3
+            className="text-xl font-bold text-neutral-900 dark:text-white mb-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors"
+            style={{ transform: 'translateZ(20px)' }}
+          >
+            {member.name}
+          </h3>
+          <p
+            className="text-xs font-mono text-emerald-500 dark:text-emerald-400 mb-4 uppercase tracking-wider"
+            style={{ transform: 'translateZ(15px)' }}
+          >
+            {member.role}
+          </p>
+          <p
+            className="text-sm text-neutral-600 dark:text-muted-foreground leading-relaxed mb-6"
+            style={{ transform: 'translateZ(10px)' }}
+          >
             {member.bio}
           </p>
 
           {/* Skills Tags */}
-          <div className="flex flex-wrap gap-2" style={{ transform: "translateZ(25px)" }}>
+          <div
+            className="flex flex-wrap gap-2"
+            style={{ transform: 'translateZ(25px)' }}
+          >
             {member.skills.map((skill, i) => (
-              <span key={i} className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[10px] text-neutral-500 dark:text-white/50 group-hover:text-neutral-900 dark:group-hover:text-white/80 group-hover:border-neutral-300 dark:group-hover:border-white/20 transition-colors">
+              <span
+                key={i}
+                className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[10px] text-neutral-500 dark:text-white/50 group-hover:text-neutral-900 dark:group-hover:text-white/80 group-hover:border-neutral-300 dark:group-hover:border-white/20 transition-colors"
+              >
                 {skill}
               </span>
             ))}
@@ -197,95 +269,97 @@ const TeamCard = ({ member, index }: { member: typeof TEAM[0], index: number }) 
 
 const TEAM = [
   {
-    name: "Ajith T.",
-    role: "Founder & CEO",
-    bio: "",
-    image: "/team/1.jpeg",
-    skills: ["Strategy", "Scale", "Systems"],
-    id: "Qai0001"
+    name: 'Ajith T.',
+    role: 'Founder & CEO',
+    bio: '',
+    image: '/team/1.jpeg',
+    skills: ['Strategy', 'Scale', 'Systems'],
+    id: 'Qai0001',
   },
   {
-    name: "Joel J.",
-    role: "Co-Founder & COO",
-    bio: "",
-    image: "/team/2.jpeg",
-    skills: ["Ops", "Human-AI", "Process"],
-    id: "Qai0002"
+    name: 'Joel J.',
+    role: 'Co-Founder & COO',
+    bio: '',
+    image: '/team/2.jpeg',
+    skills: ['Ops', 'Human-AI', 'Process'],
+    id: 'Qai0002',
   },
   {
-    name: "Kanish K.",
-    role: "CTO",
-    bio: "",
-    image: "/team/3.jpeg",
-    skills: ["LLMs", "Architecture", "RAG"],
-    id: "Qai0003"
+    name: 'Kanish K.',
+    role: 'CTO',
+    bio: '',
+    image: '/team/3.jpeg',
+    skills: ['LLMs', 'Architecture', 'RAG'],
+    id: 'Qai0003',
   },
   {
-    name: "Sai Laaxmi",
-    role: "Head of Design",
-    bio: "",
-    image: "",
-    skills: ["Visual", "Product", "Brand"],
-    id: "Qai0004"
+    name: 'Sai Laaxmi',
+    role: 'Head of Design',
+    bio: '',
+    image: '',
+    skills: ['Visual', 'Product', 'Brand'],
+    id: 'Qai0004',
   },
   {
-    name: "Jessica",
-    role: "Head of Finance (HR)",
-    bio: "",
-    image: "",
-    skills: ["Finance", "People", "Culture"],
-    id: "Qai0005"
+    name: 'Jessica',
+    role: 'Head of Finance (HR)',
+    bio: '',
+    image: '',
+    skills: ['Finance', 'People', 'Culture'],
+    id: 'Qai0005',
   },
   {
-    name: "Basco",
-    role: "Head of Sales",
-    bio: "",
-    image: "",
-    skills: ["GTM", "Revenue", "Growth"],
-    id: "Qai0006"
+    name: 'Basco',
+    role: 'Head of Sales',
+    bio: '',
+    image: '',
+    skills: ['GTM', 'Revenue', 'Growth'],
+    id: 'Qai0006',
   },
   {
-    name: "Rathi R.",
-    role: "Head of Operations",
-    bio: "",
-    image: "",
-    skills: ["Process", "Scale", "Efficiency"],
-    id: "Qai0007"
+    name: 'Rathi R.',
+    role: 'Head of Operations',
+    bio: '',
+    image: '',
+    skills: ['Process', 'Scale', 'Efficiency'],
+    id: 'Qai0007',
   },
   {
-    name: "Harshit",
-    role: "Head of Customer Success",
-    bio: "",
-    image: "",
-    skills: ["Retention", "Support", "CX"],
-    id: "QAi0008"
-  }
+    name: 'Harshit',
+    role: 'Head of Customer Success',
+    bio: '',
+    image: '',
+    skills: ['Retention', 'Support', 'CX'],
+    id: 'QAi0008',
+  },
 ];
 
 const DASHBOARD_IMAGES = [
-  "/dashboard/1.png",
-  "/dashboard/2.png",
-  "/dashboard/3.png",
-  "/dashboard/4.png",
-  "/dashboard/5.png",
-  "/dashboard/6.png",
+  '/dashboard/1.png',
+  '/dashboard/2.png',
+  '/dashboard/3.png',
+  '/dashboard/4.png',
+  '/dashboard/5.png',
+  '/dashboard/6.png',
 ];
 
 const PRICING_SLABS = [
-  { range: "0 – 10K", price: "₹10", desc: "Starter" },
-  { range: "10K – 25K", price: "₹8", desc: "Growth" },
-  { range: "25K – 50K", price: "₹6", desc: "Scale", recommended: true },
-  { range: "50K – 75K", price: "₹4", desc: "Volume" },
-  { range: "75K – 100K", price: "₹3", desc: "Enterprise" },
-  { range: "100K+", price: "₹2", desc: "Partner" },
+  { range: '0 – 10K', price: '₹10', desc: 'Starter' },
+  { range: '10K – 25K', price: '₹8', desc: 'Growth' },
+  { range: '25K – 50K', price: '₹6', desc: 'Scale', recommended: true },
+  { range: '50K – 75K', price: '₹4', desc: 'Volume' },
+  { range: '75K – 100K', price: '₹3', desc: 'Enterprise' },
+  { range: '100K+', price: '₹2', desc: 'Partner' },
 ];
 
 export default function BrochurePage() {
   const containerRef = useRef(null);
 
   return (
-    <div ref={containerRef} className="bg-[#fdfbf7] dark:bg-black font-sans selection:bg-emerald-500/30">
-
+    <div
+      ref={containerRef}
+      className="bg-[#fdfbf7] dark:bg-black font-sans selection:bg-emerald-500/30"
+    >
       {/* Standard Navbar */}
       <Navbar />
 
@@ -311,9 +385,13 @@ export default function BrochurePage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8 text-neutral-900 dark:text-white"
           >
-            Audit <span className="text-emerald-600 dark:text-emerald-500">100%</span> of Your Calls.
+            Audit{' '}
+            <span className="text-emerald-600 dark:text-emerald-500">100%</span>{' '}
+            of Your Calls.
             <br />
-            <span className="text-3xl md:text-5xl lg:text-6xl text-neutral-400 dark:text-neutral-600 font-medium">No More Blind Spots.</span>
+            <span className="text-3xl md:text-5xl lg:text-6xl text-neutral-400 dark:text-neutral-600 font-medium">
+              No More Blind Spots.
+            </span>
           </motion.h1>
 
           <motion.p
@@ -322,7 +400,8 @@ export default function BrochurePage() {
             transition={{ delay: 0.1 }}
             className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto mb-12 leading-relaxed"
           >
-            AssureQAi delivers parameter-level defect detection, automatic TNIs, and leadership-ready dashboards at a fraction of manual QA costs.
+            AssureQAi delivers parameter-level defect detection, automatic TNIs,
+            and leadership-ready dashboards at a fraction of manual QA costs.
           </motion.p>
 
           <motion.div
@@ -350,17 +429,24 @@ export default function BrochurePage() {
         <div className="bg-white dark:bg-neutral-900 rounded-[2.5rem] p-8 md:p-16 border border-neutral-200 dark:border-neutral-800 shadow-sm">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-neutral-900 dark:text-white">The 98% Blind Spot</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-neutral-900 dark:text-white">
+                The 98% Blind Spot
+              </h2>
               <div className="space-y-6 text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
                 <p>
-                  In traditional QA, only <b className="text-red-500">1–2%</b> of interactions are audited. This leaves 98% of your customer conversations in the dark.
+                  In traditional QA, only <b className="text-red-500">1–2%</b>{' '}
+                  of interactions are audited. This leaves 98% of your customer
+                  conversations in the dark.
                 </p>
                 <p>
-                  Risks hide in the shadows: DNC violations, missed disclosures, and rude behavior often go unchecked until a escalation happens.
+                  Risks hide in the shadows: DNC violations, missed disclosures,
+                  and rude behavior often go unchecked until a escalation
+                  happens.
                 </p>
                 <div className="p-6 bg-emerald-50 dark:bg-emerald-900/10 border-l-4 border-emerald-500 rounded-r-xl">
                   <p className="text-emerald-900 dark:text-emerald-100 font-medium italic">
-                    &quot;AssureQAi eliminates this blind spot by auditing 100% of calls with superhuman precision.&quot;
+                    &quot;AssureQAi eliminates this blind spot by auditing 100%
+                    of calls with superhuman precision.&quot;
                   </p>
                 </div>
               </div>
@@ -369,12 +455,24 @@ export default function BrochurePage() {
               {/* Abstract Visualization of 1% vs 100% */}
               <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 gap-1 p-4 opacity-20">
                 {Array.from({ length: 144 }).map((_, i) => (
-                  <div key={i} className={cn("rounded-sm", i < 3 ? "bg-red-500" : "bg-neutral-400 dark:bg-neutral-600")} />
+                  <div
+                    key={i}
+                    className={cn(
+                      'rounded-sm',
+                      i < 3
+                        ? 'bg-red-500'
+                        : 'bg-neutral-400 dark:bg-neutral-600',
+                    )}
+                  />
                 ))}
               </div>
               <div className="relative z-10 text-center p-12 bg-white/90 dark:bg-black/80 backdrop-blur-xl rounded-2xl border border-neutral-200 dark:border-white/10 shadow-2xl">
-                <div className="text-7xl md:text-8xl font-bold text-emerald-600 mb-2 tracking-tighter">100%</div>
-                <div className="text-sm font-mono uppercase tracking-widest text-neutral-500">Coverage</div>
+                <div className="text-7xl md:text-8xl font-bold text-emerald-600 mb-2 tracking-tighter">
+                  100%
+                </div>
+                <div className="text-sm font-mono uppercase tracking-widest text-neutral-500">
+                  Coverage
+                </div>
               </div>
             </div>
           </div>
@@ -402,10 +500,14 @@ export default function BrochurePage() {
             </div>
             <div className="absolute -bottom-6 -right-6 p-6 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-100 dark:border-neutral-800 hidden md:block">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600"><Search className="w-6 h-6" /></div>
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600">
+                  <Search className="w-6 h-6" />
+                </div>
                 <div>
                   <div className="text-2xl font-bold">100%</div>
-                  <div className="text-xs text-neutral-500 uppercase">Coverage</div>
+                  <div className="text-xs text-neutral-500 uppercase">
+                    Coverage
+                  </div>
                 </div>
               </div>
             </div>
@@ -413,7 +515,9 @@ export default function BrochurePage() {
           <div className="order-1 md:order-2">
             <h3 className="text-3xl font-bold mb-4">End-to-End Auditing</h3>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
-              Audit 100% of calls across inbound, outbound, collections, and sales. Or configure sampling parameters to focus on high-risk interactions.
+              Audit 100% of calls across inbound, outbound, collections, and
+              sales. Or configure sampling parameters to focus on high-risk
+              interactions.
             </p>
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-neutral-700 dark:text-neutral-300">
@@ -437,7 +541,9 @@ export default function BrochurePage() {
           <div>
             <h3 className="text-3xl font-bold mb-4">Defect Intelligence</h3>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
-              Go beyond simple scores. Tag defects parameter-wise across behavioral, process, compliance, system, and product knowledge dimensions.
+              Go beyond simple scores. Tag defects parameter-wise across
+              behavioral, process, compliance, system, and product knowledge
+              dimensions.
             </p>
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-neutral-700 dark:text-neutral-300">
@@ -483,7 +589,9 @@ export default function BrochurePage() {
           <div className="order-1 md:order-2">
             <h3 className="text-3xl font-bold mb-4">Smart Coaching</h3>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
-              Automatically generate Training Needs Identification (TNIs) from defect patterns. Link them directly to coaching plans and track closure.
+              Automatically generate Training Needs Identification (TNIs) from
+              defect patterns. Link them directly to coaching plans and track
+              closure.
             </p>
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-neutral-700 dark:text-neutral-300">
@@ -507,7 +615,8 @@ export default function BrochurePage() {
           <div>
             <h3 className="text-3xl font-bold mb-4">Leadership Reporting</h3>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
-              Real-time drilldowns from agent to site level. Export one-click Excel reports with pivots, PDF summaries, and PPT packs for MBRs.
+              Real-time drilldowns from agent to site level. Export one-click
+              Excel reports with pivots, PDF summaries, and PPT packs for MBRs.
             </p>
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-neutral-700 dark:text-neutral-300">
@@ -536,7 +645,6 @@ export default function BrochurePage() {
             </div>
           </motion.div>
         </div>
-
       </Section>
 
       {/* Comparison Table */}
@@ -547,12 +655,20 @@ export default function BrochurePage() {
           <div className="relative z-10">
             <div className="md:flex justify-between items-end mb-16">
               <div>
-                <h2 className="text-3xl md:text-5xl font-bold mb-4">Manual vs AssureQAi</h2>
-                <p className="text-neutral-400 max-w-lg text-lg">See the difference in cost, speed, and intelligence.</p>
+                <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                  Manual vs AssureQAi
+                </h2>
+                <p className="text-neutral-400 max-w-lg text-lg">
+                  See the difference in cost, speed, and intelligence.
+                </p>
               </div>
               <div className="hidden md:block text-right">
-                <div className="text-sm text-neutral-500 uppercase font-mono mb-1">Savings up to</div>
-                <div className="text-5xl font-bold text-emerald-400 tracking-tighter">92%</div>
+                <div className="text-sm text-neutral-500 uppercase font-mono mb-1">
+                  Savings up to
+                </div>
+                <div className="text-5xl font-bold text-emerald-400 tracking-tighter">
+                  92%
+                </div>
               </div>
             </div>
 
@@ -567,24 +683,48 @@ export default function BrochurePage() {
                 </thead>
                 <tbody className="divide-y divide-white/5 text-lg">
                   <tr>
-                    <td className="py-6 px-4 font-medium text-neutral-300">Coverage</td>
-                    <td className="py-6 px-4 text-neutral-500">1-2% (Costly)</td>
-                    <td className="py-6 px-4 font-bold text-white">100% Audits</td>
+                    <td className="py-6 px-4 font-medium text-neutral-300">
+                      Coverage
+                    </td>
+                    <td className="py-6 px-4 text-neutral-500">
+                      1-2% (Costly)
+                    </td>
+                    <td className="py-6 px-4 font-bold text-white">
+                      100% Audits
+                    </td>
                   </tr>
                   <tr>
-                    <td className="py-6 px-4 font-medium text-neutral-300">Turnaround</td>
-                    <td className="py-6 px-4 text-neutral-500">Daily/Weekly Batches</td>
-                    <td className="py-6 px-4 font-bold text-white">Near Real-time</td>
+                    <td className="py-6 px-4 font-medium text-neutral-300">
+                      Turnaround
+                    </td>
+                    <td className="py-6 px-4 text-neutral-500">
+                      Daily/Weekly Batches
+                    </td>
+                    <td className="py-6 px-4 font-bold text-white">
+                      Near Real-time
+                    </td>
                   </tr>
                   <tr>
-                    <td className="py-6 px-4 font-medium text-neutral-300">Insights</td>
-                    <td className="py-6 px-4 text-neutral-500">Manual Consolidation</td>
-                    <td className="py-6 px-4 font-bold text-white">Parameter-level + Fatal Classification</td>
+                    <td className="py-6 px-4 font-medium text-neutral-300">
+                      Insights
+                    </td>
+                    <td className="py-6 px-4 text-neutral-500">
+                      Manual Consolidation
+                    </td>
+                    <td className="py-6 px-4 font-bold text-white">
+                      Parameter-level + Fatal Classification
+                    </td>
                   </tr>
                   <tr>
-                    <td className="py-6 px-4 font-medium text-neutral-300">Scalability</td>
-                    <td className="py-6 px-4 text-neutral-500">Linear (Hire more people)</td>
-                    <td className="py-6 px-4 font-bold text-white">Elastic (Infinite Scale)</td>
+                    <td className="py-6 px-4 font-medium text-neutral-300">
+                      Scalability
+                    </td>
+                    <td className="py-6 px-4 text-neutral-500">
+                      Linear (Hire more people)
+                    </td>
+                    <td className="py-6 px-4 font-bold text-white">
+                      Elastic (Infinite Scale)
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -592,8 +732,6 @@ export default function BrochurePage() {
           </div>
         </div>
       </Section>
-
-
 
       {/* Our Mission / The Architects */}
       <section className="relative px-6 py-24 text-center">
@@ -606,15 +744,20 @@ export default function BrochurePage() {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 backdrop-blur-md mb-8">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Our Mission</span>
+            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+              Our Mission
+            </span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tighter text-neutral-900 dark:text-white mb-8">
             The Architects of <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400 dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-200">Automated QA.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400 dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-200">
+              Automated QA.
+            </span>
           </h1>
           <p className="text-xl text-neutral-600 dark:text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            We built AssureQAi because we believe random sampling is a relic of the past.
-            In a world of infinite data, &ldquo;good enough&rdquo; coverage is no longer acceptable.
+            We built AssureQAi because we believe random sampling is a relic of
+            the past. In a world of infinite data, &ldquo;good enough&rdquo;
+            coverage is no longer acceptable.
           </p>
         </motion.div>
       </section>
@@ -632,18 +775,25 @@ export default function BrochurePage() {
             <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-500/20 rounded-full blur-[50px] pointer-events-none" />
 
             <div className="relative z-10 space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white">Built by Practitioners.</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white">
+                Built by Practitioners.
+              </h2>
               <div className="space-y-4 text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed">
                 <p>
-                  The founding team spent a decade scaling support teams at high-growth startups.
-                  We saw the same problem everywhere: QA was a bottleneck.
+                  The founding team spent a decade scaling support teams at
+                  high-growth startups. We saw the same problem everywhere: QA
+                  was a bottleneck.
                 </p>
                 <p>
-                  Human auditors could only review 1-2% of calls. This meant 98% of customer interactions—and the risks buried within them—went unheard.
+                  Human auditors could only review 1-2% of calls. This meant 98%
+                  of customer interactions—and the risks buried within them—went
+                  unheard.
                 </p>
                 <div className="p-6 bg-neutral-100 dark:bg-neutral-900 border-l-4 border-emerald-500 rounded-r-xl">
                   <p className="font-medium text-emerald-900 dark:text-emerald-300">
-                    We decided to fix it. Not by hiring more people, but by building an intelligence layer that could listen, understand, and grade every single second of conversation.
+                    We decided to fix it. Not by hiring more people, but by
+                    building an intelligence layer that could listen,
+                    understand, and grade every single second of conversation.
                   </p>
                 </div>
               </div>
@@ -673,17 +823,24 @@ export default function BrochurePage() {
               className="inline-flex items-center gap-2 mb-16"
             >
               <div className="w-12 h-[1px] bg-gradient-to-r from-transparent to-emerald-500" />
-              <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em] font-bold">The Directive</span>
+              <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em] font-bold">
+                The Directive
+              </span>
               <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-emerald-500" />
             </motion.div>
 
             <h2 className="max-w-4xl mx-auto leading-tight tracking-tight mb-20">
               <span className="text-2xl md:text-3xl font-light text-neutral-400 dark:text-white/40 block mb-6">
-                Our vision is to lead as a premier AI-driven technology company, transforming industries with
+                Our vision is to lead as a premier AI-driven technology company,
+                transforming industries with
               </span>
 
               <span className="block text-4xl md:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 via-emerald-600 to-emerald-800 dark:from-white dark:via-emerald-200 dark:to-emerald-400 mb-4">
-                <ScrambleText text="intelligent, adaptive systems" revealSpeed={40} delay={200} />
+                <ScrambleText
+                  text="intelligent, adaptive systems"
+                  revealSpeed={40}
+                  delay={200}
+                />
               </span>
 
               <span className="text-2xl md:text-3xl font-light text-neutral-400 dark:text-white/40 block mb-6">
@@ -747,17 +904,29 @@ export default function BrochurePage() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
               className={cn(
-                "p-6 rounded-2xl border text-center flex flex-col items-center justify-center min-h-[180px] transition-all duration-300",
+                'p-6 rounded-2xl border text-center flex flex-col items-center justify-center min-h-[180px] transition-all duration-300',
                 slab.recommended
-                  ? "bg-emerald-600 text-white border-emerald-600 shadow-xl shadow-emerald-600/20 scale-110 z-10"
-                  : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500/30"
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xl shadow-emerald-600/20 scale-110 z-10'
+                  : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500/30',
               )}
             >
-              <div className={cn("text-xs font-mono uppercase mb-3", slab.recommended ? "text-emerald-100" : "text-neutral-500")}>
+              <div
+                className={cn(
+                  'text-xs font-mono uppercase mb-3',
+                  slab.recommended ? 'text-emerald-100' : 'text-neutral-500',
+                )}
+              >
                 {slab.range} calls
               </div>
-              <div className="text-4xl font-bold mb-3 tracking-tight">{slab.price}</div>
-              <div className={cn("text-xs font-medium", slab.recommended ? "text-emerald-200" : "text-neutral-400")}>
+              <div className="text-4xl font-bold mb-3 tracking-tight">
+                {slab.price}
+              </div>
+              <div
+                className={cn(
+                  'text-xs font-medium',
+                  slab.recommended ? 'text-emerald-200' : 'text-neutral-400',
+                )}
+              >
                 per audit
               </div>
             </motion.div>
@@ -772,7 +941,9 @@ export default function BrochurePage() {
       {/* Leadership / The Command Crew */}
       <section className="py-24 px-6 md:px-12 relative overflow-hidden">
         <div className="text-center mb-16 relative z-10">
-          <h2 className="text-3xl md:text-5xl font-bold text-neutral-900 dark:text-white mb-6">The Command Crew</h2>
+          <h2 className="text-3xl md:text-5xl font-bold text-neutral-900 dark:text-white mb-6">
+            The Command Crew
+          </h2>
           <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
             Built by practitioners who have audited millions of calls.
           </p>
@@ -787,11 +958,8 @@ export default function BrochurePage() {
         </div>
       </section>
 
-
-
       {/* Standard CTA & Footer */}
       <CTASection />
-
     </div>
   );
 }

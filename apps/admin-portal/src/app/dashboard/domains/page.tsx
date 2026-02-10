@@ -23,7 +23,7 @@ interface DomainUI {
   clientId: string;
   clientName: string;
   status: 'active' | 'pending' | 'error'; // Mapped from instance/domain status
-  sslStatus: 'valid' | 'pending' | 'expired';
+  sslStatus: 'valid' | 'pending' | 'expired' | 'disabled';
   sslExpiry?: string;
   createdAt: string;
   isCustom: boolean;
@@ -134,7 +134,7 @@ export default function DomainsPage() {
       } else {
         alert(
           result.error ||
-            'Domain verification failed. Please check DNS settings.',
+          'Domain verification failed. Please check DNS settings.',
         );
       }
     } catch (error) {

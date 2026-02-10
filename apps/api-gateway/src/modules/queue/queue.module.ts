@@ -8,9 +8,18 @@ import { QueueService } from './queue.service';
 import { QueueWorkerService } from './queue-worker.service';
 import { AiModule } from '../ai/ai.module';
 import { AuditReportModule } from '../audit-report/audit-report.module';
-import { CallAudit, CallAuditSchema } from '../../database/schemas/call-audit.schema';
-import { Campaign, CampaignSchema } from '../../database/schemas/campaign.schema';
-import { QAParameter, QAParameterSchema } from '../../database/schemas/qa-parameter.schema';
+import {
+  CallAudit,
+  CallAuditSchema,
+} from '../../database/schemas/call-audit.schema';
+import {
+  Campaign,
+  CampaignSchema,
+} from '../../database/schemas/campaign.schema';
+import {
+  QAParameter,
+  QAParameterSchema,
+} from '../../database/schemas/qa-parameter.schema';
 
 @Global()
 @Module({
@@ -28,5 +37,4 @@ import { QAParameter, QAParameterSchema } from '../../database/schemas/qa-parame
   // are available to modules that import QueueModule (like CampaignModule).
   exports: [QueueService, QueueWorkerService, MongooseModule],
 })
-export class QueueModule { }
-
+export class QueueModule {}

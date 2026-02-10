@@ -89,21 +89,15 @@ export const authApi = {
 };
 
 export const instanceApi = {
-  getStatus: async () => {
-    // Use same-origin fetch so the client portal checks the *local* instance runtime config.
-    if (typeof window !== 'undefined') {
-      const res = await fetch('/api/instance/status', { credentials: 'include', headers: { 'Content-Type': 'application/json' } });
-      if (!res.ok) throw new Error('Failed to fetch instance status');
-      return res.json();
-    }
-
-    // Fallback during SSR or unexpected environments: use API base request
-    return request<{
+  getStatus: () =>
+    // Always call configured API base (NEXT_PUBLIC_API_URL) so we query the admin panel route.
+    request<{
       usageReportingEnabled: boolean;
       hasAdminUrl: boolean;
       hasInstanceApiKey: boolean;
-    }>('/api/instance/status');
-  },
+    }>('/api/instance/status'),
+  sendTestReport: () =>
+    request<{ success: boolean; message?: string }>('/api/instance/test-report', { method: 'POST' }),
 };
 
 // Audit APIs

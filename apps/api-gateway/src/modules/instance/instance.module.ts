@@ -18,6 +18,9 @@ import { ProvisioningModule } from '../provisioning/provisioning.module';
       { name: Instance.name, schema: InstanceSchema },
     ]),
     forwardRef(() => ProvisioningModule),
+    // Import AuditReportModule to allow the instance controller to send test reports
+    // via the UsageReporterService (server -> admin reporting).
+    require('../audit-report/audit-report.module').AuditReportModule,
   ],
   controllers: [InstanceController, PublicInstanceController],
   providers: [InstanceService],

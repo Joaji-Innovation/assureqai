@@ -69,12 +69,15 @@ export class AuditReportService {
 
     await report.save();
 
-    // Update instance credits
+    // Update instance credits and last reported timestamp
     await this.instanceModel.findByIdAndUpdate(instance._id, {
       $inc: {
         'credits.usedAudits': 1,
         'credits.usedTokens': dto.totalTokens || 0,
         'credits.totalApiCalls': 1,
+      },
+      $set: {
+        'usage.lastReportedAt': new Date(),
       },
     });
 

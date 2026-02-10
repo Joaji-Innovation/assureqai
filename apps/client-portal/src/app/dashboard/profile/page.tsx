@@ -42,6 +42,9 @@ export default function ProfilePage() {
     hasInstanceApiKey: boolean;
   } | null>(null);
 
+  const [testInProgress, setTestInProgress] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
+
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -361,6 +364,35 @@ export default function ProfilePage() {
                   </a>{' '}
                   for setup.
                 </p>
+
+                {/* Test report */}
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    className="inline-flex items-center px-3 py-1.5 rounded-md border border-border text-sm bg-background hover:bg-muted"
+                    onClick={async () => {
+                      setTestInProgress(true);
+                      setTestResult(null);
+                      try {
+                        const res = await instanceApi.sendTestReport();
+                        setTestResult({ success: res.success, message: res.message });
+                      } catch (err) {
+                        setTestResult({ success: false, message: (err as Error).message || 'Failed to send test report' });
+                      } finally {
+                        setTestInProgress(false);
+                      }
+                    }}
+                    disabled={testInProgress}
+                  >
+                    {testInProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send test report'}
+                  </button>
+                  {testResult && (
+                    <div className={`mt-2 text-sm ${testResult.success ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {testResult.message || (testResult.success ? 'Test report sent' : 'Failed to send test report')}
+                    </div>
+                  )}
+                </div>
+
               </div>
 
               <Button

@@ -27,10 +27,11 @@ import {
   ChevronUp,
   Filter,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { campaignApi } from '@/lib/api';
+import { campaignApi, auditApi } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -44,6 +45,16 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useCampaign } from '@/lib/hooks';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type JobFilter = 'all' | 'failed' | 'completed' | 'pending' | 'processing';
 
@@ -62,6 +73,9 @@ export default function CampaignDetailsPage() {
   const [expandedJobs, setExpandedJobs] = useState<Set<number>>(new Set());
   const [retryingJobs, setRetryingJobs] = useState<Set<number>>(new Set());
   const [jobFilter, setJobFilter] = useState<JobFilter>('all');
+
+  // Delete state
+  const [auditToDelete, setAuditToDelete] = useState<string | null>(null);
 
   // Auto-poll when campaign is active
   useEffect(() => {
@@ -123,6 +137,22 @@ export default function CampaignDetailsPage() {
     [campaignId, toast, refetch],
   );
 
+  const handleDeleteAudit = async (id: string) => {
+    try {
+      await auditApi.delete(id);
+      toast({ title: 'Audit deleted' });
+      refetch(); // Refresh campaign to show updated stats and removed audit
+    } catch (e: any) {
+      toast({
+        title: 'Failed to delete audit',
+        description: e.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setAuditToDelete(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -155,10 +185,10 @@ export default function CampaignDetailsPage() {
   const progressPercent =
     campaign.totalJobs > 0
       ? Math.round(
-          ((campaign.completedJobs + campaign.failedJobs) /
-            campaign.totalJobs) *
-            100,
-        )
+        ((campaign.completedJobs + campaign.failedJobs) /
+          campaign.totalJobs) *
+        100,
+      )
       : 0;
 
   const pendingJobs =
@@ -327,17 +357,17 @@ export default function CampaignDetailsPage() {
               <p>Campaign Details</p>
               {(campaign.status === 'processing' ||
                 campaign.status === 'pending') && (
-                <>
-                  <span>•</span>
-                  <Badge
-                    variant="outline"
-                    className="text-xs font-normal bg-primary/5 text-primary border-primary/20"
-                  >
-                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    Live Polling
-                  </Badge>
-                </>
-              )}
+                  <>
+                    <span>•</span>
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-normal bg-primary/5 text-primary border-primary/20"
+                    >
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      Live Polling
+                    </Badge>
+                  </>
+                )}
             </div>
           </div>
         </div>
@@ -415,11 +445,11 @@ export default function CampaignDetailsPage() {
       <div className="flex items-center gap-2">
         {(campaign.status === 'processing' ||
           campaign.status === 'pending') && (
-          <Button variant="outline" size="sm" onClick={handlePause}>
-            <PauseCircle className="mr-2 h-4 w-4" />
-            Pause
-          </Button>
-        )}
+            <Button variant="outline" size="sm" onClick={handlePause}>
+              <PauseCircle className="mr-2 h-4 w-4" />
+              Pause
+            </Button>
+          )}
         {campaign.status === 'paused' && (
           <Button variant="outline" size="sm" onClick={handleResume}>
             <PlayCircle className="mr-2 h-4 w-4" />
@@ -673,16 +703,26 @@ export default function CampaignDetailsPage() {
                                 </Button>
                               )}
                               {job.auditId && (
-                                <Link href={`/dashboard/audits/${job.auditId}`}>
+                                <>
+                                  <Link href={`/dashboard/audits/${job.auditId}`}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs"
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                                      View
+                                    </Button>
+                                  </Link>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 text-xs"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={() => setAuditToDelete(job.auditId || null)}
                                   >
-                                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                                    View
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
-                                </Link>
+                                </>
                               )}
                             </div>
                           </TableCell>
@@ -724,6 +764,26 @@ export default function CampaignDetailsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!auditToDelete} onOpenChange={(open) => !open && setAuditToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Audit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this audit? This will remove the audit result and reset the job status to pending (allowing re-run).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => auditToDelete && handleDeleteAudit(auditToDelete)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

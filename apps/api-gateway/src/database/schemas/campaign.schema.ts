@@ -31,6 +31,12 @@ export class Campaign {
   @Prop({ type: Types.ObjectId, ref: 'QAParameter', required: true })
   qaParameterSetId: Types.ObjectId;
 
+  @Prop({ trim: true })
+  language?: string;
+
+  @Prop({ trim: true })
+  transcriptionLanguage?: string;
+
   // Job tracking
   @Prop({ default: 0 })
   totalJobs: number;

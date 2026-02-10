@@ -192,6 +192,24 @@ export class CallAudit {
   @Prop()
   auditDurationMs?: number; // Legacy field - use timing.processingDurationMs instead
 
+  // Root cause analysis
+  @Prop()
+  rootCauseAnalysis?: string;
+
+  // Coaching recommendations
+  @Prop(
+    raw({
+      strengths: [String],
+      improvements: [String],
+      suggestedActions: [String],
+    }),
+  )
+  coaching?: {
+    strengths: string[];
+    improvements: string[];
+    suggestedActions: string[];
+  };
+
   // Dispute tracking
   @Prop({ enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' })
   disputeStatus: 'none' | 'pending' | 'approved' | 'rejected';

@@ -147,6 +147,128 @@ export default function AuditDetailPage() {
         </Card>
       )}
 
+      {/* Root Cause Analysis */}
+      {audit.rootCauseAnalysis && (
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Root Cause Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap text-muted-foreground">{audit.rootCauseAnalysis}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* English Translation */}
+      {audit.englishTranslation && audit.englishTranslation !== audit.transcript && (
+        <Collapsible>
+          <Card className="bg-card/50 backdrop-blur border-border/50">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">English Translation</CardTitle>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="max-h-[400px] overflow-y-auto pr-2 rounded-md bg-muted/30 p-4">
+                  <pre className="text-sm whitespace-pre-wrap font-mono">{audit.englishTranslation}</pre>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
+
+      {/* Coaching Recommendations */}
+      {audit.coaching && (audit.coaching.strengths?.length > 0 || audit.coaching.improvements?.length > 0 || audit.coaching.suggestedActions?.length > 0) && (
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Coaching Recommendations</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {audit.coaching.strengths?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-emerald-500 uppercase tracking-wide mb-2">Strengths</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {audit.coaching.strengths.map((s: string, i: number) => (
+                    <li key={i} className="text-sm text-muted-foreground">{s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {audit.coaching.improvements?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-amber-500 uppercase tracking-wide mb-2">Areas for Improvement</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {audit.coaching.improvements.map((s: string, i: number) => (
+                    <li key={i} className="text-sm text-muted-foreground">{s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {audit.coaching.suggestedActions?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-primary uppercase tracking-wide mb-2">Suggested Actions</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {audit.coaching.suggestedActions.map((s: string, i: number) => (
+                    <li key={i} className="text-sm text-muted-foreground">{s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Compliance */}
+      {audit.compliance && (audit.compliance.violations?.length > 0 || audit.compliance.keywordsDetected?.length > 0) && (
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Compliance</CardTitle>
+              {audit.compliance.complianceScore !== undefined && (
+                <Badge variant="outline" className={`text-sm px-3 py-1 ${getScoreBgColor(audit.compliance.complianceScore)}`}>
+                  Score: {audit.compliance.complianceScore}%
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {audit.compliance.violations?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-red-500 uppercase tracking-wide mb-2">Violations</p>
+                <div className="space-y-2">
+                  {audit.compliance.violations.map((v: any, i: number) => (
+                    <div key={i} className="p-3 rounded-lg border border-red-500/20 bg-red-500/5">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">{v.rule}</span>
+                        <Badge variant="outline" className="text-xs">{v.severity}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{v.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {audit.compliance.keywordsDetected?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Keywords Detected</p>
+                <div className="flex flex-wrap gap-1">
+                  {audit.compliance.keywordsDetected.map((kw: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-xs">{kw}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Parameter Scores with Evidence */}
       {auditResults.length > 0 && (
         <Card className="bg-card/50 backdrop-blur border-border/50">

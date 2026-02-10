@@ -15,6 +15,9 @@ export interface QueueJob {
   agentName?: string;
   callId?: string;
   parameterId: string;
+  language?: string;
+  transcriptionLanguage?: string;
+  campaignName?: string;
   attempts: number;
   createdAt: Date;
 }

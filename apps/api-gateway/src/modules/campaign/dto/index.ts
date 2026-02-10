@@ -43,6 +43,16 @@ export class CreateCampaignDto {
   @IsNotEmpty()
   qaParameterSetId: string;
 
+  @ApiPropertyOptional({ description: 'Call language (e.g., Hindi, English)' })
+  @IsString()
+  @IsOptional()
+  language?: string;
+
+  @ApiPropertyOptional({ description: 'Additional transcription language for translation' })
+  @IsString()
+  @IsOptional()
+  transcriptionLanguage?: string;
+
   @ApiProperty({ type: [CampaignJobDto] })
   @IsArray()
   @ValidateNested({ each: true })

@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -41,6 +42,16 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useCampaigns, useCreateCampaign } from '@/lib/hooks';
 import { qaParameterApi, campaignApi, type QAParameter, type Campaign } from '@/lib/api';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ParsedRow {
   audioUrl: string;
@@ -54,12 +65,17 @@ export default function BulkAuditPage() {
   const [campaignName, setCampaignName] = useState('Bulk QA Campaign');
   const [selectedQaParameterSetId, setSelectedQaParameterSetId] = useState<string>('');
   const [availableQaParameterSets, setAvailableQaParameterSets] = useState<QAParameter[]>([]);
+  const [callLanguage, setCallLanguage] = useState('Hindi');
+  const [transcriptionLanguage, setTranscriptionLanguage] = useState('');
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [uploadMode, setUploadMode] = useState<'csv' | 'direct'>('csv');
   const [audioFiles, setAudioFiles] = useState<File[]>([]);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // Delete state
+  const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
 
   // React Query hooks
   const { data: campaignsData, isLoading: isLoadingCampaigns, refetch: refetchCampaigns } = useCampaigns(1, 50);
@@ -254,6 +270,8 @@ export default function BulkAuditPage() {
         const newCampaign = await createCampaignMutation.mutateAsync({
           name: campaignName,
           qaParameterSetId: selectedQaParameterSetId,
+          language: callLanguage,
+          transcriptionLanguage: transcriptionLanguage || undefined,
           jobs: [], // Start with empty jobs
         });
 
@@ -288,6 +306,8 @@ export default function BulkAuditPage() {
         await createCampaignMutation.mutateAsync({
           name: campaignName,
           qaParameterSetId: selectedQaParameterSetId,
+          language: callLanguage,
+          transcriptionLanguage: transcriptionLanguage || undefined,
           jobs: rows.map(row => ({
             audioUrl: row.audioUrl,
             agentName: row.agentName,
@@ -311,6 +331,22 @@ export default function BulkAuditPage() {
       });
     } finally {
       setIsUploadingFiles(false);
+    }
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    try {
+      await campaignApi.delete(id);
+      toast({ title: 'Campaign deleted' });
+      refetchCampaigns();
+    } catch (error: any) {
+      toast({
+        title: 'Failed to delete campaign',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setCampaignToDelete(null);
     }
   };
 
@@ -377,6 +413,51 @@ export default function BulkAuditPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Language Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Call Language</Label>
+              <Select value={callLanguage} onValueChange={setCallLanguage}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="English">English</SelectItem>
+                  <SelectItem value="Spanish">Spanish</SelectItem>
+                  <SelectItem value="French">French</SelectItem>
+                  <SelectItem value="German">German</SelectItem>
+                  <SelectItem value="Mandarin Chinese">Mandarin Chinese</SelectItem>
+                  <SelectItem value="Japanese">Japanese</SelectItem>
+                  <SelectItem value="Russian">Russian</SelectItem>
+                  <SelectItem value="Portuguese">Portuguese</SelectItem>
+                  <SelectItem value="Arabic">Arabic</SelectItem>
+                  <SelectItem value="Italian">Italian</SelectItem>
+                  <Separator />
+                  <SelectItem value="Hindi">Hindi</SelectItem>
+                  <SelectItem value="Bengali">Bengali</SelectItem>
+                  <SelectItem value="Telugu">Telugu</SelectItem>
+                  <SelectItem value="Marathi">Marathi</SelectItem>
+                  <SelectItem value="Tamil">Tamil</SelectItem>
+                  <SelectItem value="Urdu">Urdu</SelectItem>
+                  <SelectItem value="Gujarati">Gujarati</SelectItem>
+                  <SelectItem value="Kannada">Kannada</SelectItem>
+                  <SelectItem value="Odia">Odia</SelectItem>
+                  <SelectItem value="Punjabi">Punjabi</SelectItem>
+                  <SelectItem value="Malayalam">Malayalam</SelectItem>
+                  <SelectItem value="Assamese">Assamese</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Transcription Language (Optional)</Label>
+              <Input
+                value={transcriptionLanguage}
+                onChange={(e) => setTranscriptionLanguage(e.target.value)}
+                placeholder="e.g., Tamil (if call is Hindi)"
+              />
             </div>
           </div>
 
@@ -658,6 +739,14 @@ export default function BulkAuditPage() {
                               View
                             </Button>
                           </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => setCampaignToDelete(c._id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -668,6 +757,26 @@ export default function BulkAuditPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!campaignToDelete} onOpenChange={(open) => !open && setCampaignToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this campaign? This action cannot be undone and will delete all associated audit records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => campaignToDelete && handleDeleteCampaign(campaignToDelete)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

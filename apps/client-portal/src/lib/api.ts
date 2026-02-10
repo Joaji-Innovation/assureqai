@@ -270,7 +270,7 @@ export interface Audit {
   callId?: string;
   campaignName?: string;
   projectId?: string;
-  auditType: 'ai' | 'manual';
+  auditType: 'ai' | 'manual' | 'bulk';
   overallScore: number;
   overallConfidence?: number; // Overall AI confidence
   maxPossibleScore?: number;
@@ -284,17 +284,29 @@ export interface Audit {
   additionalTranslation?: string;
   additionalTranslationLanguage?: string;
   callSummary?: string;
+  rootCauseAnalysis?: string;
   auditDurationMs?: number;
-  audioUrl?: string; // Added field
+  audioUrl?: string;
 
   auditResults: AuditResult[];
 
   metrics?: {
-    // Added metrics object
     talkToListenRatio?: number;
     silencePercentage?: number;
     holdTime?: number;
     callDuration?: number;
+  };
+
+  compliance?: {
+    keywordsDetected: string[];
+    violations: { rule: string; description: string; severity: string }[];
+    complianceScore: number;
+  };
+
+  coaching?: {
+    strengths: string[];
+    improvements: string[];
+    suggestedActions: string[];
   };
 
   tokenUsage?: {
@@ -440,6 +452,8 @@ export interface Campaign {
   usage: {
     lastJobStartedAt?: string;
   };
+  language?: string;
+  transcriptionLanguage?: string;
   totalJobs: number;
   completedJobs: number;
   failedJobs: number;
@@ -465,6 +479,8 @@ export interface CreateCampaignPayload {
   qaParameterSetId: string;
   projectId?: string;
   applyRateLimit?: boolean;
+  language?: string;
+  transcriptionLanguage?: string;
   jobs: Array<{ audioUrl: string; agentName?: string; callId?: string }>;
 }
 

@@ -317,10 +317,22 @@ export class AiService {
         sopContent: request.sopContent,
         language: request.language || 'en',
       });
+
+      // Always provide English translation - translate transcript if not English
+      let englishTranslation = request.transcript;
+      if (request.language && request.language.toLowerCase() !== 'en' && request.language.toLowerCase() !== 'english') {
+        try {
+          englishTranslation = await this.translateToEnglish(request.transcript);
+        } catch (err) {
+          this.logger.warn(`Failed to translate transcript to English: ${err}`);
+        }
+      }
+
       return {
         ...result,
         transcript: request.transcript,
         transcriptionInOriginalLanguage: request.transcript,
+        englishTranslation,
       };
     }
 
@@ -1443,6 +1455,28 @@ ${parametersJson}
   /**
    * Call Gemini API with retry logic
    */
+  /**
+   * Translate text to English using Gemini
+   */
+  private async translateToEnglish(text: string): Promise<string> {
+    if (!this.apiKey) return text;
+
+    const prompt = `Translate the following text to English. If it is already in English, return it as-is.
+Preserve speaker labels (Agent:, Customer:) and formatting.
+Return ONLY the translated text, no explanations or JSON.
+
+Text to translate:
+${text.substring(0, 50000)}`;
+
+    try {
+      const response = await this.callGemini(prompt);
+      return response.trim() || text;
+    } catch (error) {
+      this.logger.warn(`Translation to English failed: ${error}`);
+      return text;
+    }
+  }
+
   private async callGemini(
     prompt: string,
     retries = LIMITS.MAX_RETRIES,

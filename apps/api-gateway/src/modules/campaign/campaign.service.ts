@@ -14,6 +14,10 @@ import {
   Campaign,
   CampaignDocument,
 } from '../../database/schemas/campaign.schema';
+import {
+  CallAudit,
+  CallAuditDocument,
+} from '../../database/schemas/call-audit.schema';
 import { QueueService } from '../queue/queue.service';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto';
 import { PaginatedResult, LIMITS } from '@assureqai/common';
@@ -24,8 +28,9 @@ export class CampaignService {
 
   constructor(
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
+    @InjectModel(CallAudit.name) private auditModel: Model<CallAuditDocument>,
     private queueService: QueueService,
-  ) {}
+  ) { }
 
   /**
    * Create a new campaign and queue jobs
@@ -49,6 +54,8 @@ export class CampaignService {
       totalJobs: dto.jobs.length,
       completedJobs: 0,
       failedJobs: 0,
+      language: dto.language,
+      transcriptionLanguage: dto.transcriptionLanguage,
       jobs: dto.jobs.map((job) => ({
         audioUrl: job.audioUrl,
         agentName: job.agentName,
@@ -70,6 +77,9 @@ export class CampaignService {
             agentName: job.agentName,
             callId: job.callId,
             parameterId: dto.qaParameterSetId,
+            language: dto.language,
+            transcriptionLanguage: dto.transcriptionLanguage,
+            campaignName: dto.name,
           })),
         );
 
@@ -317,6 +327,9 @@ export class CampaignService {
               agentName: job.agentName,
               callId: job.callId,
               parameterId: campaign.qaParameterSetId.toString(),
+              language: campaign.language,
+              transcriptionLanguage: campaign.transcriptionLanguage,
+              campaignName: campaign.name,
             },
           ]);
         }
@@ -363,6 +376,9 @@ export class CampaignService {
           agentName: job.agentName,
           callId: job.callId,
           parameterId: campaign.qaParameterSetId.toString(),
+          language: campaign.language,
+          transcriptionLanguage: campaign.transcriptionLanguage,
+          campaignName: campaign.name,
         },
       ]);
     }
@@ -385,12 +401,59 @@ export class CampaignService {
   /**
    * Delete campaign
    */
+  /**
+   * Delete campaign and its audits
+   */
   async delete(id: string): Promise<void> {
-    const result = await this.campaignModel.findByIdAndDelete(id).exec();
-    if (!result) {
+    const campaign = await this.campaignModel.findById(id).exec();
+    if (!campaign) {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
     }
+
+    // Delete associated audits
+    await this.auditModel.deleteMany({ campaignId: id }).exec();
+
+    // Delete campaign
+    await this.campaignModel.findByIdAndDelete(id).exec();
   }
+
+  /**
+   * Handle audit deletion - update campaign stats
+   */
+  async onAuditDeleted(campaignId: string, auditId: string): Promise<void> {
+    const campaign = await this.campaignModel.findById(campaignId);
+    if (!campaign) return;
+
+    // Find job with this auditId
+    const jobIndex = campaign.jobs.findIndex(
+      (j) => j.auditId && j.auditId.toString() === auditId,
+    );
+
+    if (jobIndex > -1) {
+      const job = campaign.jobs[jobIndex];
+
+      // Update stats
+      if (job.status === 'completed') {
+        campaign.completedJobs = Math.max(0, campaign.completedJobs - 1);
+      } else if (job.status === 'failed') {
+        campaign.failedJobs = Math.max(0, campaign.failedJobs - 1);
+      }
+
+      // Reset job
+      campaign.jobs[jobIndex].status = 'pending';
+      campaign.jobs[jobIndex].auditId = undefined;
+      (campaign.jobs[jobIndex] as any).error = undefined;
+
+      // Update campaign status if it was completed
+      if (campaign.status === 'completed' || campaign.status === 'failed') {
+        campaign.status = 'processing';
+      }
+
+      await campaign.save();
+      this.logger.log(`Audit ${auditId} deleted, reset job ${jobIndex} in campaign ${campaignId}`);
+    }
+  }
+
   /**
    * Add a single job to an existing campaign and queue it immediately
    */
@@ -434,6 +497,9 @@ export class CampaignService {
             agentName: job.agentName,
             callId: job.callId,
             parameterId: campaign.qaParameterSetId.toString(),
+            language: campaign.language,
+            transcriptionLanguage: campaign.transcriptionLanguage,
+            campaignName: campaign.name,
           },
         ]);
         this.logger.log(`Added and queued job for campaign ${campaignId}`);

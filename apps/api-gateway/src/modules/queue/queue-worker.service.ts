@@ -197,6 +197,9 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
         parameters: qaParameterSet.parameters,
         agentName: job.agentName,
         callId: job.callId,
+        language: job.language,
+        transcriptionLanguage: job.transcriptionLanguage,
+        campaignName: job.campaignName,
       });
 
       // Save audit to database
@@ -336,27 +339,45 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
     transcript: string,
     auditResult: any,
   ): Promise<CallAuditDocument> {
+    // Get projectId from campaign
+    const campaign = await this.campaignModel.findById(job.campaignId).exec();
+    const projectId = campaign?.projectId;
+
     const audit = new this.auditModel({
       callId: job.callId || `bulk-${job.id}`,
-      agentName: job.agentName || 'Unknown',
+      agentName: auditResult.identifiedAgentName || job.agentName || 'Unknown',
       campaignId: new Types.ObjectId(job.campaignId),
+      campaignName: job.campaignName || campaign?.name,
+      projectId: projectId,
       qaParameterSetId: qaParameterSet._id,
       transcript,
+      englishTranslation: auditResult.englishTranslation,
+      additionalTranslation: auditResult.additionalTranslation,
+      additionalTranslationLanguage: auditResult.additionalTranslationLanguage,
+      audioUrl: job.audioUrl,
       overallScore: auditResult.overallScore,
       maxPossibleScore: 100,
+      overallConfidence: auditResult.overallConfidence,
       auditResults: auditResult.auditResults.map((r: any) => ({
         parameterId: r.parameterId,
         parameterName: r.parameterName,
         score: r.score,
         maxScore: r.weight,
+        weight: r.weight,
         comments: r.comments,
         type: r.type,
         confidence: r.confidence,
         evidence: r.evidence,
+        subResults: r.subResults,
       })),
       sentiment: auditResult.sentiment,
       callSummary: auditResult.callSummary,
+      rootCauseAnalysis: auditResult.rootCauseAnalysis,
+      compliance: auditResult.compliance,
+      metrics: auditResult.metrics,
+      coaching: auditResult.coaching,
       tokenUsage: auditResult.tokenUsage,
+      timing: auditResult.timing,
       auditDurationMs: auditResult.timing?.processingDurationMs || 0,
       auditType: 'bulk',
       status: 'completed',
@@ -492,6 +513,9 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
           agentName: job.agentName,
           callId: job.callId,
           parameterId: campaign.qaParameterSetId.toString(),
+          language: campaign.language,
+          transcriptionLanguage: campaign.transcriptionLanguage,
+          campaignName: campaign.name,
         });
 
         // Reset job status

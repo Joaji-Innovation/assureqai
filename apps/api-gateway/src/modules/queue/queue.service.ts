@@ -3,7 +3,12 @@
  * Redis-based job queue for bulk audit processing
  * Uses ioredis directly for simplicity
  */
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { LIMITS } from '@assureqai/common';
@@ -53,7 +58,9 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   /**
    * Add job to queue
    */
-  async addJob(job: Omit<QueueJob, 'id' | 'attempts' | 'createdAt'>): Promise<string> {
+  async addJob(
+    job: Omit<QueueJob, 'id' | 'attempts' | 'createdAt'>,
+  ): Promise<string> {
     if (!this.redis) {
       throw new Error('Redis not available');
     }
@@ -73,7 +80,9 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   /**
    * Add multiple jobs to queue
    */
-  async addJobs(jobs: Omit<QueueJob, 'id' | 'attempts' | 'createdAt'>[]): Promise<string[]> {
+  async addJobs(
+    jobs: Omit<QueueJob, 'id' | 'attempts' | 'createdAt'>[],
+  ): Promise<string[]> {
     const ids: string[] = [];
     for (const job of jobs) {
       const id = await this.addJob(job);

@@ -30,7 +30,7 @@ export class CampaignService {
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     @InjectModel(CallAudit.name) private auditModel: Model<CallAuditDocument>,
     private queueService: QueueService,
-  ) { }
+  ) {}
 
   /**
    * Create a new campaign and queue jobs
@@ -450,7 +450,9 @@ export class CampaignService {
       }
 
       await campaign.save();
-      this.logger.log(`Audit ${auditId} deleted, reset job ${jobIndex} in campaign ${campaignId}`);
+      this.logger.log(
+        `Audit ${auditId} deleted, reset job ${jobIndex} in campaign ${campaignId}`,
+      );
     }
   }
 

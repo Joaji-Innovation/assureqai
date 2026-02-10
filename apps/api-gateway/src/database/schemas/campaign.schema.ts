@@ -17,10 +17,23 @@ export class Campaign {
 
   @Prop({
     required: true,
-    enum: ['pending', 'processing', 'completed', 'failed', 'cancelled', 'paused'],
+    enum: [
+      'pending',
+      'processing',
+      'completed',
+      'failed',
+      'cancelled',
+      'paused',
+    ],
     default: 'pending',
   })
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'paused';
+  status:
+    | 'pending'
+    | 'processing'
+    | 'completed'
+    | 'failed'
+    | 'cancelled'
+    | 'paused';
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
@@ -92,7 +105,7 @@ export class Campaign {
     default: { rpm: 10, failureThreshold: 20 },
   })
   config: {
-    rpm: number;             // Rate limit: Audits per minute
+    rpm: number; // Rate limit: Audits per minute
     failureThreshold: number; // Pause if failure % > this
   };
 

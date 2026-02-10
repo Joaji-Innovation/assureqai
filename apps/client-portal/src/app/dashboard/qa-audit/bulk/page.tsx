@@ -1,9 +1,22 @@
 'use client';
 
-import { useState, useCallback, useEffect, ChangeEvent, useMemo, useRef } from 'react';
+import {
+  useState,
+  useCallback,
+  useEffect,
+  ChangeEvent,
+  useMemo,
+  useRef,
+} from 'react';
 import Link from 'next/link';
 import Papa from 'papaparse';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import {
   UploadCloud,
   FileText,
@@ -17,7 +30,7 @@ import {
   XCircle,
   FileSpreadsheet,
   FileAudio,
-  Music
+  Music,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +54,12 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useCampaigns, useCreateCampaign } from '@/lib/hooks';
-import { qaParameterApi, campaignApi, type QAParameter, type Campaign } from '@/lib/api';
+import {
+  qaParameterApi,
+  campaignApi,
+  type QAParameter,
+  type Campaign,
+} from '@/lib/api';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,8 +81,11 @@ interface ParsedRow {
 export default function BulkAuditPage() {
   const { toast } = useToast();
   const [campaignName, setCampaignName] = useState('Bulk QA Campaign');
-  const [selectedQaParameterSetId, setSelectedQaParameterSetId] = useState<string>('');
-  const [availableQaParameterSets, setAvailableQaParameterSets] = useState<QAParameter[]>([]);
+  const [selectedQaParameterSetId, setSelectedQaParameterSetId] =
+    useState<string>('');
+  const [availableQaParameterSets, setAvailableQaParameterSets] = useState<
+    QAParameter[]
+  >([]);
   const [callLanguage, setCallLanguage] = useState('Hindi');
   const [transcriptionLanguage, setTranscriptionLanguage] = useState('');
   const [rows, setRows] = useState<ParsedRow[]>([]);
@@ -78,7 +99,11 @@ export default function BulkAuditPage() {
   const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
 
   // React Query hooks
-  const { data: campaignsData, isLoading: isLoadingCampaigns, refetch: refetchCampaigns } = useCampaigns(1, 50);
+  const {
+    data: campaignsData,
+    isLoading: isLoadingCampaigns,
+    refetch: refetchCampaigns,
+  } = useCampaigns(1, 50);
   const createCampaignMutation = useCreateCampaign();
 
   const campaigns = campaignsData?.data || [];
@@ -86,14 +111,17 @@ export default function BulkAuditPage() {
 
   // Fetch QA Parameter Sets on mount
   useEffect(() => {
-    qaParameterApi.list().then((params) => {
-      setAvailableQaParameterSets(params);
-      if (params.length > 0 && !selectedQaParameterSetId) {
-        setSelectedQaParameterSetId(params[0]._id);
-      }
-    }).catch((err) => {
-      console.error('Failed to fetch QA parameters', err);
-    });
+    qaParameterApi
+      .list()
+      .then((params) => {
+        setAvailableQaParameterSets(params);
+        if (params.length > 0 && !selectedQaParameterSetId) {
+          setSelectedQaParameterSetId(params[0]._id);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch QA parameters', err);
+      });
   }, []);
 
   // Poll for campaign updates
@@ -106,13 +134,28 @@ export default function BulkAuditPage() {
 
   // Normalize CSV row to expected format
   const normalizeRow = (row: Record<string, string>): ParsedRow | null => {
-    const audioUrl = row['(S3) recording_url'] || row['recording_url'] || row['recordingUrl'] || row['audioUrl'] || row['audio_url'];
+    const audioUrl =
+      row['(S3) recording_url'] ||
+      row['recording_url'] ||
+      row['recordingUrl'] ||
+      row['audioUrl'] ||
+      row['audio_url'];
     if (!audioUrl) return null;
 
     return {
       audioUrl,
-      agentName: row['Full_Name'] || row['full_name'] || row['agentName'] || row['agent_name'] || '',
-      callId: row['RID-Phone #'] || row['rid_phone'] || row['callId'] || row['call_id'] || '',
+      agentName:
+        row['Full_Name'] ||
+        row['full_name'] ||
+        row['agentName'] ||
+        row['agent_name'] ||
+        '',
+      callId:
+        row['RID-Phone #'] ||
+        row['rid_phone'] ||
+        row['callId'] ||
+        row['call_id'] ||
+        '',
     };
   };
 
@@ -172,7 +215,7 @@ export default function BulkAuditPage() {
       if (file.name.endsWith('.csv')) {
         // Create a fake event to reuse handleFile
         const fakeEvent = {
-          target: { files: e.dataTransfer.files }
+          target: { files: e.dataTransfer.files },
         } as unknown as ChangeEvent<HTMLInputElement>;
         handleFile(fakeEvent);
       } else {
@@ -193,9 +236,11 @@ export default function BulkAuditPage() {
     const validAudioFiles: File[] = [];
     const invalidFiles: string[] = [];
 
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file) => {
       const ext = file.name.split('.').pop()?.toLowerCase();
-      if (['mp3', 'wav', 'webm', 'm4a', 'ogg', 'flac', 'aac'].includes(ext || '')) {
+      if (
+        ['mp3', 'wav', 'webm', 'm4a', 'ogg', 'flac', 'aac'].includes(ext || '')
+      ) {
         validAudioFiles.push(file);
       } else {
         invalidFiles.push(file.name);
@@ -210,7 +255,7 @@ export default function BulkAuditPage() {
       });
     }
 
-    setAudioFiles(prev => [...prev, ...validAudioFiles]);
+    setAudioFiles((prev) => [...prev, ...validAudioFiles]);
     toast({
       title: 'Files added',
       description: `${validAudioFiles.length} audio file(s) added`,
@@ -224,14 +269,14 @@ export default function BulkAuditPage() {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const fakeEvent = {
-        target: { files: e.dataTransfer.files }
+        target: { files: e.dataTransfer.files },
       } as unknown as ChangeEvent<HTMLInputElement>;
       handleAudioFiles(fakeEvent);
     }
   };
 
   const removeAudioFile = (index: number) => {
-    setAudioFiles(prev => prev.filter((_, i) => i !== index));
+    setAudioFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const formatFileSize = (bytes: number) => {
@@ -243,15 +288,22 @@ export default function BulkAuditPage() {
   };
 
   // Progress state
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [uploadProgress, setUploadProgress] = useState({
+    current: 0,
+    total: 0,
+  });
 
   const startCampaign = async () => {
-    const hasData = uploadMode === 'csv' ? rows.length > 0 : audioFiles.length > 0;
+    const hasData =
+      uploadMode === 'csv' ? rows.length > 0 : audioFiles.length > 0;
 
     if (!hasData) {
       toast({
-        title: uploadMode === 'csv' ? 'Upload a CSV first' : 'Upload audio files first',
-        variant: 'destructive'
+        title:
+          uploadMode === 'csv'
+            ? 'Upload a CSV first'
+            : 'Upload audio files first',
+        variant: 'destructive',
       });
       return;
     }
@@ -289,10 +341,13 @@ export default function BulkAuditPage() {
             toast({
               title: `Failed to upload ${file.name}`,
               description: 'Continuing with remaining files...',
-              variant: 'destructive'
+              variant: 'destructive',
             });
           }
-          setUploadProgress(prev => ({ ...prev, current: uploadedCount + failedCount }));
+          setUploadProgress((prev) => ({
+            ...prev,
+            current: uploadedCount + failedCount,
+          }));
         }
 
         toast({
@@ -308,7 +363,7 @@ export default function BulkAuditPage() {
           qaParameterSetId: selectedQaParameterSetId,
           language: callLanguage,
           transcriptionLanguage: transcriptionLanguage || undefined,
-          jobs: rows.map(row => ({
+          jobs: rows.map((row) => ({
             audioUrl: row.audioUrl,
             agentName: row.agentName,
             callId: row.callId,
@@ -365,11 +420,14 @@ export default function BulkAuditPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Bulk AI Audit</h2>
-          <p className="text-muted-foreground">Process multiple recordings at once using CSV or direct audio upload</p>
+          <p className="text-muted-foreground">
+            Process multiple recordings at once using CSV or direct audio upload
+          </p>
         </div>
         {campaigns.length > 0 && (
           <div className="text-sm text-muted-foreground">
-            {campaigns.filter(c => c.status === 'completed').length} / {campaigns.length} campaigns completed
+            {campaigns.filter((c) => c.status === 'completed').length} /{' '}
+            {campaigns.length} campaigns completed
           </div>
         )}
       </div>
@@ -382,7 +440,8 @@ export default function BulkAuditPage() {
             Campaign Setup
           </CardTitle>
           <CardDescription>
-            Upload a CSV file with recording URLs and configure your audit campaign
+            Upload a CSV file with recording URLs and configure your audit
+            campaign
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -429,7 +488,9 @@ export default function BulkAuditPage() {
                   <SelectItem value="Spanish">Spanish</SelectItem>
                   <SelectItem value="French">French</SelectItem>
                   <SelectItem value="German">German</SelectItem>
-                  <SelectItem value="Mandarin Chinese">Mandarin Chinese</SelectItem>
+                  <SelectItem value="Mandarin Chinese">
+                    Mandarin Chinese
+                  </SelectItem>
                   <SelectItem value="Japanese">Japanese</SelectItem>
                   <SelectItem value="Russian">Russian</SelectItem>
                   <SelectItem value="Portuguese">Portuguese</SelectItem>
@@ -486,8 +547,11 @@ export default function BulkAuditPage() {
           {/* CSV Upload Zone */}
           {uploadMode === 'csv' && (
             <div
-              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                }`}
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
+                dragActive
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50'
+              }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -527,8 +591,11 @@ export default function BulkAuditPage() {
           {uploadMode === 'direct' && (
             <div className="space-y-4">
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                  }`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
+                  dragActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50'
+                }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -546,7 +613,8 @@ export default function BulkAuditPage() {
                 <Music className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-lg font-medium mb-1">Upload Audio Files</p>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Drag & drop or click to select audio files (MP3, WAV, M4A, etc.)
+                  Drag & drop or click to select audio files (MP3, WAV, M4A,
+                  etc.)
                 </p>
                 <p className="text-xs text-muted-foreground mb-3">
                   No file limit - upload as many recordings as you need
@@ -561,7 +629,9 @@ export default function BulkAuditPage() {
               {audioFiles.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">{audioFiles.length} file(s) selected</div>
+                    <div className="text-sm font-medium">
+                      {audioFiles.length} file(s) selected
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -617,8 +687,12 @@ export default function BulkAuditPage() {
           {parsedPreview.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">Preview (first 5 rows)</div>
-                <div className="text-sm text-muted-foreground">{rows.length} rows ready</div>
+                <div className="text-sm font-medium">
+                  Preview (first 5 rows)
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {rows.length} rows ready
+                </div>
               </div>
               <div className="rounded-md border overflow-hidden">
                 <Table>
@@ -649,22 +723,31 @@ export default function BulkAuditPage() {
           <div className="flex items-center justify-between pt-2">
             <div className="text-sm text-muted-foreground">
               {uploadMode === 'csv'
-                ? (rows.length ? `${rows.length} rows ready to process` : 'No rows loaded')
-                : (audioFiles.length ? `${audioFiles.length} audio file(s) ready to process` : 'No files selected')}
+                ? rows.length
+                  ? `${rows.length} rows ready to process`
+                  : 'No rows loaded'
+                : audioFiles.length
+                  ? `${audioFiles.length} audio file(s) ready to process`
+                  : 'No files selected'}
             </div>
             <Button
               onClick={startCampaign}
-              disabled={isUploadingFiles || createCampaignMutation.isPending || (uploadMode === 'csv' ? !rows.length : !audioFiles.length) || !selectedQaParameterSetId}
+              disabled={
+                isUploadingFiles ||
+                createCampaignMutation.isPending ||
+                (uploadMode === 'csv' ? !rows.length : !audioFiles.length) ||
+                !selectedQaParameterSetId
+              }
             >
-              {(isUploadingFiles || createCampaignMutation.isPending) ? (
+              {isUploadingFiles || createCampaignMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <PlayCircle className="mr-2 h-4 w-4" />
               )}
               {isUploadingFiles
-                ? (uploadMode === 'direct' && uploadProgress.total > 0
+                ? uploadMode === 'direct' && uploadProgress.total > 0
                   ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
-                  : 'Uploading...')
+                  : 'Uploading...'
                 : 'Start Campaign'}
             </Button>
           </div>
@@ -688,7 +771,9 @@ export default function BulkAuditPage() {
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-8 w-8 mx-auto mb-4" />
               <p>No campaigns yet</p>
-              <p className="text-sm">Upload files and start your first campaign</p>
+              <p className="text-sm">
+                Upload files and start your first campaign
+              </p>
             </div>
           ) : (
             <div className="rounded-md border overflow-hidden">
@@ -709,13 +794,22 @@ export default function BulkAuditPage() {
                         <div className="font-medium">{c.name}</div>
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${c.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' :
-                          c.status === 'processing' || c.status === 'in_progress' ? 'bg-primary/10 text-primary' :
-                            c.status === 'failed' ? 'bg-red-500/10 text-red-500' :
-                              c.status === 'cancelled' ? 'bg-gray-500/10 text-gray-500' :
-                                c.status === 'paused' ? 'bg-amber-500/10 text-amber-500' :
-                                  'bg-muted text-muted-foreground'
-                          }`}>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${
+                            c.status === 'completed'
+                              ? 'bg-emerald-500/10 text-emerald-500'
+                              : c.status === 'processing' ||
+                                  c.status === 'in_progress'
+                                ? 'bg-primary/10 text-primary'
+                                : c.status === 'failed'
+                                  ? 'bg-red-500/10 text-red-500'
+                                  : c.status === 'cancelled'
+                                    ? 'bg-gray-500/10 text-gray-500'
+                                    : c.status === 'paused'
+                                      ? 'bg-amber-500/10 text-amber-500'
+                                      : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
                           {statusLabel(c.status)}
                         </span>
                       </TableCell>
@@ -724,7 +818,9 @@ export default function BulkAuditPage() {
                         <div className="text-xs text-muted-foreground mt-1">
                           {c.completedJobs + c.failedJobs} / {c.totalJobs}
                           {c.failedJobs > 0 && (
-                            <span className="text-red-500 ml-1">({c.failedJobs} failed)</span>
+                            <span className="text-red-500 ml-1">
+                              ({c.failedJobs} failed)
+                            </span>
                           )}
                         </div>
                       </TableCell>
@@ -758,19 +854,25 @@ export default function BulkAuditPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!campaignToDelete} onOpenChange={(open) => !open && setCampaignToDelete(null)}>
+      <AlertDialog
+        open={!!campaignToDelete}
+        onOpenChange={(open) => !open && setCampaignToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Campaign</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this campaign? This action cannot be undone and will delete all associated audit records.
+              Are you sure you want to delete this campaign? This action cannot
+              be undone and will delete all associated audit records.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => campaignToDelete && handleDeleteCampaign(campaignToDelete)}
+              onClick={() =>
+                campaignToDelete && handleDeleteCampaign(campaignToDelete)
+              }
             >
               Delete
             </AlertDialogAction>

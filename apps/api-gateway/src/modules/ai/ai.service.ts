@@ -320,9 +320,15 @@ export class AiService {
 
       // Always provide English translation - translate transcript if not English
       let englishTranslation = request.transcript;
-      if (request.language && request.language.toLowerCase() !== 'en' && request.language.toLowerCase() !== 'english') {
+      if (
+        request.language &&
+        request.language.toLowerCase() !== 'en' &&
+        request.language.toLowerCase() !== 'english'
+      ) {
         try {
-          englishTranslation = await this.translateToEnglish(request.transcript);
+          englishTranslation = await this.translateToEnglish(
+            request.transcript,
+          );
         } catch (err) {
           this.logger.warn(`Failed to translate transcript to English: ${err}`);
         }

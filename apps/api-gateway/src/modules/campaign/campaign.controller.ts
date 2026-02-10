@@ -66,7 +66,13 @@ export class CampaignController {
   @UseInterceptors(FilesInterceptor('files'))
   async bulkUpload(
     @UploadedFiles() files: Array<any>,
-    @Body() body: { campaignName: string; qaParameterSetId: string; language?: string; transcriptionLanguage?: string },
+    @Body()
+    body: {
+      campaignName: string;
+      qaParameterSetId: string;
+      language?: string;
+      transcriptionLanguage?: string;
+    },
     @CurrentUser() user: JwtPayload,
   ) {
     if (!files || files.length === 0) {

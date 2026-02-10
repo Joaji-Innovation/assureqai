@@ -1,7 +1,14 @@
 /**
  * Campaign DTOs
  */
-import { IsString, IsOptional, IsArray, IsBoolean, ValidateNested, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsBoolean,
+  ValidateNested,
+  IsNotEmpty,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -48,7 +55,9 @@ export class CreateCampaignDto {
   @IsOptional()
   language?: string;
 
-  @ApiPropertyOptional({ description: 'Additional transcription language for translation' })
+  @ApiPropertyOptional({
+    description: 'Additional transcription language for translation',
+  })
   @IsString()
   @IsOptional()
   transcriptionLanguage?: string;

@@ -15,6 +15,6 @@ export interface SavedAuditItem {
   projectId?: string; // Project ID for project-based access control
   overallScore: number;
   auditData: QaAuditOutput;
-  auditType: "ai" | "manual" | "bulk";
+  auditType: 'ai' | 'manual' | 'bulk';
   auditedBy?: string; // User ID of who performed the audit
 }

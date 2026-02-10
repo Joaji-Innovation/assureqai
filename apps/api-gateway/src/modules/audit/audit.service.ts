@@ -46,7 +46,6 @@ export class AuditService {
     @Inject(forwardRef(() => CreditsService))
     private creditsService: CreditsService,
   ) { }
-}
 
   /**
    * Create a new audit

@@ -248,22 +248,38 @@ export default function ProfilePage() {
               {/* Usage Reporting Status */}
               <div className="pt-2">
                 <label className="text-sm font-medium">Usage Reporting</label>
-                <div className="mt-1 flex items-center gap-3">
+                <div className="mt-1 space-y-2">
                   {reportingStatus === null ? (
                     <div className="flex items-center gap-2 text-muted-foreground text-sm">
                       <Loader2 className="h-4 w-4 animate-spin" /> Checking status...
                     </div>
-                  ) : reportingStatus.usageReportingEnabled ? (
-                    <div className="flex items-center gap-2 text-emerald-600 text-sm">
-                      <CheckCircle className="h-4 w-4" /> Reporting enabled
-                    </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-red-600 text-sm">
-                      <AlertCircle className="h-4 w-4" /> Reporting disabled
-                    </div>
+                    <>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reportingStatus.hasAdminUrl ? (
+                          <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="h-4 w-4" /> Admin URL configured</div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-red-600"><AlertCircle className="h-4 w-4" /> Admin URL not configured</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reportingStatus.hasInstanceApiKey ? (
+                          <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="h-4 w-4" /> API key configured</div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-red-600"><AlertCircle className="h-4 w-4" /> API key not configured</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reportingStatus.usageReportingEnabled ? (
+                          <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="h-4 w-4" /> Reporting enabled</div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-red-600"><AlertCircle className="h-4 w-4" /> Reporting disabled</div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Enable reporting to send anonymized usage to the admin panel.</p>
+                <p className="text-xs text-muted-foreground mt-1">Enable reporting to send anonymized usage to the admin panel. See <a className="underline" href="/docs/DEPLOYMENT.md">docs</a> for setup.</p>
               </div>
 
               <Button type="submit" variant="outline" disabled={changingPassword}>

@@ -24,7 +24,9 @@ import { QAParameter, QAParameterSchema } from '../../database/schemas/qa-parame
     AuditReportModule,
   ],
   providers: [QueueService, QueueWorkerService],
-  exports: [QueueService, QueueWorkerService],
+  // Re-export MongooseModule providers so models registered here (e.g. CallAudit)
+  // are available to modules that import QueueModule (like CampaignModule).
+  exports: [QueueService, QueueWorkerService, MongooseModule],
 })
 export class QueueModule { }
 

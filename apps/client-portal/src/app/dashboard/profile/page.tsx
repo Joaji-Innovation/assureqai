@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Mail, Key, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { authApi, userApi } from '@/lib/api';
+import { authApi, userApi, instanceApi } from '@/lib/api';
 
 interface UserProfile {
   _id?: string;
@@ -25,6 +25,12 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({ fullName: '', email: '' });
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
+  const [reportingStatus, setReportingStatus] = useState<{
+    usageReportingEnabled: boolean;
+    hasAdminUrl: boolean;
+    hasInstanceApiKey: boolean;
+  } | null>(null);
+
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -40,8 +46,17 @@ export default function ProfilePage() {
       }
     }
     loadProfile();
-  }, []);
 
+      async function loadReporting() {
+        try {
+          const status = await instanceApi.getStatus();
+          setReportingStatus(status);
+        } catch (err) {
+          // ignore - non-critical
+          setReportingStatus(null);
+        }
+      }
+      loadReporting();
   const showMessage = (type: 'success' | 'error', message: string) => {
     if (type === 'success') {
       setSuccessMessage(message);
@@ -229,6 +244,28 @@ export default function ProfilePage() {
                   required
                 />
               </div>
+
+              {/* Usage Reporting Status */}
+              <div className="pt-2">
+                <label className="text-sm font-medium">Usage Reporting</label>
+                <div className="mt-1 flex items-center gap-3">
+                  {reportingStatus === null ? (
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Checking status...
+                    </div>
+                  ) : reportingStatus.usageReportingEnabled ? (
+                    <div className="flex items-center gap-2 text-emerald-600 text-sm">
+                      <CheckCircle className="h-4 w-4" /> Reporting enabled
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-red-600 text-sm">
+                      <AlertCircle className="h-4 w-4" /> Reporting disabled
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Enable reporting to send anonymized usage to the admin panel.</p>
+              </div>
+
               <Button type="submit" variant="outline" disabled={changingPassword}>
                 {changingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Change Password

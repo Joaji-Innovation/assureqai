@@ -88,6 +88,10 @@ export const authApi = {
   me: () => request<User>('/api/users/me'),
 };
 
+export const instanceApi = {
+  getStatus: () => request<{ usageReportingEnabled: boolean; hasAdminUrl: boolean; hasInstanceApiKey: boolean }>('/api/instance/status'),
+};
+
 // Audit APIs
 export interface AuditStats {
   total: number;

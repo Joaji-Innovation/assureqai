@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { auditApi, userApi, campaignApi, queueApi, type AuditStats, type LeaderboardEntry, type Audit, type User, type Campaign } from './api';
+import { auditApi, userApi, campaignApi, queueApi, type AuditStats, type LeaderboardEntry, type Audit, type User, type Campaign, type CreateCampaignPayload } from './api';
 
 // Query Keys - centralized for easy invalidation
 export const queryKeys = {
@@ -199,7 +199,7 @@ export function useCampaignStatus(id: string) {
 export function useCreateCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; qaParameterSetId: string; projectId?: string; applyRateLimit?: boolean; jobs: Array<{ audioUrl: string; agentName?: string; callId?: string }> }) =>
+    mutationFn: (data: CreateCampaignPayload) =>
       campaignApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });

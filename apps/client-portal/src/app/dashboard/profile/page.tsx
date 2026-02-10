@@ -57,6 +57,8 @@ export default function ProfilePage() {
         }
       }
       loadReporting();
+    }, []);
+
   const showMessage = (type: 'success' | 'error', message: string) => {
     if (type === 'success') {
       setSuccessMessage(message);

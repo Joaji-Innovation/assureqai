@@ -89,7 +89,12 @@ export const authApi = {
 };
 
 export const instanceApi = {
-  getStatus: () => request<{ usageReportingEnabled: boolean; hasAdminUrl: boolean; hasInstanceApiKey: boolean }>('/api/instance/status'),
+  getStatus: () =>
+    request<{
+      usageReportingEnabled: boolean;
+      hasAdminUrl: boolean;
+      hasInstanceApiKey: boolean;
+    }>('/api/instance/status'),
 };
 
 // Audit APIs

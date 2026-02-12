@@ -60,13 +60,10 @@ export class AuditController {
       );
     }
 
-    return this.auditService.create(
-      {
-        ...processedDto,
-        projectId: processedDto.projectId || user.projectId,
-      },
-      (user as any).instanceId,
-    );
+    return this.auditService.create({
+      ...processedDto,
+      projectId: processedDto.projectId || user.projectId,
+    });
   }
 
   /**

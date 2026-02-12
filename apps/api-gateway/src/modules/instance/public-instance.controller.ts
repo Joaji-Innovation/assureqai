@@ -6,6 +6,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Public } from '@assureqai/auth';
 import { UsageReporterService } from '../audit-report/usage-reporter.service';
+import { UsageTrackingService } from '../usage-tracking/usage-tracking.service';
 import { Post, Req, InternalServerErrorException } from '@nestjs/common';
 
 @ApiTags('Instance - Public')
@@ -14,6 +15,7 @@ export class PublicInstanceController {
   constructor(
     private configService: ConfigService,
     private usageReporter: UsageReporterService,
+    private usageTracking: UsageTrackingService,
   ) {}
 
   @Get('status')
@@ -28,6 +30,7 @@ export class PublicInstanceController {
       usageReportingEnabled: !!(adminPanelUrl && apiKey),
       hasAdminUrl: !!adminPanelUrl,
       hasInstanceApiKey: !!apiKey,
+      usageTrackingActive: this.usageTracking.isEnabled,
     };
   }
 

@@ -95,3 +95,17 @@ export class ChangePasswordDto {
   @MinLength(VALIDATION.PASSWORD_MIN)
   newPassword: string;
 }
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MinLength(2)
+  @MaxLength(100)
+  fullName?: string;
+
+  @ApiPropertyOptional()
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+}

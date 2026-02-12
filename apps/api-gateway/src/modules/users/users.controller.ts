@@ -18,7 +18,7 @@ import {
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, LoginDto, ChangePasswordDto } from './dto';
+import { CreateUserDto, UpdateUserDto, LoginDto, ChangePasswordDto, UpdateProfileDto } from './dto';
 import { Public, Roles, RequirePermissions, CurrentUser } from '@assureqai/auth';
 import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
 
@@ -65,6 +65,20 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Profile retrieved' })
   async getProfile(@CurrentUser() user: JwtPayload) {
     return this.usersService.findById(user.sub);
+  }
+
+  /**
+   * Update own profile (fullName, email)
+   */
+  @Put('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update own profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated' })
+  async updateProfile(
+    @Body() dto: UpdateProfileDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.update(user.sub, dto);
   }
 
   /**

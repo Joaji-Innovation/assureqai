@@ -24,6 +24,10 @@ export class Project {
   @Prop({ type: Types.ObjectId, ref: 'SOP' })
   defaultSopId?: Types.ObjectId;
 
+  // Links this project to a billing Instance for credit tracking
+  @Prop({ type: Types.ObjectId, ref: 'Instance' })
+  instanceId?: Types.ObjectId;
+
   // Project-specific settings
   @Prop({ type: Object })
   settings?: {
@@ -34,3 +38,6 @@ export class Project {
 }
 
 export const ProjectSchema = SchemaFactory.createForClass(Project);
+
+// Indexes
+ProjectSchema.index({ instanceId: 1 });

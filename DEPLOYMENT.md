@@ -133,13 +133,15 @@ api.assureqai.app {
 
 ## Required Environment Variables
 
-| Variable         | Description                    |
-| ---------------- | ------------------------------ |
-| `MONGODB_URI`    | MongoDB connection string      |
-| `JWT_SECRET`     | Secret for JWT signing         |
-| `GEMINI_API_KEY` | Google Gemini API key          |
-| `MASTER_API_KEY` | Admin-level API key (optional) |
-| `REDIS_URL`      | Redis for queues (optional)    |
+| Variable           | Description                                                    |
+| ------------------ | -------------------------------------------------------------- |
+| `MONGODB_URI`      | MongoDB connection string                                      |
+| `JWT_SECRET`       | Secret for JWT signing                                         |
+| `GEMINI_API_KEY`   | Google Gemini API key                                          |
+| `MASTER_API_KEY`   | Admin-level API key (optional)                                 |
+| `REDIS_URL`        | Redis for queues (optional)                                    |
+| `ADMIN_PANEL_URL`  | URL of the central admin API (e.g. `https://api.assureqai.app`) – enables usage reporting |
+| `INSTANCE_API_KEY` | API key for this instance (generated in Admin Portal → Instances → Detail → API Key)      |
 
 ---
 

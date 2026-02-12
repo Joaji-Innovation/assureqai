@@ -10,12 +10,17 @@ import {
   Instance,
   InstanceSchema,
 } from '../../database/schemas/instance.schema';
+import {
+  Project,
+  ProjectSchema,
+} from '../../database/schemas/project.schema';
 import { ProvisioningModule } from '../provisioning/provisioning.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Instance.name, schema: InstanceSchema },
+      { name: Project.name, schema: ProjectSchema },
     ]),
     forwardRef(() => ProvisioningModule),
     // Import AuditReportModule to allow the instance controller to send test reports

@@ -16,6 +16,10 @@ import {
   Instance,
   InstanceDocument,
 } from '../../database/schemas/instance.schema';
+import {
+  Project,
+  ProjectDocument,
+} from '../../database/schemas/project.schema';
 import { randomBytes } from 'crypto';
 import * as dns from 'dns';
 import { promisify } from 'util';
@@ -29,6 +33,7 @@ export class InstanceService {
 
   constructor(
     @InjectModel(Instance.name) private instanceModel: Model<InstanceDocument>,
+    @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
     @Inject(forwardRef(() => ProvisioningService))
     private provisioningService: ProvisioningService,
   ) {}
@@ -74,6 +79,18 @@ export class InstanceService {
 
     const instance = new this.instanceModel(data);
     const savedInstance = await instance.save();
+
+    // For shared-database instances, auto-create a Project linked to this Instance
+    if (!data.database?.type || data.database.type === 'shared') {
+      const project = await this.projectModel.create({
+        name: data.companyName || data.name || 'Client Project',
+        description: `Default project for instance ${savedInstance.name}`,
+        isActive: true,
+        instanceId: savedInstance._id,
+        settings: { language: 'en', timezone: 'UTC' },
+      });
+      this.logger.log(`Auto-created project ${project._id} linked to instance ${savedInstance._id}`);
+    }
 
     // Trigger On-Premise / VPS Deployment
     if (data.vps) {

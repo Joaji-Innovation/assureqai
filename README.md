@@ -5,6 +5,7 @@ AI-powered quality assurance and audit platform for call centers.
 ## Quick Start
 
 ### Prerequisites
+
 - Node.js 20+
 - Docker & Docker Compose
 - MongoDB 7.0+
@@ -42,13 +43,13 @@ docker-compose --profile with-nginx up -d
 
 ## Services
 
-| Service | Port | Description |
-|---------|------|-------------|
-| API Gateway | 3000 | NestJS backend with MongoDB, Redis |
-| Client Portal | 3001 | Next.js dashboard for clients |
-| Admin Portal | 3002 | Next.js super-admin panel |
-| MongoDB | 27017 | Database |
-| Redis | 6379 | Cache & queue |
+| Service       | Port  | Description                        |
+| ------------- | ----- | ---------------------------------- |
+| API Gateway   | 3000  | NestJS backend with MongoDB, Redis |
+| Client Portal | 3001  | Next.js dashboard for clients      |
+| Admin Portal  | 3002  | Next.js super-admin panel          |
+| MongoDB       | 27017 | Database                           |
+| Redis         | 6379  | Cache & queue                      |
 
 ## Project Structure
 
@@ -66,6 +67,7 @@ libs/
 ## Features
 
 ### Client Portal
+
 - Dashboard with stats & charts
 - AI-powered audit (single & bulk)
 - Manual audit forms
@@ -74,6 +76,7 @@ libs/
 - Real-time alerts & webhooks
 
 ### Admin Portal
+
 - Client provisioning
 - Instance management (start/stop)
 - Domain & SSL management

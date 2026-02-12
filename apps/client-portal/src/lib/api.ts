@@ -604,12 +604,18 @@ export const userApi = {
       body: JSON.stringify(data),
     }),
 
+  updateProfile: (data: { fullName?: string; email?: string }) =>
+    request<User>('/api/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
   delete: (id: string) =>
     request<void>(`/api/users/${id}`, { method: 'DELETE' }),
 
   changePassword: (currentPassword: string, newPassword: string) =>
-    request<void>('/api/users/change-password', {
-      method: 'POST',
+    request<void>('/api/users/me/password', {
+      method: 'PUT',
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
 };

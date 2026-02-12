@@ -28,6 +28,7 @@ import { CreateAuditDto, UpdateAuditDto, AuditFiltersDto } from './dto';
 import { PaginatedResult, LIMITS } from '@assureqai/common';
 import { AlertsService } from '../alerts/alerts.service';
 import { CreditsService } from '../credits/credits.service';
+import { UsageTrackingService } from '../usage-tracking/usage-tracking.service';
 
 // Use Record for filter type (mongoose 8.x compatible)
 type AuditFilter = Record<string, any>;
@@ -45,17 +46,19 @@ export class AuditService {
     private alertsService: AlertsService,
     @Inject(forwardRef(() => CreditsService))
     private creditsService: CreditsService,
+    private usageTracking: UsageTrackingService,
   ) {}
 
   /**
    * Create a new audit
    */
-  async create(dto: CreateAuditDto, instanceId?: string): Promise<CallAudit> {
+  async create(dto: CreateAuditDto): Promise<CallAudit> {
     this.logger.log(
       `Creating audit: callId=${dto.callId}, auditType=${dto.auditType}, campaignName=${dto.campaignName}`,
     );
 
-    // Deduct audit credit if instanceId is provided
+    // Deduct audit credit using the globally-resolved instance API key
+    const instanceId = this.usageTracking.getInstanceId();
     if (instanceId) {
       try {
         const creditResult =

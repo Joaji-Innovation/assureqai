@@ -2,13 +2,22 @@
  * Users Service
  * User management with password hashing and authentication
  */
-import { Injectable, NotFoundException, ConflictException, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../../database/schemas/user.schema';
-import { Project, ProjectDocument } from '../../database/schemas/project.schema';
+import {
+  Project,
+  ProjectDocument,
+} from '../../database/schemas/project.schema';
 import { CreateUserDto, UpdateUserDto, LoginDto } from './dto';
 import { PaginatedResult, LIMITS, JwtPayload, ROLES } from '@assureqai/common';
 import { Response } from 'express';
@@ -23,7 +32,7 @@ export class UsersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   /**
    * Create a new user
@@ -62,7 +71,10 @@ export class UsersService {
   /**
    * Login user and return JWT token
    */
-  async login(dto: LoginDto, res: Response): Promise<{ user: Partial<User>; accessToken: string }> {
+  async login(
+    dto: LoginDto,
+    res: Response,
+  ): Promise<{ user: Partial<User>; accessToken: string }> {
     const user = await this.userModel.findOne({ username: dto.username });
 
     if (!user) {
@@ -81,7 +93,9 @@ export class UsersService {
     // Fix legacy role if present (Self-healing)
     if ((user.role as any) === 'Administrator') {
       user.role = ROLES.SUPER_ADMIN;
-      this.logger.warn(`Migrated legacy user ${user.username} from Administrator to super_admin`);
+      this.logger.warn(
+        `Migrated legacy user ${user.username} from Administrator to super_admin`,
+      );
     }
 
     // Auto-create default project if user doesn't have one
@@ -239,13 +253,20 @@ export class UsersService {
   /**
    * Ensure user has a project - use existing or create if missing
    */
-  private async ensureUserHasProject(user: UserDocument): Promise<ProjectDocument> {
+  private async ensureUserHasProject(
+    user: UserDocument,
+  ): Promise<ProjectDocument> {
     // First, check if there's already a project in the database we can use
     // This handles the case where parameters/data were created before multi-project support
-    const existingProject = await this.projectModel.findOne({ isActive: true }).sort({ createdAt: 1 }).exec();
+    const existingProject = await this.projectModel
+      .findOne({ isActive: true })
+      .sort({ createdAt: 1 })
+      .exec();
 
     if (existingProject) {
-      this.logger.log(`Assigned existing project ${existingProject._id} (${existingProject.name}) to user ${user.username}`);
+      this.logger.log(
+        `Assigned existing project ${existingProject._id} (${existingProject.name}) to user ${user.username}`,
+      );
       return existingProject;
     }
 
@@ -261,7 +282,9 @@ export class UsersService {
     });
 
     const savedProject = await project.save();
-    this.logger.log(`Auto-created default project ${savedProject._id} for user ${user.username}`);
+    this.logger.log(
+      `Auto-created default project ${savedProject._id} for user ${user.username}`,
+    );
 
     return savedProject;
   }

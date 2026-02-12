@@ -17,6 +17,8 @@ import { join } from 'path';
 import { QueueService, QueueJob } from './queue.service';
 import { AiService } from '../ai/ai.service';
 import { UsageReporterService } from '../audit-report/usage-reporter.service';
+import { CreditsService } from '../credits/credits.service';
+import { UsageTrackingService } from '../usage-tracking/usage-tracking.service';
 import {
   CallAudit,
   CallAuditDocument,
@@ -51,6 +53,8 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
     private queueService: QueueService,
     private aiService: AiService,
     private usageReporter: UsageReporterService,
+    private creditsService: CreditsService,
+    private usageTracking: UsageTrackingService,
     @InjectModel(CallAudit.name) private auditModel: Model<CallAuditDocument>,
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     @InjectModel(QAParameter.name)
@@ -225,6 +229,21 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
       // Cleanup audio file
       await this.deleteAudioFile(job.audioUrl);
+
+      // --- Credit deduction via API key ---
+      const instanceId = this.usageTracking.getInstanceId();
+      if (instanceId) {
+        // Deduct 1 audit credit
+        this.creditsService.useAuditCredits(instanceId, 1, audit._id.toString())
+          .catch((err) => this.logger.warn(`Audit credit deduction failed: ${err.message}`));
+
+        // Deduct token credits (AI tokens consumed)
+        const tokensUsed = auditResult.tokenUsage?.totalTokens || 0;
+        if (tokensUsed > 0) {
+          this.creditsService.useTokenCredits(instanceId, tokensUsed, audit._id.toString())
+            .catch((err) => this.logger.warn(`Token credit deduction failed: ${err.message}`));
+        }
+      }
 
       // Report usage to admin panel (for isolated instances)
       this.usageReporter

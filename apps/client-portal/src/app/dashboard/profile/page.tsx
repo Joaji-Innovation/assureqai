@@ -90,12 +90,11 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaving(true);
     try {
-      // In real implementation, update via API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setProfile((prev) => (prev ? { ...prev, ...formData } : null));
+      const updated = await userApi.updateProfile(formData);
+      setProfile((prev) => (prev ? { ...prev, ...updated } : null));
       showMessage('success', 'Profile updated successfully!');
     } catch (err) {
-      showMessage('error', 'Failed to update profile');
+      showMessage('error', (err as Error).message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }

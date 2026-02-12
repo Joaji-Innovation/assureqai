@@ -5,7 +5,7 @@ var __TEARDOWN_MESSAGE__: string;
 
 function waitForPortOpen(
   port: number,
-  options: { host?: string; timeout?: number } = {}
+  options: { host?: string; timeout?: number } = {},
 ): Promise<void> {
   const { host = 'localhost', timeout = 30000 } = options;
   const start = Date.now();

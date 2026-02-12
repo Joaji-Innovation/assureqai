@@ -8,6 +8,7 @@ import { QueueService } from './queue.service';
 import { QueueWorkerService } from './queue-worker.service';
 import { AiModule } from '../ai/ai.module';
 import { AuditReportModule } from '../audit-report/audit-report.module';
+import { CreditsModule } from '../credits/credits.module';
 import {
   CallAudit,
   CallAuditSchema,
@@ -31,6 +32,7 @@ import {
     ]),
     forwardRef(() => AiModule),
     AuditReportModule,
+    CreditsModule,
   ],
   providers: [QueueService, QueueWorkerService],
   // Re-export MongooseModule providers so models registered here (e.g. CallAudit)

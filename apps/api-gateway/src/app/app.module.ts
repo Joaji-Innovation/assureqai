@@ -4,7 +4,7 @@
  */
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -41,6 +41,8 @@ import { NotificationsModule } from '../modules/notifications/notifications.modu
 import { AuditReportModule } from '../modules/audit-report/audit-report.module';
 import { TicketModule } from '../modules/ticket/ticket.module';
 import { SettingsModule } from '../modules/settings/settings.module';
+import { UsageTrackingModule } from '../modules/usage-tracking/usage-tracking.module';
+import { UsageTrackingInterceptor } from '../modules/usage-tracking/usage-tracking.interceptor';
 
 // Config
 import { WinstonLoggerConfig } from '../config/logger.config';
@@ -115,6 +117,7 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     AuditReportModule,
     TicketModule,
     SettingsModule,
+    UsageTrackingModule,
   ],
   controllers: [AppController],
   providers: [
@@ -132,6 +135,11 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     {
       provide: APP_GUARD,
       useClass: RolesGuard, // Then authorization
+    },
+    // Global usage tracking — counts every API call against the instance
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: UsageTrackingInterceptor,
     },
   ],
 })

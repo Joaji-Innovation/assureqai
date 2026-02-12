@@ -6,12 +6,12 @@ export interface User {
   email?: string;
   fullName?: string;
   role:
-    | "super_admin"
-    | "client_admin"
-    | "manager"
-    | "qa_analyst"
-    | "auditor"
-    | "agent";
+    | 'super_admin'
+    | 'client_admin'
+    | 'manager'
+    | 'qa_analyst'
+    | 'auditor'
+    | 'agent';
   projectId?: string; // Project ID for project-based access control
   isActive?: boolean;
   createdAt?: Date;

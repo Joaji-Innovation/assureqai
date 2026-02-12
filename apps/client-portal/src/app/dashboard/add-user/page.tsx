@@ -293,14 +293,16 @@ export default function AddUserPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{{
-                      super_admin: 'Super Admin',
-                      client_admin: 'Client Admin',
-                      manager: 'Manager',
-                      qa_analyst: 'QA Analyst',
-                      auditor: 'Auditor',
-                      agent: 'Agent',
-                    }[user.role] || user.role}</span>
+                    <span className="text-sm">
+                      {{
+                        super_admin: 'Super Admin',
+                        client_admin: 'Client Admin',
+                        manager: 'Manager',
+                        qa_analyst: 'QA Analyst',
+                        auditor: 'Auditor',
+                        agent: 'Agent',
+                      }[user.role] || user.role}
+                    </span>
                   </div>
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${user.isActive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}`}

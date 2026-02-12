@@ -4,8 +4,14 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AuditReport, AuditReportDocument } from '../../database/schemas/audit-report.schema';
-import { Instance, InstanceDocument } from '../../database/schemas/instance.schema';
+import {
+  AuditReport,
+  AuditReportDocument,
+} from '../../database/schemas/audit-report.schema';
+import {
+  Instance,
+  InstanceDocument,
+} from '../../database/schemas/instance.schema';
 
 export interface CreateAuditReportDto {
   auditId: string;
@@ -41,15 +47,19 @@ export class AuditReportService {
   private readonly logger = new Logger(AuditReportService.name);
 
   constructor(
-    @InjectModel(AuditReport.name) private auditReportModel: Model<AuditReportDocument>,
+    @InjectModel(AuditReport.name)
+    private auditReportModel: Model<AuditReportDocument>,
     @InjectModel(Instance.name) private instanceModel: Model<InstanceDocument>,
-  ) { }
+  ) {}
 
   /**
    * Receive an audit report from an isolated instance
    * Validates the API key and stores the report
    */
-  async create(apiKey: string, dto: CreateAuditReportDto): Promise<AuditReport> {
+  async create(
+    apiKey: string,
+    dto: CreateAuditReportDto,
+  ): Promise<AuditReport> {
     // Validate API key and get instance
     const instance = await this.instanceModel.findOne({
       apiKey: apiKey,
@@ -81,7 +91,9 @@ export class AuditReportService {
       },
     });
 
-    this.logger.log(`Audit report received from ${instance.clientId}: ${dto.auditId}`);
+    this.logger.log(
+      `Audit report received from ${instance.clientId}: ${dto.auditId}`,
+    );
 
     return report;
   }
@@ -93,7 +105,12 @@ export class AuditReportService {
     instanceId: string,
     page = 1,
     limit = 50,
-  ): Promise<{ data: AuditReport[]; total: number; page: number; totalPages: number }> {
+  ): Promise<{
+    data: AuditReport[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       this.auditReportModel
@@ -116,7 +133,11 @@ export class AuditReportService {
   /**
    * Get usage statistics for an instance
    */
-  async getStats(instanceId: string, startDate?: Date, endDate?: Date): Promise<AuditReportStats> {
+  async getStats(
+    instanceId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<AuditReportStats> {
     const match: any = { instanceId };
     if (startDate || endDate) {
       match.createdAt = {};
@@ -131,10 +152,14 @@ export class AuditReportService {
           $group: {
             _id: null,
             totalAudits: { $sum: 1 },
-            totalAudioSeconds: { $sum: { $ifNull: ['$audioDurationSeconds', 0] } },
+            totalAudioSeconds: {
+              $sum: { $ifNull: ['$audioDurationSeconds', 0] },
+            },
             totalTokens: { $sum: { $ifNull: ['$totalTokens', 0] } },
             avgScore: { $avg: '$overallScore' },
-            passCount: { $sum: { $cond: [{ $eq: ['$passStatus', 'pass'] }, 1, 0] } },
+            passCount: {
+              $sum: { $cond: [{ $eq: ['$passStatus', 'pass'] }, 1, 0] },
+            },
           },
         },
       ]),
@@ -165,7 +190,10 @@ export class AuditReportService {
       totalAudioMinutes: Math.round(stat.totalAudioSeconds / 60),
       totalTokens: stat.totalTokens,
       avgScore: Math.round(stat.avgScore * 100) / 100,
-      passRate: stat.totalAudits > 0 ? Math.round((stat.passCount / stat.totalAudits) * 100) : 0,
+      passRate:
+        stat.totalAudits > 0
+          ? Math.round((stat.passCount / stat.totalAudits) * 100)
+          : 0,
       byDate: dailyStats.map((d: any) => ({
         date: d._id,
         count: d.count,
@@ -189,7 +217,9 @@ export class AuditReportService {
           $group: {
             _id: null,
             totalReports: { $sum: 1 },
-            totalAudioSeconds: { $sum: { $ifNull: ['$audioDurationSeconds', 0] } },
+            totalAudioSeconds: {
+              $sum: { $ifNull: ['$audioDurationSeconds', 0] },
+            },
             totalTokens: { $sum: { $ifNull: ['$totalTokens', 0] } },
           },
         },
@@ -207,7 +237,11 @@ export class AuditReportService {
       ]),
     ]);
 
-    const total = totals[0] || { totalReports: 0, totalAudioSeconds: 0, totalTokens: 0 };
+    const total = totals[0] || {
+      totalReports: 0,
+      totalAudioSeconds: 0,
+      totalTokens: 0,
+    };
 
     return {
       totalReports: total.totalReports,

@@ -726,24 +726,24 @@ function applyAuditFilters(
   let filtered = audits;
 
   // Role-based access control:
-  // - Administrator: Can see ALL audits across the system
-  // - Project Admin, Manager: Can see all audits within their project only
-  // - Agent: Can see audits where they are the subject (agentUserId)
-  // - QA Analyst, Auditor: Can only see audits they performed
+  // - super_admin: Can see ALL audits across the system
+  // - client_admin, manager: Can see all audits within their project only
+  // - agent: Can see audits where they are the subject (agentUserId)
+  // - qa_analyst, auditor: Can only see audits they performed
   if (currentUser) {
-    if (currentUser.role === 'Administrator') {
-      // Administrator can see all audits - no filtering
+    if (currentUser.role === 'super_admin') {
+      // Super admin can see all audits - no filtering
     } else if (
-      currentUser.role === 'Project Admin' ||
-      currentUser.role === 'Manager'
+      currentUser.role === 'client_admin' ||
+      currentUser.role === 'manager'
     ) {
-      // Project Admin and Manager can see all audits within their project
+      // Client admin and Manager can see all audits within their project
       filtered = filtered.filter((a) => a.projectId === currentUser.projectId);
-    } else if (currentUser.role === 'Agent') {
+    } else if (currentUser.role === 'agent') {
       // Agent can see audits where they are the agent being audited
       filtered = filtered.filter((a) => a.agentUserId === currentUser.id);
     } else {
-      // All other roles (QA Analyst, Auditor) can only see audits they performed
+      // All other roles (qa_analyst, auditor) can only see audits they performed
       filtered = filtered.filter((a) => a.auditedBy === currentUser.id);
     }
   }
@@ -1142,7 +1142,7 @@ function DashboardPageContent() {
               />
             </PopoverContent>
           </Popover>
-          {currentUser?.role === 'Administrator' ? (
+          {currentUser?.role === 'super_admin' ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -1204,7 +1204,7 @@ function DashboardPageContent() {
         </div>
       </div>
 
-      {currentUser?.role === 'Agent' ? (
+      {currentUser?.role === 'agent' ? (
         <DashboardTabContent
           key="agent-overview"
           auditType="all"
@@ -1223,7 +1223,7 @@ function DashboardPageContent() {
           dashboardStats={dashboardStats}
           isLoadingStats={isLoadingStats}
         />
-      ) : currentUser?.role === 'Auditor' ? (
+      ) : currentUser?.role === 'auditor' ? (
         <Tabs
           value={activeTab}
           onValueChange={(value) => router.push(`/dashboard?tab=${value}`)}
@@ -1768,7 +1768,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
     }
 
     // Filter by Role (Agent view vs Admin view)
-    if (currentUser?.role === 'Agent') {
+    if (currentUser?.role === 'agent') {
       filtered = filtered.filter((a) => a.agentUserId === currentUser.id);
     }
 
@@ -2656,7 +2656,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
     negative: { label: 'Negative', color: 'hsl(var(--destructive))' },
   } as const;
 
-  const isAgentView = currentUser?.role === 'Agent';
+  const isAgentView = currentUser?.role === 'agent';
 
   // Helper for formatting chart labels to show only L1 parameter
   const formatChartLabel = (value: any) => {
@@ -3888,7 +3888,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                       <TableHead className="font-semibold">
                         Audit Type
                       </TableHead>
-                      {currentUser?.role === 'Administrator' && (
+                      {currentUser?.role === 'super_admin' && (
                         <>
                           <TableHead className="font-semibold text-xs">
                             Duration
@@ -3945,7 +3945,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             {audit.auditType.toUpperCase()}
                           </Badge>
                         </TableCell>
-                        {currentUser?.role === 'Administrator' && (
+                        {currentUser?.role === 'super_admin' && (
                           <>
                             <TableCell className="text-xs text-muted-foreground">
                               {audit.auditData?.auditDurationMs
@@ -3983,10 +3983,10 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                         <TableCell
                           colSpan={
                             isAgentView
-                              ? currentUser?.role === 'Administrator'
+                              ? currentUser?.role === 'super_admin'
                                 ? 7
                                 : 5
-                              : currentUser?.role === 'Administrator'
+                              : currentUser?.role === 'super_admin'
                                 ? 8
                                 : 6
                           }

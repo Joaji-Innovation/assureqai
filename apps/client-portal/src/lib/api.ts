@@ -97,7 +97,10 @@ export const instanceApi = {
       hasInstanceApiKey: boolean;
     }>('/api/instance/status'),
   sendTestReport: () =>
-    request<{ success: boolean; message?: string }>('/api/instance/test-report', { method: 'POST' }),
+    request<{ success: boolean; message?: string }>(
+      '/api/instance/test-report',
+      { method: 'POST' },
+    ),
 };
 
 // Audit APIs

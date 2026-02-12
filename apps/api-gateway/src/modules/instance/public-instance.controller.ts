@@ -36,10 +36,16 @@ export class PublicInstanceController {
    * Protected by normal auth (no @Public) so only logged-in users can trigger it.
    */
   @Post('test-report')
-  @ApiOperation({ summary: 'Send a test usage report to the admin panel (server-side)' })
+  @ApiOperation({
+    summary: 'Send a test usage report to the admin panel (server-side)',
+  })
   async sendTestReport(@Req() req: any) {
     if (!this.usageReporter.isReportingEnabled()) {
-      return { success: false, message: 'Usage reporter not enabled (ADMIN_PANEL_URL or INSTANCE_API_KEY missing)' };
+      return {
+        success: false,
+        message:
+          'Usage reporter not enabled (ADMIN_PANEL_URL or INSTANCE_API_KEY missing)',
+      };
     }
 
     const payload = {

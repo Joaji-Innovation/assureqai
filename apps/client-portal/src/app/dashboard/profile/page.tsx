@@ -43,7 +43,10 @@ export default function ProfilePage() {
   } | null>(null);
 
   const [testInProgress, setTestInProgress] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message?: string;
+  } | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -182,7 +185,14 @@ export default function ProfilePage() {
               </h3>
               <p className="text-muted-foreground">{profile?.email}</p>
               <span className="inline-block mt-2 px-3 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium">
-                {profile?.role}
+                {{
+                  super_admin: 'Super Admin',
+                  client_admin: 'Client Admin',
+                  manager: 'Manager',
+                  qa_analyst: 'QA Analyst',
+                  auditor: 'Auditor',
+                  agent: 'Agent',
+                }[profile?.role as string] || profile?.role}
               </span>
             </div>
           </div>
@@ -375,24 +385,40 @@ export default function ProfilePage() {
                       setTestResult(null);
                       try {
                         const res = await instanceApi.sendTestReport();
-                        setTestResult({ success: res.success, message: res.message });
+                        setTestResult({
+                          success: res.success,
+                          message: res.message,
+                        });
                       } catch (err) {
-                        setTestResult({ success: false, message: (err as Error).message || 'Failed to send test report' });
+                        setTestResult({
+                          success: false,
+                          message:
+                            (err as Error).message ||
+                            'Failed to send test report',
+                        });
                       } finally {
                         setTestInProgress(false);
                       }
                     }}
                     disabled={testInProgress}
                   >
-                    {testInProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send test report'}
+                    {testInProgress ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Send test report'
+                    )}
                   </button>
                   {testResult && (
-                    <div className={`mt-2 text-sm ${testResult.success ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {testResult.message || (testResult.success ? 'Test report sent' : 'Failed to send test report')}
+                    <div
+                      className={`mt-2 text-sm ${testResult.success ? 'text-emerald-500' : 'text-red-500'}`}
+                    >
+                      {testResult.message ||
+                        (testResult.success
+                          ? 'Test report sent'
+                          : 'Failed to send test report')}
                     </div>
                   )}
                 </div>
-
               </div>
 
               <Button

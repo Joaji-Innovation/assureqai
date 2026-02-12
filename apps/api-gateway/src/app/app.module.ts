@@ -143,4 +143,4 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

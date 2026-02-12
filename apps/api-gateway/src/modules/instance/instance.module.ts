@@ -10,10 +10,7 @@ import {
   Instance,
   InstanceSchema,
 } from '../../database/schemas/instance.schema';
-import {
-  Project,
-  ProjectSchema,
-} from '../../database/schemas/project.schema';
+import { Project, ProjectSchema } from '../../database/schemas/project.schema';
 import { ProvisioningModule } from '../provisioning/provisioning.module';
 
 @Module({

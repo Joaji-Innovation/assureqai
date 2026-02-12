@@ -234,14 +234,20 @@ export class QueueWorkerService implements OnModuleInit, OnModuleDestroy {
       const instanceId = this.usageTracking.getInstanceId();
       if (instanceId) {
         // Deduct 1 audit credit
-        this.creditsService.useAuditCredits(instanceId, 1, audit._id.toString())
-          .catch((err) => this.logger.warn(`Audit credit deduction failed: ${err.message}`));
+        this.creditsService
+          .useAuditCredits(instanceId, 1, audit._id.toString())
+          .catch((err) =>
+            this.logger.warn(`Audit credit deduction failed: ${err.message}`),
+          );
 
         // Deduct token credits (AI tokens consumed)
         const tokensUsed = auditResult.tokenUsage?.totalTokens || 0;
         if (tokensUsed > 0) {
-          this.creditsService.useTokenCredits(instanceId, tokensUsed, audit._id.toString())
-            .catch((err) => this.logger.warn(`Token credit deduction failed: ${err.message}`));
+          this.creditsService
+            .useTokenCredits(instanceId, tokensUsed, audit._id.toString())
+            .catch((err) =>
+              this.logger.warn(`Token credit deduction failed: ${err.message}`),
+            );
         }
       }
 

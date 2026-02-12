@@ -94,7 +94,10 @@ export default function ProfilePage() {
       setProfile((prev) => (prev ? { ...prev, ...updated } : null));
       showMessage('success', 'Profile updated successfully!');
     } catch (err) {
-      showMessage('error', (err as Error).message || 'Failed to update profile');
+      showMessage(
+        'error',
+        (err as Error).message || 'Failed to update profile',
+      );
     } finally {
       setSaving(false);
     }

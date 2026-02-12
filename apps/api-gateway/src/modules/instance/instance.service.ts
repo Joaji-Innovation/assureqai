@@ -89,7 +89,9 @@ export class InstanceService {
         instanceId: savedInstance._id,
         settings: { language: 'en', timezone: 'UTC' },
       });
-      this.logger.log(`Auto-created project ${project._id} linked to instance ${savedInstance._id}`);
+      this.logger.log(
+        `Auto-created project ${project._id} linked to instance ${savedInstance._id}`,
+      );
     }
 
     // Trigger On-Premise / VPS Deployment

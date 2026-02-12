@@ -38,9 +38,7 @@ export class UsageTrackingService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     const apiKey = this.configService.get<string>('INSTANCE_API_KEY');
     if (!apiKey) {
-      this.logger.warn(
-        'INSTANCE_API_KEY not set — usage tracking disabled',
-      );
+      this.logger.warn('INSTANCE_API_KEY not set — usage tracking disabled');
       return;
     }
 
@@ -63,9 +61,7 @@ export class UsageTrackingService implements OnModuleInit, OnModuleDestroy {
 
     // Start periodic flush
     this.flushTimer = setInterval(() => {
-      this.flush().catch((err) =>
-        this.logger.error('Usage flush failed', err),
-      );
+      this.flush().catch((err) => this.logger.error('Usage flush failed', err));
     }, this.FLUSH_INTERVAL_MS);
   }
 
@@ -110,6 +106,8 @@ export class UsageTrackingService implements OnModuleInit, OnModuleDestroy {
       )
       .exec();
 
-    this.logger.debug(`Flushed ${count} API calls for instance ${this.instanceId}`);
+    this.logger.debug(
+      `Flushed ${count} API calls for instance ${this.instanceId}`,
+    );
   }
 }

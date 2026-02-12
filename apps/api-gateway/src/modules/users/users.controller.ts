@@ -16,16 +16,32 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, LoginDto, ChangePasswordDto, UpdateProfileDto } from './dto';
-import { Public, Roles, RequirePermissions, CurrentUser } from '@assureqai/auth';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  LoginDto,
+  ChangePasswordDto,
+  UpdateProfileDto,
+} from './dto';
+import {
+  Public,
+  Roles,
+  RequirePermissions,
+  CurrentUser,
+} from '@assureqai/auth';
 import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
 
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   /**
    * Login endpoint - public
@@ -92,7 +108,11 @@ export class UsersController {
     @Body() dto: ChangePasswordDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    await this.usersService.changePassword(user.sub, dto.currentPassword, dto.newPassword);
+    await this.usersService.changePassword(
+      user.sub,
+      dto.currentPassword,
+      dto.newPassword,
+    );
     return { success: true, message: 'Password changed' };
   }
 
@@ -127,9 +147,7 @@ export class UsersController {
   ) {
     // Scope to project if not super admin
     const scopedProjectId =
-      user?.role === ROLES.SUPER_ADMIN
-        ? projectId
-        : user?.projectId;
+      user?.role === ROLES.SUPER_ADMIN ? projectId : user?.projectId;
 
     return this.usersService.findAll(scopedProjectId, page, limit);
   }

@@ -4,7 +4,6 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY nx.json ./
 RUN npm ci
 
 # Builder stage
@@ -12,14 +11,16 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY package*.json ./
+COPY tsconfig.base.json ./
+COPY apps/client-portal ./apps/client-portal
 
 # Set environment variables
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Build the Next.js application
-RUN npx nx build client-portal --prod
+RUN cd apps/client-portal && npx next build
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -34,8 +35,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy necessary files
 COPY --from=builder /app/apps/client-portal/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/dist/apps/client-portal/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/dist/apps/client-portal/.next/static ./dist/apps/client-portal/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/client-portal/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/client-portal/.next/static ./apps/client-portal/.next/static
 
 USER nextjs
 

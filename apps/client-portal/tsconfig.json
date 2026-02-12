@@ -27,8 +27,7 @@
     "**/*.js",
     "**/*.jsx",
 
-    "../../apps/client-portal/.next/types/**/*.ts",
-    "../../dist/apps/client-portal/.next/types/**/*.ts",
+    ".next/types/**/*.ts",
 
     "next-env.d.ts"
   ],

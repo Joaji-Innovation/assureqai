@@ -3,7 +3,7 @@
 A high-level map of the monorepo: what lives where, how the pieces fit, and how to run the main services.
 
 ## Stack at a Glance
-- Monorepo: Nx (workspace config in nx.json, tsconfig.base.json)
+- Monorepo: npm scripts (workspace config in tsconfig.base.json)
 - Backend: NestJS (apps/api-gateway)
 - Frontend: Next.js (apps/client-portal, apps/admin-portal)
 - Data: MongoDB, Redis (see docker-compose.yml)
@@ -11,11 +11,11 @@ A high-level map of the monorepo: what lives where, how the pieces fit, and how 
 - Styling: TailwindCSS, Radix UI, custom components
 
 ## Apps (apps/)
-- api-gateway: NestJS API for audits, users, campaigns, credits, webhooks; see project.json and webpack.config.js for build/serve.
-- client-portal: Next.js client dashboard (14 pages noted in README), runs with nx dev client-portal.
-- admin-portal: Next.js super-admin portal, runs with nx dev admin-portal.
-- api-gateway-e2e: E2E test harness for the API (Cypress/Jest harness via Nx target definitions).
-- landing: Marketing/landing Next.js site (separate app).
+- api-gateway: NestJS API for audits, users, campaigns, credits, webhooks; see webpack.config.js for build/serve.
+- client-portal: Next.js client dashboard (14 pages noted in README), runs with npm run dev:client.
+- admin-portal: Next.js super-admin portal, runs with npm run dev:admin.
+- api-gateway-e2e: E2E test harness for the API (Jest).
+- landing: Marketing/landing Next.js site, runs with npm run dev:landing.
 
 ## Shared Libraries (libs/)
 - auth: Shared authentication helpers, guards, DTOs used across apps.
@@ -44,13 +44,14 @@ A high-level map of the monorepo: what lives where, how the pieces fit, and how 
 
 ## Runbook (local)
 1) Install: npm install
-2) Backend: npx nx serve api-gateway
-3) Client portal: npx nx dev client-portal (new terminal)
-4) Admin portal: npx nx dev admin-portal (new terminal)
-5) Alt: docker-compose up -d (use profile with-nginx for reverse proxy)
+2) Backend: npm run dev:api
+3) Client portal: npm run dev:client (new terminal)
+4) Admin portal: npm run dev:admin (new terminal)
+5) Landing: npm run dev:landing (new terminal)
+6) Alt: docker-compose up -d (use profile with-nginx for reverse proxy)
 
 ## Environments
-- Development: uses local .env.* files and Nx serve/dev targets.
+- Development: uses local .env.* files and npm run dev:* scripts.
 - Production: build with docker-compose (copy .env.example to .env and adjust), optionally fronted by Nginx.
 
 ### Separate DB per client (high level)

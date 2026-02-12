@@ -17,13 +17,13 @@ AI-powered quality assurance and audit platform for call centers.
 npm install
 
 # Start API Gateway
-npx nx serve api-gateway
+npm run dev:api
 
 # Start Client Portal (separate terminal)
-npx nx dev client-portal
+npm run dev:client
 
 # Start Admin Portal (separate terminal)
-npx nx dev admin-portal
+npm run dev:admin
 ```
 
 ### Production (Docker)

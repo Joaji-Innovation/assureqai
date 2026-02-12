@@ -5,7 +5,6 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY nx.json ./
 COPY tsconfig*.json ./
 
 # Install all dependencies
@@ -16,7 +15,7 @@ COPY apps/api-gateway ./apps/api-gateway
 COPY libs ./libs
 
 # Build the application
-RUN npx nx build api-gateway --prod
+RUN npm run build:api
 
 # Production stage
 FROM node:20-alpine AS production
@@ -25,7 +24,7 @@ WORKDIR /app
 
 # Install production dependencies only
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy built application
 COPY --from=builder /app/dist/apps/api-gateway ./dist/apps/api-gateway

@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { FileText, Search, Plus, Trash2, Edit, X, Loader2, Copy } from 'lucide-react';
 import { templateApi, Template } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 const industries = ['Insurance', 'Banking', 'Telecom', 'Healthcare', 'Retail', 'E-commerce', 'Travel', 'Custom'];
 
 export default function TemplatesPage() {
+  const { success, error: showError } = useToast();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,6 +18,7 @@ export default function TemplatesPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [newTemplate, setNewTemplate] = useState({ name: '', type: 'sop', industry: 'Custom', description: '' });
 
   useEffect(() => {
@@ -54,26 +58,28 @@ export default function TemplatesPage() {
       setTemplates(prev => [...prev, created]);
       setNewTemplate({ name: '', type: 'sop', industry: 'Custom', description: '' });
       setShowAddForm(false);
+      success('Template created successfully');
     } catch (error) {
       console.error('Failed to create template:', error);
-      alert('Failed to create template');
+      showError('Failed to create template');
     } finally {
       setAdding(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this template?')) return;
-
-    setDeleting(id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget);
     try {
-      await templateApi.delete(id);
-      setTemplates(prev => prev.filter(t => t._id !== id));
+      await templateApi.delete(deleteTarget);
+      setTemplates(prev => prev.filter(t => t._id !== deleteTarget));
+      success('Template deleted successfully');
     } catch (error) {
       console.error('Failed to delete template:', error);
-      alert('Failed to delete template');
+      showError('Failed to delete template');
     } finally {
       setDeleting(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -81,9 +87,10 @@ export default function TemplatesPage() {
     try {
       const cloned = await templateApi.clone(id);
       setTemplates(prev => [...prev, cloned]);
+      success('Template cloned successfully');
     } catch (error) {
       console.error('Failed to clone template:', error);
-      alert('Failed to clone template');
+      showError('Failed to clone template');
     }
   };
 
@@ -256,7 +263,7 @@ export default function TemplatesPage() {
                   <Edit className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(template._id)}
+                  onClick={() => setDeleteTarget(template._id)}
                   disabled={deleting === template._id}
                   className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
                 >
@@ -271,6 +278,17 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Template"
+        description="Are you sure you want to delete this template? This cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={!!deleting}
+      />
     </div>
   );
 }

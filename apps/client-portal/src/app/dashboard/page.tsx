@@ -363,8 +363,8 @@ function generateCSV(audits: SavedAuditItem[], includeTokens: boolean = false) {
       .getDate()
       .toString()
       .padStart(2, '0')}-${(auditDate.getMonth() + 1)
-      .toString()
-      .padStart(2, '0')}-${auditDate.getFullYear()}`;
+        .toString()
+        .padStart(2, '0')}-${auditDate.getFullYear()}`;
 
     // Calculate audit duration using auditDurationMs
     let auditDuration = '';
@@ -380,8 +380,8 @@ function generateCSV(audits: SavedAuditItem[], includeTokens: boolean = false) {
       auditDuration = `${hours.toString().padStart(2, '0')}:${minutes
         .toString()
         .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds
-        .toString()
-        .padStart(3, '0')}`;
+          .toString()
+          .padStart(3, '0')}`;
 
       // Calculate start and end time based on audit date and duration
       const endDate = auditDate;
@@ -413,8 +413,8 @@ function generateCSV(audits: SavedAuditItem[], includeTokens: boolean = false) {
       auditDuration = `${hours.toString().padStart(2, '0')}:${minutes
         .toString()
         .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds
-        .toString()
-        .padStart(3, '0')}`;
+          .toString()
+          .padStart(3, '0')}`;
 
       // Format as DD-MM-YYYY HH:MM:SS
       const formatDateTime = (date: Date) => {
@@ -486,9 +486,9 @@ function generateCSV(audits: SavedAuditItem[], includeTokens: boolean = false) {
 
     const row = [
       audit.agentUserId ||
-        audit.auditData?.agentUserId ||
-        audit.agentName ||
-        '',
+      audit.auditData?.agentUserId ||
+      audit.agentName ||
+      '',
       audit.campaignName || '',
       callCategory,
       audit.agentName || '',
@@ -578,8 +578,8 @@ async function handleDownload(
         .getDate()
         .toString()
         .padStart(2, '0')}-${(auditDate.getMonth() + 1)
-        .toString()
-        .padStart(2, '0')}-${auditDate.getFullYear()}`;
+          .toString()
+          .padStart(2, '0')}-${auditDate.getFullYear()}`;
 
       // Calculate audit duration
       let auditDuration = '';
@@ -710,7 +710,7 @@ async function handleDownload(
     }
   } catch (err) {
     console.error('Failed to download audits:', err);
-    alert('Failed to download audits. Please try again.');
+    // Error already logged above; toast is unavailable here (standalone function)
   }
 }
 
@@ -927,13 +927,13 @@ function DashboardPageContent() {
           dataLength: response?.data?.length,
           firstAudit: response?.data?.[0]
             ? {
-                id: response.data[0]._id,
-                agentName: response.data[0].agentName,
-                campaignName: response.data[0].campaignName,
-                overallScore: response.data[0].overallScore,
-                auditResultsLength: response.data[0].auditResults?.length,
-                auditResultsSample: response.data[0].auditResults?.[0],
-              }
+              id: response.data[0]._id,
+              agentName: response.data[0].agentName,
+              campaignName: response.data[0].campaignName,
+              overallScore: response.data[0].overallScore,
+              auditResultsLength: response.data[0].auditResults?.length,
+              auditResultsSample: response.data[0].auditResults?.[0],
+            }
             : 'No audits',
         });
 
@@ -945,15 +945,15 @@ function DashboardPageContent() {
             count: savedAuditsData.length,
             firstConverted: savedAuditsData[0]
               ? {
-                  id: savedAuditsData[0].id,
-                  agentName: savedAuditsData[0].agentName,
-                  campaignName: savedAuditsData[0].campaignName,
-                  overallScore: savedAuditsData[0].overallScore,
-                  auditResultsCount:
-                    savedAuditsData[0].auditData?.auditResults?.length,
-                  auditResultsSample:
-                    savedAuditsData[0].auditData?.auditResults?.[0],
-                }
+                id: savedAuditsData[0].id,
+                agentName: savedAuditsData[0].agentName,
+                campaignName: savedAuditsData[0].campaignName,
+                overallScore: savedAuditsData[0].overallScore,
+                auditResultsCount:
+                  savedAuditsData[0].auditData?.auditResults?.length,
+                auditResultsSample:
+                  savedAuditsData[0].auditData?.auditResults?.[0],
+              }
               : 'No audits',
           });
           setSavedAudits(savedAuditsData);
@@ -2126,11 +2126,11 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
             suggestion:
               subParamsList.length > 0
                 ? `Focus on improving: ${subParamsList
-                    .slice(0, 3)
-                    .map((s) => s.name)
-                    .join(
-                      ', ',
-                    )}. Review relevant SOPs and provide targeted coaching.`
+                  .slice(0, 3)
+                  .map((s) => s.name)
+                  .join(
+                    ', ',
+                  )}. Review relevant SOPs and provide targeted coaching.`
                 : 'Review general guidelines for this parameter.',
           };
         });
@@ -2268,34 +2268,34 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
         positive:
           filteredAudits.length > 0
             ? parseFloat(
-                (
-                  (filteredAudits.filter((a) => a.overallScore >= 85).length /
-                    filteredAudits.length) *
-                  100
-                ).toFixed(1),
-              )
+              (
+                (filteredAudits.filter((a) => a.overallScore >= 85).length /
+                  filteredAudits.length) *
+                100
+              ).toFixed(1),
+            )
             : 0,
         neutral:
           filteredAudits.length > 0
             ? parseFloat(
-                (
-                  (filteredAudits.filter(
-                    (a) => a.overallScore >= 70 && a.overallScore < 85,
-                  ).length /
-                    filteredAudits.length) *
-                  100
-                ).toFixed(1),
-              )
+              (
+                (filteredAudits.filter(
+                  (a) => a.overallScore >= 70 && a.overallScore < 85,
+                ).length /
+                  filteredAudits.length) *
+                100
+              ).toFixed(1),
+            )
             : 0,
         negative:
           filteredAudits.length > 0
             ? parseFloat(
-                (
-                  (filteredAudits.filter((a) => a.overallScore < 70).length /
-                    filteredAudits.length) *
-                  100
-                ).toFixed(1),
-              )
+              (
+                (filteredAudits.filter((a) => a.overallScore < 70).length /
+                  filteredAudits.length) *
+                100
+              ).toFixed(1),
+            )
             : 0,
       });
 
@@ -2320,10 +2320,10 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
         fatalRate:
           filteredAudits.length > 0
             ? parseFloat(
-                ((auditsWithFatalErrors / filteredAudits.length) * 100).toFixed(
-                  1,
-                ),
-              )
+              ((auditsWithFatalErrors / filteredAudits.length) * 100).toFixed(
+                1,
+              ),
+            )
             : 0,
       });
 
@@ -2334,8 +2334,8 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
       const ztpRate =
         filteredAudits.length > 0
           ? parseFloat(
-              ((ztpAuditsCount / filteredAudits.length) * 100).toFixed(1),
-            )
+            ((ztpAuditsCount / filteredAudits.length) * 100).toFixed(1),
+          )
           : 0;
 
       setZtpData({
@@ -3495,15 +3495,15 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                           )}
                           {agentPerformanceData.underperformingAgents.length ===
                             0 && (
-                            <TableRow>
-                              <TableCell
-                                colSpan={3}
-                                className="text-center text-muted-foreground py-8 h-32"
-                              >
-                                No agents currently need improvement.
-                              </TableCell>
-                            </TableRow>
-                          )}
+                              <TableRow>
+                                <TableCell
+                                  colSpan={3}
+                                  className="text-center text-muted-foreground py-8 h-32"
+                                >
+                                  No agents currently need improvement.
+                                </TableCell>
+                              </TableRow>
+                            )}
                         </TableBody>
                       </Table>
                     </div>
@@ -3688,13 +3688,12 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             </TableCell>
                             <TableCell className="text-right">
                               <span
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
-                                  c.score >= 80
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${c.score >= 80
                                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                     : c.score >= 70
                                       ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                                       : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                }`}
+                                  }`}
                               >
                                 {c.score}%
                               </span>
@@ -3924,13 +3923,12 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                         )}
                         <TableCell>
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              audit.overallScore > 90
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${audit.overallScore > 90
                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                 : audit.overallScore >= 85
                                   ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                                   : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            }`}
+                              }`}
                           >
                             {audit.overallScore.toFixed(2)}%
                           </span>
@@ -3950,15 +3948,14 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             <TableCell className="text-xs text-muted-foreground">
                               {audit.auditData?.auditDurationMs
                                 ? `${(
-                                    audit.auditData.auditDurationMs / 1000
-                                  ).toFixed(1)}s`
+                                  audit.auditData.auditDurationMs / 1000
+                                ).toFixed(1)}s`
                                 : '-'}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
                               {audit.auditData?.tokenUsage
-                                ? `${audit.auditData.tokenUsage.inputTokens || 0} / ${
-                                    audit.auditData.tokenUsage.outputTokens || 0
-                                  }`
+                                ? `${audit.auditData.tokenUsage.inputTokens || 0} / ${audit.auditData.tokenUsage.outputTokens || 0
+                                }`
                                 : '-'}
                             </TableCell>
                           </>
@@ -4078,7 +4075,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                   <span>Failure Count</span>
                 </div>
                 {selectedIssue?.subParameters &&
-                selectedIssue.subParameters.length > 0 ? (
+                  selectedIssue.subParameters.length > 0 ? (
                   <div className="grid gap-2">
                     {selectedIssue.subParameters.map(
                       (sub: any, idx: number) => (
@@ -4236,9 +4233,9 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                   const agentQAScore =
                     agentAudits.length > 0
                       ? agentAudits.reduce(
-                          (sum, a) => sum + (a.overallScore || 0),
-                          0,
-                        ) / agentAudits.length
+                        (sum, a) => sum + (a.overallScore || 0),
+                        0,
+                      ) / agentAudits.length
                       : 0;
                   const agentFatalAudits = agentAudits.filter((a) =>
                     a.auditData?.auditResults?.some(
@@ -4309,7 +4306,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                 })()}
 
                 {agentSpecificChartData.topIssues.length > 0 ||
-                agentSpecificChartData.paretoData.length > 0 ? (
+                  agentSpecificChartData.paretoData.length > 0 ? (
                   <>
                     <div className="grid gap-6 lg:grid-cols-2">
                       {/* Agent's Top QA Issues */}
@@ -4836,9 +4833,9 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                   const agentQAScore =
                     agentAudits.length > 0
                       ? agentAudits.reduce(
-                          (sum, a) => sum + (a.overallScore || 0),
-                          0,
-                        ) / agentAudits.length
+                        (sum, a) => sum + (a.overallScore || 0),
+                        0,
+                      ) / agentAudits.length
                       : 0;
                   const agentFatalAudits = agentAudits.filter((a) =>
                     a.auditData?.auditResults?.some(
@@ -4974,7 +4971,7 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                   ];
                   actionSheet.addRow([
                     'Recommended Action Plan for ' +
-                      selectedTrainingAgent.agentName,
+                    selectedTrainingAgent.agentName,
                   ]).font = { bold: true, size: 14 };
                   actionSheet.addRow([]);
                   const actionHeaders = actionSheet.addRow([

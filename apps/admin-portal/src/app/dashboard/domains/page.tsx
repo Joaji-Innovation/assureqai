@@ -15,6 +15,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { instanceApi, Instance } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 // Derived domain interface for the UI
 interface DomainUI {
@@ -45,6 +47,8 @@ export default function DomainsPage() {
   const [newDomain, setNewDomain] = useState({ domain: '', instanceId: '' });
   const [adding, setAdding] = useState(false);
   const [verifying, setVerifying] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const { success, error: showError, warning: showWarning } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -111,9 +115,10 @@ export default function DomainsPage() {
       await fetchData();
       setNewDomain({ domain: '', instanceId: '' });
       setShowAddForm(false);
+      success('Custom domain added successfully');
     } catch (error) {
       console.error('Failed to add domain', error);
-      alert('Failed to add custom domain');
+      showError('Failed to add custom domain');
     } finally {
       setAdding(false);
     }
@@ -131,30 +136,33 @@ export default function DomainsPage() {
             d.id === id ? { ...d, status: 'active', sslStatus: 'valid' } : d,
           ),
         );
+        success('Domain verified successfully');
       } else {
-        alert(
+        showWarning(
           result.error ||
           'Domain verification failed. Please check DNS settings.',
         );
       }
     } catch (error) {
       console.error('Verification failed', error);
-      alert('Failed to verify domain');
+      showError('Failed to verify domain');
     } finally {
       setVerifying(null);
     }
   };
 
-  const handleDeleteDomain = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this custom domain?')) return;
-
-    const instanceId = id.split('-')[0];
+  const handleDeleteDomain = async () => {
+    if (!deleteTarget) return;
+    const instanceId = deleteTarget.split('-')[0];
     try {
       await instanceApi.removeDomain(instanceId);
-      setDomains((prev) => prev.filter((d) => d.id !== id));
+      setDomains((prev) => prev.filter((d) => d.id !== deleteTarget));
+      success('Domain removed successfully');
     } catch (error) {
       console.error('Failed to remove domain', error);
-      alert('Failed to remove custom domain');
+      showError('Failed to remove custom domain');
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -387,7 +395,7 @@ export default function DomainsPage() {
                       )}
                       {domain.isCustom && (
                         <button
-                          onClick={() => handleDeleteDomain(domain.id)}
+                          onClick={() => setDeleteTarget(domain.id)}
                           className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -401,6 +409,16 @@ export default function DomainsPage() {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteDomain}
+        title="Remove Domain"
+        description="Are you sure you want to remove this custom domain? DNS records will need to be reconfigured if re-added."
+        confirmLabel="Remove"
+        variant="danger"
+      />
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { BarChart2, Users, FileText, Search, AlertTriangle, TrendingUp, TrendingDown, Server, Key, Copy, RefreshCw, Check, CreditCard } from 'lucide-react';
 import api, { Instance } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 interface UsageData {
   instanceId: string;
@@ -32,6 +34,8 @@ export default function UsagePage() {
   const [billingFilter, setBillingFilter] = useState('all');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [regenTarget, setRegenTarget] = useState<string | null>(null);
+  const { success, error: showError } = useToast();
 
   useEffect(() => {
     fetchUsage();
@@ -124,20 +128,22 @@ export default function UsagePage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const regenerateApiKey = async (id: string) => {
-    if (!confirm('Are you sure you want to regenerate this API key? The old key will stop working immediately.')) return;
+  const regenerateApiKey = async () => {
+    if (!regenTarget) return;
 
-    setRegeneratingId(id);
+    setRegeneratingId(regenTarget);
     try {
-      const result = await api.instance.regenerateApiKey(id);
+      const result = await api.instance.regenerateApiKey(regenTarget);
       setUsageData(prev => prev.map(d =>
-        d.instanceId === id ? { ...d, apiKey: result.apiKey } : d
+        d.instanceId === regenTarget ? { ...d, apiKey: result.apiKey } : d
       ));
+      success('API key regenerated successfully');
     } catch (error) {
       console.error('Failed to regenerate API key', error);
-      alert('Failed to regenerate API key');
+      showError('Failed to regenerate API key');
     } finally {
       setRegeneratingId(null);
+      setRegenTarget(null);
     }
   };
 
@@ -147,9 +153,10 @@ export default function UsagePage() {
       setUsageData(prev => prev.map(d =>
         d.instanceId === id ? { ...d, billingType: newType } : d
       ));
+      success('Billing type updated');
     } catch (error) {
       console.error('Failed to update billing type', error);
-      alert('Failed to update billing type');
+      showError('Failed to update billing type');
     }
   };
 
@@ -302,7 +309,7 @@ export default function UsagePage() {
                             )}
                           </button>
                           <button
-                            onClick={() => regenerateApiKey(data.instanceId)}
+                            onClick={() => setRegenTarget(data.instanceId)}
                             disabled={regeneratingId === data.instanceId}
                             className="p-1 hover:bg-muted rounded transition-colors disabled:opacity-50"
                             title="Regenerate API Key"
@@ -320,6 +327,17 @@ export default function UsagePage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={!!regenTarget}
+        onClose={() => setRegenTarget(null)}
+        onConfirm={regenerateApiKey}
+        title="Regenerate API Key"
+        description="Are you sure you want to regenerate this API key? The old key will stop working immediately."
+        confirmLabel="Regenerate"
+        variant="warning"
+        loading={!!regeneratingId}
+      />
     </div>
   );
 }

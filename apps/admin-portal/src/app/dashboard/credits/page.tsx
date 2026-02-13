@@ -12,6 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 
 interface InstanceCredits {
   id: string;
@@ -44,6 +45,7 @@ export default function CreditsPage() {
   const [addAmount, setAddAmount] = useState(100);
   const [addReason, setAddReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const { success, error: showError } = useToast();
 
   // Fetch credits data on mount
   useEffect(() => {
@@ -100,15 +102,15 @@ export default function CreditsPage() {
           reason: addReason,
         });
       }
-      // Refresh data
       await fetchCredits();
 
       setAddingCredits(null);
       setAddAmount(100);
       setAddReason('');
+      success('Credits added successfully');
     } catch (error) {
       console.error('Failed to add credits', error);
-      alert('Failed to add credits');
+      showError('Failed to add credits');
     } finally {
       setProcessing(false);
     }

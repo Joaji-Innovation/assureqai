@@ -14,6 +14,16 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useUsers, useCreateUser, useDeleteUser } from '@/lib/hooks';
 import type { User } from '@/lib/api';
 import { useState } from 'react';
@@ -39,6 +49,7 @@ export default function AddUserPage() {
     email: '',
     role: 'agent',
   });
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   // Get users from API
   const users: User[] = userData?.data || [];
@@ -63,8 +74,13 @@ export default function AddUserPage() {
   }
 
   async function handleDeleteUser(id: string) {
-    if (confirm('Are you sure you want to delete this user?')) {
-      await deleteUserMutation.mutateAsync(id);
+    setDeleteUserId(id);
+  }
+
+  async function confirmDeleteUser() {
+    if (deleteUserId) {
+      await deleteUserMutation.mutateAsync(deleteUserId);
+      setDeleteUserId(null);
     }
   }
 
@@ -360,6 +376,22 @@ export default function AddUserPage() {
           </div>
         </div>
       )}
+      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this user? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

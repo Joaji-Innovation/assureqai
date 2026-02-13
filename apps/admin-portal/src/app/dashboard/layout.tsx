@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       authApi
         .me()
         .then((user) => setCurrentUser(user))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [router, pathname]);
 
@@ -97,7 +97,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
       <aside
-        className={`${collapsed ? 'w-16' : 'w-64'} bg-card/50 backdrop-blur border-r border-border transition-all duration-300 flex flex-col`}
+        className={`${collapsed ? 'w-16' : 'w-64'} h-screen sticky top-0 bg-card/50 backdrop-blur border-r border-border transition-all duration-300 flex flex-col`}
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
@@ -122,7 +122,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 space-y-1">
+        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -131,11 +131,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                  isActive
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                } ${collapsed ? 'justify-center' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  } ${collapsed ? 'justify-center' : ''}`}
                 title={collapsed ? item.label : undefined}
               >
                 <item.icon
@@ -154,11 +153,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/80 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
                 {currentUser?.fullName
                   ? currentUser.fullName
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase()
-                      .slice(0, 2)
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)
                   : 'SA'}
               </div>
               <div className="flex-1 min-w-0">

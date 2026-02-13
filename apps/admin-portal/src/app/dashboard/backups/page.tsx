@@ -15,6 +15,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 interface Backup {
   id: string;
@@ -44,6 +46,9 @@ export default function BackupsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [restoring, setRestoring] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const { success, error: showError } = useToast();
 
   useEffect(() => {
     fetchBackups();
@@ -95,37 +100,35 @@ export default function BackupsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleRestore = async (id: string) => {
-    if (
-      !confirm(
-        'Are you sure you want to restore this backup? This will overwrite current data.',
-      )
-    )
-      return;
-    setRestoring(id);
+  const handleRestore = async () => {
+    if (!restoreTarget) return;
+    setRestoring(restoreTarget);
     try {
-      await api.backup.restore(id);
-      alert('Backup restore initiated successfully!');
+      await api.backup.restore(restoreTarget);
+      success('Backup restore initiated successfully!');
       fetchBackups(); // Refresh status
     } catch (error) {
       console.error('Restore failed', error);
-      alert('Failed to restore backup');
+      showError('Failed to restore backup');
     } finally {
       setRestoring(null);
+      setRestoreTarget(null);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this backup?')) return;
-    setDeleting(id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget);
     try {
-      await api.backup.delete(id);
-      setBackups((prev) => prev.filter((b) => b.id !== id));
+      await api.backup.delete(deleteTarget);
+      setBackups((prev) => prev.filter((b) => b.id !== deleteTarget));
+      success('Backup deleted successfully');
     } catch (error) {
       console.error('Delete failed', error);
-      alert('Failed to delete backup');
+      showError('Failed to delete backup');
     } finally {
       setDeleting(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -302,7 +305,7 @@ export default function BackupsPage() {
                   <div className="flex items-center justify-end gap-2">
                     {backup.status === 'completed' && (
                       <button
-                        onClick={() => handleRestore(backup.id)}
+                        onClick={() => setRestoreTarget(backup.id)}
                         disabled={restoring === backup.id}
                         className="p-2 rounded-lg hover:bg-muted transition-colors"
                         title="Restore"
@@ -315,7 +318,7 @@ export default function BackupsPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => handleDelete(backup.id)}
+                      onClick={() => setDeleteTarget(backup.id)}
                       disabled={deleting === backup.id}
                       className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
                       title="Delete"
@@ -333,6 +336,28 @@ export default function BackupsPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={!!restoreTarget}
+        onClose={() => setRestoreTarget(null)}
+        onConfirm={handleRestore}
+        title="Restore Backup"
+        description="Are you sure you want to restore this backup? This will overwrite current data."
+        confirmLabel="Restore"
+        variant="warning"
+        loading={!!restoring}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Backup"
+        description="Are you sure you want to delete this backup? This cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={!!deleting}
+      />
     </div>
   );
 }

@@ -134,12 +134,12 @@ export interface Instance {
   companyName?: string;
   plan?: string;
   status:
-    | 'running'
-    | 'stopped'
-    | 'provisioning'
-    | 'error'
-    | 'active'
-    | 'suspended';
+  | 'running'
+  | 'stopped'
+  | 'provisioning'
+  | 'error'
+  | 'active'
+  | 'suspended';
   region?: string;
   version?: string;
   cpu?: number;
@@ -390,7 +390,7 @@ export const creditsApi = {
     instanceId: string,
     data: { amount: number; reason: string },
   ) =>
-    request<void>(`/api/admin/credits/${instanceId}/audit`, {
+    request<void>(`/api/admin/credits/${instanceId}/audit-credits`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -398,7 +398,7 @@ export const creditsApi = {
     instanceId: string,
     data: { amount: number; reason: string },
   ) =>
-    request<void>(`/api/admin/credits/${instanceId}/token`, {
+    request<void>(`/api/admin/credits/${instanceId}/token-credits`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),

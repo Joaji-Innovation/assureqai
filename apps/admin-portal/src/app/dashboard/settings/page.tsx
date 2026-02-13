@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { settingsApi, healthApi } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 
 interface PlatformSettings {
   platformName: string;
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [smtpTesting, setSmtpTesting] = useState(false);
+  const { success: showSuccess, error: showError } = useToast();
   const [smtpTestResult, setSmtpTestResult] = useState<{
     success: boolean;
     message: string;
@@ -86,10 +88,11 @@ export default function SettingsPage() {
     try {
       await settingsApi.update(settings);
       setSaved(true);
+      showSuccess('Settings saved successfully');
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('Failed to save settings', error);
-      alert('Failed to save settings');
+      showError('Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -367,11 +370,10 @@ export default function SettingsPage() {
           </button>
           {smtpTestResult && (
             <div
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                smtpTestResult.success
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${smtpTestResult.success
                   ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                   : 'bg-red-500/10 text-red-500 border border-red-500/20'
-              }`}
+                }`}
             >
               {smtpTestResult.success ? (
                 <CheckCircle className="h-4 w-4 shrink-0" />

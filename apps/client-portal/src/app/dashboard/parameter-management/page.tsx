@@ -29,6 +29,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -60,6 +70,7 @@ export default function ParameterManagementPage() {
     type: 'Non-Fatal'
   });
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'sub' | 'group'; groupId: string; subParamId?: string } | null>(null);
 
   // Load parameter sets
   useEffect(() => {
@@ -195,39 +206,41 @@ export default function ParameterManagementPage() {
 
   // Delete a sub-parameter
   const handleDeleteSubParam = async (groupId: string, subParamId: string) => {
-    if (!selectedSet) return;
-    if (!confirm('Delete this sub-parameter?')) return;
-
-    try {
-      const updatedParams = selectedSet.parameters.map(group => {
-        if (group.id === groupId) {
-          return {
-            ...group,
-            subParameters: group.subParameters.filter(sp => sp.id !== subParamId)
-          };
-        }
-        return group;
-      });
-      await qaParameterApi.update(selectedSetId!, { parameters: updatedParams } as any);
-      await loadParameterSets();
-      toast({ title: 'Deleted', description: 'Sub-parameter removed' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
-    }
+    setDeleteTarget({ type: 'sub', groupId, subParamId });
   };
 
   // Delete a group
   const handleDeleteGroup = async (groupId: string) => {
-    if (!selectedSet) return;
-    if (!confirm('Delete this entire parameter group and all its sub-parameters?')) return;
+    setDeleteTarget({ type: 'group', groupId });
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedSet || !deleteTarget) return;
 
     try {
-      const updatedParams = selectedSet.parameters.filter(g => g.id !== groupId);
-      await qaParameterApi.update(selectedSetId!, { parameters: updatedParams } as any);
-      await loadParameterSets();
-      toast({ title: 'Deleted', description: 'Parameter group removed' });
+      if (deleteTarget.type === 'sub' && deleteTarget.subParamId) {
+        const updatedParams = selectedSet.parameters.map(group => {
+          if (group.id === deleteTarget.groupId) {
+            return {
+              ...group,
+              subParameters: group.subParameters.filter(sp => sp.id !== deleteTarget.subParamId)
+            };
+          }
+          return group;
+        });
+        await qaParameterApi.update(selectedSetId!, { parameters: updatedParams } as any);
+        await loadParameterSets();
+        toast({ title: 'Deleted', description: 'Sub-parameter removed' });
+      } else if (deleteTarget.type === 'group') {
+        const updatedParams = selectedSet.parameters.filter(g => g.id !== deleteTarget.groupId);
+        await qaParameterApi.update(selectedSetId!, { parameters: updatedParams } as any);
+        await loadParameterSets();
+        toast({ title: 'Deleted', description: 'Parameter group removed' });
+      }
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete group', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -571,6 +584,27 @@ export default function ParameterManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget?.type === 'group' ? 'Delete Parameter Group' : 'Delete Sub-Parameter'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.type === 'group'
+                ? 'Delete this entire parameter group and all its sub-parameters? This cannot be undone.'
+                : 'Delete this sub-parameter? This cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

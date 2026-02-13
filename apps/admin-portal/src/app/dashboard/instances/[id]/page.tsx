@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { instanceApi, Instance } from '@/lib/api';
 import Link from 'next/link';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 export default function InstanceDetailPage() {
   const params = useParams();
@@ -31,6 +33,8 @@ export default function InstanceDetailPage() {
   const [saving, setSaving] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [regeneratingKey, setRegeneratingKey] = useState(false);
+  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
+  const { success, error: showError } = useToast();
 
   // Editable fields
   const [limits, setLimits] = useState({ maxUsers: 0, maxStorage: '10' });
@@ -67,9 +71,10 @@ export default function InstanceDetailPage() {
     try {
       const updated = await instanceApi.updateLimits(instance._id, limits);
       setInstance(updated);
+      success('Limits updated successfully');
     } catch (error) {
       console.error('Failed to update limits', error);
-      alert('Failed to update limits');
+      showError('Failed to update limits');
     } finally {
       setSaving(false);
     }
@@ -81,9 +86,10 @@ export default function InstanceDetailPage() {
     try {
       const updated = await instanceApi.updateCredits(instance._id, credits);
       setInstance(updated);
+      success('Credits updated successfully');
     } catch (error) {
       console.error('Failed to update credits', error);
-      alert('Failed to update credits');
+      showError('Failed to update credits');
     } finally {
       setSaving(false);
     }
@@ -98,19 +104,18 @@ export default function InstanceDetailPage() {
   };
 
   const regenerateApiKey = async () => {
-    if (
-      !instance ||
-      !confirm('Regenerate API key? The old key will stop working immediately.')
-    )
-      return;
+    if (!instance) return;
     setRegeneratingKey(true);
     try {
       const result = await instanceApi.regenerateApiKey(instance._id);
       setInstance({ ...instance, apiKey: result.apiKey });
+      success('API key regenerated successfully');
     } catch (error) {
       console.error('Failed to regenerate API key', error);
+      showError('Failed to regenerate API key');
     } finally {
       setRegeneratingKey(false);
+      setShowRegenConfirm(false);
     }
   };
 
@@ -391,7 +396,7 @@ export default function InstanceDetailPage() {
                 )}
               </button>
               <button
-                onClick={regenerateApiKey}
+                onClick={() => setShowRegenConfirm(true)}
                 disabled={regeneratingKey}
                 className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
                 title="Regenerate API Key"
@@ -408,6 +413,17 @@ export default function InstanceDetailPage() {
           instance.
         </p>
       </div>
+
+      <ConfirmDialog
+        open={showRegenConfirm}
+        onClose={() => setShowRegenConfirm(false)}
+        onConfirm={regenerateApiKey}
+        title="Regenerate API Key"
+        description="Are you sure? The old API key will stop working immediately."
+        confirmLabel="Regenerate"
+        variant="warning"
+        loading={regeneratingKey}
+      />
     </div>
   );
 }

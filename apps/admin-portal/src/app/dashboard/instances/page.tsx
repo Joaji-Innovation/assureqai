@@ -1,15 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Server, Search, Play, Square, RefreshCw, Settings, ExternalLink, Loader2, AlertTriangle, CheckCircle, Trash2, Plus } from 'lucide-react';
 import { instanceApi, Instance } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 export default function InstancesPage() {
+  const router = useRouter();
+  const { success, error: showError } = useToast();
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     fetchInstances();
@@ -50,26 +56,26 @@ export default function InstancesPage() {
       }));
     } catch (error) {
       console.error(`Failed to ${action} instance`, error);
-      alert(`Failed to ${action} instance`);
+      showError(`Failed to ${action} instance`);
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete instance "${name}"? This action cannot be undone.`)) {
-      return;
-    }
-
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
     setActionLoading(id);
     try {
       await instanceApi.delete(id);
       setInstances(prev => prev.filter(inst => inst._id !== id));
+      success('Instance deleted successfully');
     } catch (error) {
       console.error('Failed to delete instance', error);
-      alert('Failed to delete instance');
+      showError('Failed to delete instance');
     } finally {
       setActionLoading(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -106,7 +112,7 @@ export default function InstancesPage() {
             </span>
           )}
           <button
-            onClick={() => window.location.href = '/dashboard/instances/new'}
+            onClick={() => router.push('/dashboard/instances/new')}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
           >
             <Plus className="h-4 w-4" />
@@ -230,14 +236,14 @@ export default function InstancesPage() {
                   </button>
                 ) : null}
                 <button
-                  onClick={() => window.location.href = `/dashboard/instances/${instance._id}`}
+                  onClick={() => router.push(`/dashboard/instances/${instance._id}`)}
                   className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
                   title="Configure Instance"
                 >
                   <Settings className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(instance._id, instance.name || 'Unnamed Instance')}
+                  onClick={() => setDeleteTarget({ id: instance._id, name: instance.name || 'Unnamed Instance' })}
                   disabled={actionLoading === instance._id}
                   className="p-2 rounded-lg border border-border hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-colors"
                   title="Delete Instance"
@@ -254,6 +260,17 @@ export default function InstancesPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Instance"
+        description={`Are you sure you want to delete instance "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={!!actionLoading}
+      />
     </div>
   );
 }

@@ -3,14 +3,18 @@
 import { useState, useEffect } from 'react';
 import { Megaphone, Search, Plus, Trash2, Edit, X, Loader2, Clock, Users, AlertTriangle, Info, Wrench, Sparkles } from 'lucide-react';
 import { announcementApi, Announcement } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 export default function AnnouncementsPage() {
+  const { success, error: showError } = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: 'info', audience: 'all' });
 
@@ -49,9 +53,10 @@ export default function AnnouncementsPage() {
       setAnnouncements(prev => [...prev, created]);
       setNewAnnouncement({ title: '', message: '', type: 'info', audience: 'all' });
       setShowAddForm(false);
+      success('Announcement published successfully');
     } catch (error) {
       console.error('Failed to create announcement:', error);
-      alert('Failed to create announcement');
+      showError('Failed to create announcement');
     } finally {
       setAdding(false);
     }
@@ -69,24 +74,25 @@ export default function AnnouncementsPage() {
       }
     } catch (error) {
       console.error('Failed to toggle announcement:', error);
-      alert('Failed to update announcement');
+      showError('Failed to update announcement');
     } finally {
       setToggling(null);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this announcement?')) return;
-
-    setDeleting(id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget);
     try {
-      await announcementApi.delete(id);
-      setAnnouncements(prev => prev.filter(a => a._id !== id));
+      await announcementApi.delete(deleteTarget);
+      setAnnouncements(prev => prev.filter(a => a._id !== deleteTarget));
+      success('Announcement deleted successfully');
     } catch (error) {
       console.error('Failed to delete announcement:', error);
-      alert('Failed to delete announcement');
+      showError('Failed to delete announcement');
     } finally {
       setDeleting(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -266,7 +272,7 @@ export default function AnnouncementsPage() {
                   <Edit className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(announcement._id)}
+                  onClick={() => setDeleteTarget(announcement._id)}
                   disabled={deleting === announcement._id}
                   className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
                 >
@@ -281,6 +287,17 @@ export default function AnnouncementsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Announcement"
+        description="Are you sure you want to delete this announcement? This cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={!!deleting}
+      />
     </div>
   );
 }

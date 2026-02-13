@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Server, ChevronLeft, Loader2, Globe, HardDrive, CheckCircle, Database } from 'lucide-react';
 import Link from 'next/link';
 import { instanceApi } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 
 export default function NewInstancePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { success, error: showError } = useToast();
   const [deploymentType, setDeploymentType] = useState<'cloud' | 'on-premise'>('cloud');
 
   const [formData, setFormData] = useState({
@@ -67,6 +69,7 @@ export default function NewInstancePage() {
       };
 
       await instanceApi.create(payload);
+      success('Instance created successfully! Redirecting...');
 
       // Redirect to instances list after short delay
       setTimeout(() => {
@@ -74,7 +77,7 @@ export default function NewInstancePage() {
       }, 1000);
     } catch (error) {
       console.error('Failed to create instance', error);
-      alert('Failed to create instance. Please check console.');
+      showError('Failed to create instance. Please check console.');
       setLoading(false);
     }
   };

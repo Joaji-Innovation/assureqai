@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { instanceApi, Instance } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 // Simplified client interface mapped from Instance
 interface Client {
@@ -46,6 +48,8 @@ export default function ClientsPage() {
   });
   const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const { success, error: showError } = useToast();
 
   useEffect(() => {
     fetchClients();
@@ -106,37 +110,33 @@ export default function ClientsPage() {
       await fetchClients(); // Refresh list
       setNewClient({ name: '', slug: '', plan: 'starter', adminEmail: '' });
       setShowAddForm(false);
+      success('Client created successfully');
     } catch (error) {
       console.error('Failed to create client', error);
-      alert('Failed to create client. Check console for details.');
+      showError('Failed to create client. Check console for details.');
     } finally {
       setCreating(false);
     }
   };
 
-  const handleDeleteClient = async (id: string, name: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete client "${name}"? This will delete the associated instance and cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  const handleDeleteClient = async () => {
+    if (!deleteTarget) return;
 
-    // Determine instance ID (in this mock view it's the same as client ID or mapped)
-    // In real app, we might need to lookup instance ID differently if they differ
-    const client = clients.find((c) => c.id === id);
+    // Determine instance ID
+    const client = clients.find((c) => c.id === deleteTarget.id);
     if (!client || !client.instanceId) return;
 
-    setActionLoading(id);
+    setActionLoading(deleteTarget.id);
     try {
       await instanceApi.delete(client.instanceId);
-      setClients((prev) => prev.filter((c) => c.id !== id));
+      setClients((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+      success('Client deleted successfully');
     } catch (error) {
       console.error('Failed to delete client', error);
-      alert('Failed to delete client');
+      showError('Failed to delete client');
     } finally {
       setActionLoading(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -401,7 +401,7 @@ export default function ClientsPage() {
                       </Link>
                       <button
                         onClick={() =>
-                          handleDeleteClient(client.id, client.name)
+                          setDeleteTarget({ id: client.id, name: client.name })
                         }
                         disabled={actionLoading === client.id}
                         className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
@@ -431,6 +431,17 @@ export default function ClientsPage() {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteClient}
+        title="Delete Client"
+        description={`Are you sure you want to delete client "${deleteTarget?.name}"? This will delete the associated instance and cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={!!actionLoading}
+      />
     </div>
   );
 }

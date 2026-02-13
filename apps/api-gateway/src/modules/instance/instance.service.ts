@@ -36,7 +36,7 @@ export class InstanceService {
     @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
     @Inject(forwardRef(() => ProvisioningService))
     private provisioningService: ProvisioningService,
-  ) {}
+  ) { }
 
   // Create new instance
   async create(data: Partial<Instance> & { vps?: any }): Promise<Instance> {
@@ -209,6 +209,23 @@ export class InstanceService {
       throw new NotFoundException(`Instance ${id} not found`);
     }
     return instance;
+  }
+
+  // Delete instance
+  async delete(id: string): Promise<{ success: boolean }> {
+    const instance = await this.instanceModel.findById(id).exec();
+    if (!instance) {
+      throw new NotFoundException(`Instance ${id} not found`);
+    }
+
+    // Remove linked projects
+    await this.projectModel.deleteMany({ instanceId: id }).exec();
+
+    // Remove the instance itself
+    await this.instanceModel.findByIdAndDelete(id).exec();
+
+    this.logger.log(`Deleted instance ${id} (${instance.name})`);
+    return { success: true };
   }
 
   // ===== Domain Management =====

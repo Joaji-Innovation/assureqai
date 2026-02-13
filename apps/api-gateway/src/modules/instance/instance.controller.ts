@@ -51,6 +51,13 @@ export class InstanceController {
     return this.instanceService.update(id, dto);
   }
 
+  @Delete(':id')
+  @RequirePermissions(PERMISSIONS.MANAGE_INSTANCES)
+  @ApiOperation({ summary: 'Delete instance' })
+  async delete(@Param('id') id: string) {
+    return this.instanceService.delete(id);
+  }
+
   @Get(':id/logs')
   @RequirePermissions(PERMISSIONS.VIEW_INSTANCES)
   @ApiOperation({ summary: 'Get deployment logs' })

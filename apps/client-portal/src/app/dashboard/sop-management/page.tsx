@@ -40,6 +40,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -80,6 +90,7 @@ export default function SOPManagementPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null);
+  const [deleteSop, setDeleteSop] = useState<SOP | null>(null);
 
   // Form states
   const [uploading, setUploading] = useState(false);
@@ -280,12 +291,14 @@ export default function SOPManagementPage() {
     }
   };
 
-  // Delete SOP
   const handleDelete = async (sop: SOP) => {
-    if (!confirm(`Delete "${sop.name}"? This cannot be undone.`)) return;
+    setDeleteSop(sop);
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteSop) return;
     try {
-      const sopId = sop.id || sop._id;
+      const sopId = deleteSop.id || deleteSop._id;
       if (sopId) {
         await sopApi.delete(sopId);
         await loadData();
@@ -297,6 +310,8 @@ export default function SOPManagementPage() {
         description: 'Failed to delete SOP',
         variant: 'destructive',
       });
+    } finally {
+      setDeleteSop(null);
     }
   };
 
@@ -808,6 +823,23 @@ export default function SOPManagementPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteSop} onOpenChange={(open) => !open && setDeleteSop(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete SOP</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete &quot;{deleteSop?.name}&quot;? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

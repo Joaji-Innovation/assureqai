@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Users, Search, Plus, Shield, X, Loader2, Trash2, Mail, Pencil } from 'lucide-react';
 import { userApi, User } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 export default function AdminUsersPage() {
+  const { success, error: showError } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -12,6 +15,7 @@ export default function AdminUsersPage() {
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'support', password: '' });
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -64,9 +68,10 @@ export default function AdminUsersPage() {
       setNewUser({ name: '', email: '', role: 'support', password: '' });
       setShowAddForm(false);
       setEditingId(null);
+      success(editingId ? 'User updated successfully' : 'User created successfully');
     } catch (error) {
       console.error('Failed to save user', error);
-      alert('Failed to save user');
+      showError('Failed to save user');
     } finally {
       setAdding(false);
     }
@@ -83,15 +88,17 @@ export default function AdminUsersPage() {
     setShowAddForm(true);
   };
 
-  const handleDeleteUser = async (id: string) => {
-    if (confirm('Are you sure you want to remove this admin user?')) {
-      try {
-        await userApi.delete(id);
-        setUsers(prev => prev.filter(u => u._id !== id));
-      } catch (error) {
-        console.error('Failed to delete user', error);
-        alert('Failed to delete user');
-      }
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    try {
+      await userApi.delete(deleteTarget);
+      setUsers(prev => prev.filter(u => u._id !== deleteTarget));
+      success('User deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete user', error);
+      showError('Failed to delete user');
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -242,7 +249,7 @@ export default function AdminUsersPage() {
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleDeleteUser(user._id)}
+                    onClick={() => setDeleteTarget(user._id)}
                     className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
                     title="Delete User"
                   >
@@ -259,6 +266,16 @@ export default function AdminUsersPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteUser}
+        title="Delete User"
+        description="Are you sure you want to remove this admin user? This cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

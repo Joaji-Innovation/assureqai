@@ -90,17 +90,18 @@ export const authApi = {
 
 export const instanceApi = {
   getStatus: () =>
-    // Always call configured API base (NEXT_PUBLIC_API_URL) so we query the admin panel route.
-    request<{
+    // Call the client-portal's own Next.js API route (NOT the shared backend).
+    // The route reads ADMIN_PANEL_URL & INSTANCE_API_KEY from the client-portal's
+    // server-side env, which is correct in a multi-tenant deployment.
+    fetch('/api/instance/status').then((r) => r.json()) as Promise<{
       usageReportingEnabled: boolean;
       hasAdminUrl: boolean;
       hasInstanceApiKey: boolean;
-    }>('/api/instance/status'),
+    }>,
   sendTestReport: () =>
-    request<{ success: boolean; message?: string }>(
-      '/api/instance/test-report',
-      { method: 'POST' },
-    ),
+    fetch('/api/instance/test-report', { method: 'POST' }).then((r) =>
+      r.json(),
+    ) as Promise<{ success: boolean; message?: string }>,
 };
 
 // Audit APIs
@@ -453,13 +454,13 @@ export interface Campaign {
   name: string;
   description?: string;
   status:
-    | 'pending'
-    | 'processing'
-    | 'in_progress'
-    | 'completed'
-    | 'failed'
-    | 'cancelled'
-    | 'paused';
+  | 'pending'
+  | 'processing'
+  | 'in_progress'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'paused';
   config: {
     rpm: number;
     failureThreshold: number;
@@ -719,11 +720,11 @@ export const sopApi = {
 export interface Alert {
   _id: string;
   type:
-    | 'FATAL_FAILURE'
-    | 'THRESHOLD_BREACH'
-    | 'AT_RISK_AGENT'
-    | 'COMPLIANCE_VIOLATION'
-    | 'LOW_SCORE';
+  | 'FATAL_FAILURE'
+  | 'THRESHOLD_BREACH'
+  | 'AT_RISK_AGENT'
+  | 'COMPLIANCE_VIOLATION'
+  | 'LOW_SCORE';
   severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   message: string;
@@ -745,10 +746,10 @@ export const alertApi = {
       {
         params: params
           ? {
-              page: params.page,
-              limit: params.limit,
-              unreadOnly: params.unreadOnly ? 'true' : undefined,
-            }
+            page: params.page,
+            limit: params.limit,
+            unreadOnly: params.unreadOnly ? 'true' : undefined,
+          }
           : undefined,
       },
     ),
@@ -768,11 +769,11 @@ export const alertApi = {
 // Notification Settings Interfaces
 export interface AlertRuleConfig {
   type:
-    | 'fatal_failure'
-    | 'threshold_breach'
-    | 'at_risk'
-    | 'compliance'
-    | 'low_score';
+  | 'fatal_failure'
+  | 'threshold_breach'
+  | 'at_risk'
+  | 'compliance'
+  | 'low_score';
   enabled: boolean;
   channels: ('push' | 'email' | 'webhook')[];
   config: Record<string, any>;

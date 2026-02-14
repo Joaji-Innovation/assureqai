@@ -852,6 +852,52 @@ export const notificationApi = {
     ),
 };
 
+// Billing APIs
+export interface CreditPlan {
+  _id: string;
+  name: string;
+  description: string;
+  creditType: 'audit' | 'token' | 'combo';
+  auditCredits: number;
+  tokenCredits: number;
+  priceUsd: number;
+  priceInr?: number;
+  currency?: string; // Derived for UI
+  features: string[];
+  isPopular?: boolean;
+  isFeatured?: boolean;
+}
+
+export interface Payment {
+  _id: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  creditPlanId?: string | { name: string };
+  auditCreditsGranted: number;
+  tokenCreditsGranted: number;
+  createdAt: string;
+  dodoPaymentId?: string;
+  invoiceUrl?: string;
+}
+
+export const creditPlanApi = {
+  listActive: () => request<CreditPlan[]>('/api/credit-plans'),
+};
+
+export const paymentApi = {
+  createCheckout: (planId: string, returnUrl: string) =>
+    request<{ checkoutUrl: string }>('/api/payments/create-checkout', {
+      method: 'POST',
+      body: JSON.stringify({ planId, returnUrl }),
+    }),
+
+  list: (limit = 10, skip = 0) =>
+    request<{ payments: Payment[]; total: number }>('/api/payments/history', {
+      params: { limit, skip },
+    }),
+};
+
 // Ticket API
 export interface Ticket {
   _id: string;
@@ -903,4 +949,6 @@ export default {
   alert: alertApi,
   notification: notificationApi,
   ticket: ticketApi,
+  creditPlan: creditPlanApi,
+  payment: paymentApi,
 };

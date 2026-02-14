@@ -43,6 +43,10 @@ import { TicketModule } from '../modules/ticket/ticket.module';
 import { SettingsModule } from '../modules/settings/settings.module';
 import { UsageTrackingModule } from '../modules/usage-tracking/usage-tracking.module';
 import { UsageTrackingInterceptor } from '../modules/usage-tracking/usage-tracking.interceptor';
+import { OrganizationModule } from '../modules/organization/organization.module';
+import { CreditPlanModule } from '../modules/credit-plan/credit-plan.module';
+import { PaymentModule } from '../modules/payment/payment.module';
+import { TenantContextInterceptor } from '../middleware/tenant-context.middleware';
 
 // Config
 import { WinstonLoggerConfig } from '../config/logger.config';
@@ -118,6 +122,9 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     TicketModule,
     SettingsModule,
     UsageTrackingModule,
+    OrganizationModule,
+    CreditPlanModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [
@@ -136,6 +143,11 @@ import { WinstonLoggerConfig } from '../config/logger.config';
       provide: APP_GUARD,
       useClass: RolesGuard, // Then authorization
     },
+    // Global tenant context — populates org/instance info from JWT
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TenantContextInterceptor,
+    },
     // Global usage tracking — counts every API call against the instance
     {
       provide: APP_INTERCEPTOR,
@@ -143,4 +155,4 @@ import { WinstonLoggerConfig } from '../config/logger.config';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

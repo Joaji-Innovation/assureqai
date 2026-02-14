@@ -49,6 +49,10 @@ export class Settings {
 
   @Prop({ select: false }) // Hide password by default
   smtpPassword?: string;
+
+  // Credit system settings
+  @Prop({ default: 2000 })
+  tokenToCreditRate!: number; // How many tokens (input+output) = 1 audit credit deducted
 }
 
 export const SettingsSchema = SchemaFactory.createForClass(Settings);

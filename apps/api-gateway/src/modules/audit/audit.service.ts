@@ -47,7 +47,7 @@ export class AuditService {
     @Inject(forwardRef(() => CreditsService))
     private creditsService: CreditsService,
     private usageTracking: UsageTrackingService,
-  ) {}
+  ) { }
 
   /**
    * Create a new audit
@@ -87,6 +87,27 @@ export class AuditService {
       `Audit saved successfully: id=${savedAudit._id}, callId=${savedAudit.callId}, score=${dto.overallScore}`,
     );
 
+    // Deduct token credits if tokenUsage is present (single-audit path)
+    if (instanceId && dto.tokenUsage?.totalTokens > 0) {
+      try {
+        const tokenResult = await this.creditsService.useTokenCredits(
+          instanceId,
+          dto.tokenUsage.totalTokens,
+          savedAudit._id.toString(),
+        );
+        this.logger.log(
+          `Deducted ${dto.tokenUsage.totalTokens} token credits for instance ${instanceId}. ` +
+          `Remaining: ${tokenResult.remaining}` +
+          (tokenResult.creditsConsumed ? `, audit credits consumed via conversion: ${tokenResult.creditsConsumed}` : ''),
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to deduct token credits for instance ${instanceId}: ${error}`,
+        );
+        // Non-blocking: allow audit even if token credit deduction fails
+      }
+    }
+
     // Trigger alerts based on audit results
     try {
       await this.alertsService.checkAndTriggerAlerts(
@@ -122,6 +143,9 @@ export class AuditService {
     const query: AuditFilter = {};
 
     // Build filter query
+    if (filters.organizationId) {
+      query.organizationId = new Types.ObjectId(filters.organizationId);
+    }
     if (filters.projectId) {
       query.projectId = new Types.ObjectId(filters.projectId);
     }
@@ -186,10 +210,17 @@ export class AuditService {
   async getStats(
     projectId?: string,
     dateRange?: { start: Date; end: Date },
-    filters?: { auditType?: 'ai' | 'manual'; campaignName?: string },
+    filters?: {
+      auditType?: 'ai' | 'manual';
+      campaignName?: string;
+      organizationId?: string;
+    },
   ) {
     const match: AuditFilter = {};
 
+    if (filters?.organizationId) {
+      match.organizationId = new Types.ObjectId(filters.organizationId);
+    }
     if (projectId) {
       match.projectId = new Types.ObjectId(projectId);
     }
@@ -522,8 +553,8 @@ export class AuditService {
     const fatalRate =
       totalAudits > 0
         ? parseFloat(
-            ((fatalData.fatalAuditsCount / totalAudits) * 100).toFixed(1),
-          )
+          ((fatalData.fatalAuditsCount / totalAudits) * 100).toFixed(1),
+        )
         : 0;
     const ztpRate =
       totalAudits > 0
@@ -547,9 +578,9 @@ export class AuditService {
     let primaryTrainingNeed =
       trainingNeedsList.length > 0
         ? {
-            agentName: trainingNeedsList[0].agentName,
-            lowestParam: trainingNeedsList[0].param,
-          }
+          agentName: trainingNeedsList[0].agentName,
+          lowestParam: trainingNeedsList[0].param,
+        }
         : null;
 
     // Build training needs list for modal (bottom 5 agents by score)
@@ -733,9 +764,9 @@ export class AuditService {
       primaryTrainingNeed =
         trainingNeedsList.length > 0
           ? {
-              agentName: trainingNeedsList[0].agentName,
-              lowestParam: trainingNeedsList[0].param,
-            }
+            agentName: trainingNeedsList[0].agentName,
+            lowestParam: trainingNeedsList[0].param,
+          }
           : null;
 
       // Build training needs list for modal (bottom 5 agents by score)
@@ -799,8 +830,8 @@ export class AuditService {
       positive:
         totalAudits > 0
           ? parseFloat(
-              ((sentimentData.positive / totalAudits) * 100).toFixed(1),
-            )
+            ((sentimentData.positive / totalAudits) * 100).toFixed(1),
+          )
           : 0,
       neutral:
         totalAudits > 0
@@ -809,8 +840,8 @@ export class AuditService {
       negative:
         totalAudits > 0
           ? parseFloat(
-              ((sentimentData.negative / totalAudits) * 100).toFixed(1),
-            )
+            ((sentimentData.negative / totalAudits) * 100).toFixed(1),
+          )
           : 0,
     };
 
@@ -904,11 +935,11 @@ export class AuditService {
         complianceRate:
           totalAudits > 0
             ? parseFloat(
-                (
-                  ((totalAudits - fatalData.fatalAuditsCount) / totalAudits) *
-                  100
-                ).toFixed(1),
-              )
+              (
+                ((totalAudits - fatalData.fatalAuditsCount) / totalAudits) *
+                100
+              ).toFixed(1),
+            )
             : 0,
       },
 

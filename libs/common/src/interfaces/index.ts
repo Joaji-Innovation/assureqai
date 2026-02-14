@@ -26,6 +26,8 @@ export interface JwtPayload {
   email?: string;
   role: string;
   projectId?: string;
+  organizationId?: string;
+  instanceId?: string;
   iat?: number;
   exp?: number;
 }

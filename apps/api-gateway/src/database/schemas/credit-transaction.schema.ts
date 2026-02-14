@@ -11,8 +11,11 @@ export class CreditTransaction {
   @Prop({ type: Types.ObjectId, ref: 'Instance', required: true })
   instanceId: Types.ObjectId;
 
-  @Prop({ enum: ['add', 'use', 'expire', 'refund', 'adjust'], required: true })
-  type: 'add' | 'use' | 'expire' | 'refund' | 'adjust';
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId?: Types.ObjectId;
+
+  @Prop({ enum: ['add', 'use', 'expire', 'refund', 'adjust', 'purchase', 'token_conversion'], required: true })
+  type: 'add' | 'use' | 'expire' | 'refund' | 'adjust' | 'purchase' | 'token_conversion';
 
   @Prop({ enum: ['audit', 'token'], required: true })
   creditType: 'audit' | 'token';
@@ -30,6 +33,12 @@ export class CreditTransaction {
   reference?: string; // Audit ID, Campaign ID, etc.
 
   @Prop()
+  paymentId?: string; // Dodo Payments payment ID
+
+  @Prop()
+  paymentProvider?: string; // 'dodo'
+
+  @Prop()
   createdBy?: string;
 }
 
@@ -37,3 +46,4 @@ export const CreditTransactionSchema = SchemaFactory.createForClass(CreditTransa
 
 CreditTransactionSchema.index({ instanceId: 1, createdAt: -1 });
 CreditTransactionSchema.index({ instanceId: 1, creditType: 1 });
+CreditTransactionSchema.index({ organizationId: 1, createdAt: -1 });

@@ -61,6 +61,11 @@ export class CreateAuditDto {
   @IsOptional()
   projectId?: string;
 
+  @ApiPropertyOptional({ description: 'Organization ID for multi-tenant scoping' })
+  @IsString()
+  @IsOptional()
+  organizationId?: string;
+
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
@@ -217,6 +222,11 @@ export class AuditFiltersDto {
   @IsString()
   @IsOptional()
   projectId?: string;
+
+  @ApiPropertyOptional({ description: 'Organization ID for multi-tenant filtering' })
+  @IsString()
+  @IsOptional()
+  organizationId?: string;
 
   @ApiPropertyOptional()
   @IsString()

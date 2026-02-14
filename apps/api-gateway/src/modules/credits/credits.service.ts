@@ -1,5 +1,6 @@
 /**
  * Credits Service - Credit management for instances
+ * Includes configurable token-to-credit conversion
  */
 import {
   Injectable,
@@ -22,6 +23,10 @@ import {
   InstanceDocument,
 } from '../../database/schemas/instance.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SettingsService } from '../settings/settings.service';
+
+/** Default fallback if Settings has no value or value is invalid */
+const DEFAULT_TOKEN_TO_CREDIT_RATE = 2000;
 
 @Injectable()
 export class CreditsService {
@@ -33,7 +38,8 @@ export class CreditsService {
     private transactionModel: Model<CreditTransactionDocument>,
     @InjectModel(Instance.name) private instanceModel: Model<InstanceDocument>,
     private eventEmitter: EventEmitter2,
-  ) {}
+    private settingsService: SettingsService,
+  ) { }
 
   /**
    * Initialize credits for a new instance
@@ -239,26 +245,56 @@ export class CreditsService {
   }
 
   /**
-   * Use token credits (called during AI processing)
+   * Get the current token-to-credit conversion rate from Settings.
+   * Falls back to DEFAULT_TOKEN_TO_CREDIT_RATE if not configured or invalid.
+   */
+  private async getTokenToCreditRate(): Promise<number> {
+    try {
+      const settings = await this.settingsService.getSettings();
+      const rate = settings?.tokenToCreditRate;
+      if (rate && typeof rate === 'number' && rate > 0) {
+        return rate;
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to read tokenToCreditRate from settings: ${err}`);
+    }
+    return DEFAULT_TOKEN_TO_CREDIT_RATE;
+  }
+
+  /**
+   * Use token credits (called during AI processing).
+   *
+   * Also implements the token-to-credit conversion:
+   * Every `tokenToCreditRate` tokens consumed = 1 audit credit deducted.
+   * The accumulator `tokensTowardsNextCredit` tracks partial progress.
    */
   async useTokenCredits(
     instanceId: string,
     amount: number,
     reference?: string,
-  ): Promise<{ success: boolean; remaining: number }> {
+  ): Promise<{ success: boolean; remaining: number; creditsConsumed?: number }> {
+    if (amount <= 0) {
+      return { success: true, remaining: 0 };
+    }
+
     const current = await this.getByInstance(instanceId);
 
+    // Check if token credits are available (if blocking is enabled)
     if (current.tokenCredits < amount && current.blockOnExhausted) {
       return { success: false, remaining: current.tokenCredits };
     }
 
-    const newBalance = Math.max(0, current.tokenCredits - amount);
-    await this.creditsModel
+    // --- Step 1: Deduct token credits and increment the accumulator atomically ---
+    const newTokenBalance = Math.max(0, current.tokenCredits - amount);
+    const updatedCredits = await this.creditsModel
       .findOneAndUpdate(
         { instanceId: new Types.ObjectId(instanceId) },
         {
-          $set: { tokenCredits: newBalance },
-          $inc: { tokenCreditsUsed: amount },
+          $set: { tokenCredits: newTokenBalance },
+          $inc: {
+            tokenCreditsUsed: amount,
+            tokensTowardsNextCredit: amount,
+          },
         },
         { new: true },
       )
@@ -271,17 +307,77 @@ export class CreditsService {
       })
       .exec();
 
+    // Log the token usage transaction
     await this.logTransaction(instanceId, {
       type: 'use',
       creditType: 'token',
       amount: -amount,
-      balanceAfter: newBalance,
+      balanceAfter: newTokenBalance,
       reason: 'AI tokens consumed',
       reference,
     });
 
+    // --- Step 2: Check if accumulated tokens have crossed the threshold ---
+    let creditsConsumed = 0;
+    if (updatedCredits && updatedCredits.tokensTowardsNextCredit > 0) {
+      const rate = await this.getTokenToCreditRate();
+      const accumulated = updatedCredits.tokensTowardsNextCredit;
+
+      if (accumulated >= rate) {
+        creditsConsumed = Math.floor(accumulated / rate);
+        const remainder = accumulated % rate;
+
+        // Atomically deduct audit credits and reset the accumulator
+        const afterConversion = await this.creditsModel
+          .findOneAndUpdate(
+            { instanceId: new Types.ObjectId(instanceId) },
+            {
+              $inc: {
+                auditCredits: -creditsConsumed,
+                auditCreditsUsed: creditsConsumed,
+              },
+              $set: { tokensTowardsNextCredit: remainder },
+            },
+            { new: true },
+          )
+          .exec();
+
+        // Sync audit credit usage to Instance
+        await this.instanceModel
+          .findByIdAndUpdate(instanceId, {
+            $inc: { 'credits.usedAudits': creditsConsumed },
+          })
+          .exec();
+
+        // Log the conversion transaction
+        await this.logTransaction(instanceId, {
+          type: 'token_conversion',
+          creditType: 'audit',
+          amount: -creditsConsumed,
+          balanceAfter: afterConversion?.auditCredits ?? 0,
+          reason: `Token-to-credit conversion (${creditsConsumed} credits for ${creditsConsumed * rate} tokens at rate ${rate})`,
+          reference,
+        });
+
+        this.logger.log(
+          `Token-to-credit conversion: ${creditsConsumed} audit credit(s) deducted ` +
+          `for instance ${instanceId} (rate: ${rate}, remainder: ${remainder})`,
+        );
+
+        // Prevent audit credits from going negative — clamp at 0
+        if (afterConversion && afterConversion.auditCredits < 0) {
+          await this.creditsModel
+            .findOneAndUpdate(
+              { instanceId: new Types.ObjectId(instanceId) },
+              { $set: { auditCredits: 0 } },
+            )
+            .exec();
+        }
+      }
+    }
+
     await this.checkLowCreditAlert(instanceId);
-    return { success: true, remaining: newBalance };
+    return { success: true, remaining: newTokenBalance, creditsConsumed };
   }
 
   /**
@@ -365,15 +461,15 @@ export class CreditsService {
     const auditPercentage =
       credits.totalAuditCreditsAllocated > 0
         ? Math.round(
-            (credits.auditCredits / credits.totalAuditCreditsAllocated) * 100,
-          )
+          (credits.auditCredits / credits.totalAuditCreditsAllocated) * 100,
+        )
         : 0;
 
     const tokenPercentage =
       credits.totalTokenCreditsAllocated > 0
         ? Math.round(
-            (credits.tokenCredits / credits.totalTokenCreditsAllocated) * 100,
-          )
+          (credits.tokenCredits / credits.totalTokenCreditsAllocated) * 100,
+        )
         : 0;
 
     const isTrialExpired =
@@ -442,7 +538,7 @@ export class CreditsService {
   private async logTransaction(
     instanceId: string,
     data: {
-      type: 'add' | 'use' | 'expire' | 'refund' | 'adjust';
+      type: 'add' | 'use' | 'expire' | 'refund' | 'adjust' | 'purchase' | 'token_conversion';
       creditType: 'audit' | 'token';
       amount: number;
       balanceAfter: number;

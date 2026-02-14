@@ -28,6 +28,9 @@ export class CallAudit {
   @Prop({ trim: true })
   campaignName?: string;
 
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'Project' })
   projectId?: Types.ObjectId;
 
@@ -238,3 +241,4 @@ CallAuditSchema.index({ campaignId: 1, createdAt: -1 });
 CallAuditSchema.index({ auditType: 1, createdAt: -1 });
 CallAuditSchema.index({ audioHash: 1, campaignName: 1 }); // Cache lookup
 CallAuditSchema.index({ disputeStatus: 1 });
+CallAuditSchema.index({ organizationId: 1, createdAt: -1 });

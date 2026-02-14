@@ -13,6 +13,7 @@ import {
   CheckCircle,
   XCircle,
   Wifi,
+  Coins,
 } from 'lucide-react';
 
 import { settingsApi, healthApi } from '@/lib/api';
@@ -33,6 +34,7 @@ interface PlatformSettings {
   smtpHost: string;
   smtpPort: number;
   smtpUser: string;
+  tokenToCreditRate: number;
 }
 
 export default function SettingsPage() {
@@ -61,6 +63,7 @@ export default function SettingsPage() {
     smtpHost: '',
     smtpPort: 587,
     smtpUser: '',
+    tokenToCreditRate: 2000,
   });
 
   useEffect(() => {
@@ -318,6 +321,38 @@ export default function SettingsPage() {
         </div>
       </SettingsSection>
 
+      {/* Credit System Settings */}
+      <SettingsSection icon={Coins} title="Credit System">
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">
+              Token-to-Credit Conversion Rate
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">
+              How many AI tokens (input + output) must be consumed before 1 audit credit is deducted.
+              For example, a value of 2000 means every 2,000 tokens = 1 credit.
+            </p>
+            <input
+              type="number"
+              min={100}
+              step={100}
+              value={settings.tokenToCreditRate}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setSettings({
+                  ...settings,
+                  tokenToCreditRate: isNaN(val) || val < 100 ? 100 : val,
+                });
+              }}
+              className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Current: <span className="font-semibold text-foreground">{settings.tokenToCreditRate.toLocaleString()}</span> tokens = 1 audit credit
+            </p>
+          </div>
+        </div>
+      </SettingsSection>
+
       {/* Email Settings */}
       <SettingsSection icon={Mail} title="Email (SMTP)">
         <div className="grid gap-4 md:grid-cols-3">
@@ -371,8 +406,8 @@ export default function SettingsPage() {
           {smtpTestResult && (
             <div
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${smtpTestResult.success
-                  ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                : 'bg-red-500/10 text-red-500 border border-red-500/20'
                 }`}
             >
               {smtpTestResult.success ? (

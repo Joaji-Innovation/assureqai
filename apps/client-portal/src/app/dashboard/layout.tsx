@@ -166,6 +166,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       roles: ['super_admin', 'client_admin'],
     },
     {
+      href: '/dashboard/billing',
+      label: 'Billing & Credits',
+      tabName: 'billing',
+      icon: Coins,
+      type: 'link',
+      roles: ['super_admin', 'client_admin'],
+    },
+    {
       href: '/dashboard/audit-details',
       label: 'Audit Details',
       tabName: 'audit-details',

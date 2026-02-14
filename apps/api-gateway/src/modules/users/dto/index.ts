@@ -43,6 +43,11 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   projectId?: string;
+
+  @ApiPropertyOptional({ description: 'Organization ID for multi-tenant scoping' })
+  @IsString()
+  @IsOptional()
+  organizationId?: string;
 }
 
 export class UpdateUserDto {
@@ -65,6 +70,11 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   projectId?: string;
+
+  @ApiPropertyOptional({ description: 'Organization ID for multi-tenant scoping' })
+  @IsString()
+  @IsOptional()
+  organizationId?: string;
 
   @ApiPropertyOptional()
   @IsBoolean()
@@ -116,4 +126,37 @@ export class UpdateProfileDto {
   @IsEmail()
   @IsOptional()
   email?: string;
+}
+
+/**
+ * Self-service registration DTO (Mode B: shared multi-tenant)
+ * Auto-provisions: Organization → Credits → User → Project
+ */
+export class RegisterDto {
+  @ApiProperty({ description: 'Company/organization name' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  companyName: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  fullName: string;
+
+  @ApiProperty()
+  @IsEmail()
+  email: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(VALIDATION.USERNAME_MIN)
+  @MaxLength(VALIDATION.USERNAME_MAX)
+  username: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(VALIDATION.PASSWORD_MIN)
+  password: string;
 }

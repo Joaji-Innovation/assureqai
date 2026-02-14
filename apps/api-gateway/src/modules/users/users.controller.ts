@@ -29,6 +29,7 @@ import {
   LoginDto,
   ChangePasswordDto,
   UpdateProfileDto,
+  RegisterDto,
 } from './dto';
 import {
   Public,
@@ -41,7 +42,7 @@ import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   /**
    * Login endpoint - public
@@ -70,6 +71,22 @@ export class UsersController {
   logout(@Res({ passthrough: true }) res: Response) {
     this.usersService.logout(res);
     return { success: true, message: 'Logged out' };
+  }
+
+  /**
+   * Self-service registration - public (Mode B: shared multi-tenant)
+   */
+  @Post('register')
+  @Public()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register a new organization and admin user' })
+  @ApiResponse({ status: 201, description: 'Registration successful' })
+  @ApiResponse({ status: 409, description: 'Username or email already exists' })
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.usersService.register(dto, res);
   }
 
   /**

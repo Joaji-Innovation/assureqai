@@ -26,6 +26,8 @@ import {
   Coins,
   MessageSquare,
   ClipboardCheck,
+  Package,
+  CreditCard,
 } from 'lucide-react';
 import { authApi } from '@/lib/api';
 
@@ -36,6 +38,9 @@ const navItems = [
   { href: '/dashboard/instances', label: 'Instances', icon: Server },
   { href: '/dashboard/domains', label: 'Domains', icon: Globe },
   { href: '/dashboard/credits', label: 'Credits', icon: Coins },
+  { href: '/dashboard/organizations', label: 'Organizations', icon: Building2 },
+  { href: '/dashboard/plans', label: 'Credit Plans', icon: Package },
+  { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
   { href: '/dashboard/audits', label: 'Audits', icon: ClipboardCheck },
   { href: '/dashboard/templates', label: 'Templates', icon: FileText },
   { href: '/dashboard/backups', label: 'Backups', icon: HardDrive },

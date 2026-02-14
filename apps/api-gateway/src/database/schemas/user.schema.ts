@@ -30,6 +30,9 @@ export class User {
   })
   role: Role;
 
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'Project' })
   projectId?: Types.ObjectId;
 
@@ -51,3 +54,4 @@ export const UserSchema = SchemaFactory.createForClass(User);
 // Indexes
 UserSchema.index({ projectId: 1 });
 UserSchema.index({ role: 1 });
+UserSchema.index({ organizationId: 1 });

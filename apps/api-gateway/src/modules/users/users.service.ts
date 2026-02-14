@@ -18,7 +18,16 @@ import {
   Project,
   ProjectDocument,
 } from '../../database/schemas/project.schema';
-import { CreateUserDto, UpdateUserDto, LoginDto } from './dto';
+import {
+  Organization,
+  OrganizationDocument,
+} from '../../database/schemas/organization.schema';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  LoginDto,
+  RegisterDto,
+} from './dto';
 import { PaginatedResult, LIMITS, JwtPayload, ROLES } from '@assureqai/common';
 import { Response } from 'express';
 
@@ -31,8 +40,10 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
+    @InjectModel(Organization.name)
+    private organizationModel: Model<OrganizationDocument>,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * Create a new user
@@ -58,6 +69,9 @@ export class UsersService {
       ...dto,
       password: hashedPassword,
       projectId: dto.projectId ? new Types.ObjectId(dto.projectId) : undefined,
+      organizationId: dto.organizationId
+        ? new Types.ObjectId(dto.organizationId)
+        : undefined,
     });
 
     const saved = await user.save();
@@ -115,6 +129,7 @@ export class UsersService {
       email: user.email,
       role: user.role,
       projectId: user.projectId?.toString(),
+      organizationId: user.organizationId?.toString(),
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -287,5 +302,113 @@ export class UsersService {
     );
 
     return savedProject;
+  }
+
+  /**
+   * Self-service registration (Mode B: shared multi-tenant)
+   *
+   * Auto-provisions: Organization → Project → User → JWT
+   * Credits are initialized to zero; user buys via Dodo.
+   *
+   * SOLID: Reuses this.create() for user creation (DRY).
+   * KISS:  Single method handles entire provisioning flow.
+   */
+  async register(
+    dto: RegisterDto,
+    res: Response,
+  ): Promise<{ accessToken: string; user: any }> {
+    this.logger.log(`Self-service registration: ${dto.email} (${dto.companyName})`);
+
+    // 1. Check for duplicate username/email
+    const existing = await this.userModel.findOne({
+      $or: [{ username: dto.username }, { email: dto.email }],
+    });
+    if (existing) {
+      throw new ConflictException(
+        existing.username === dto.username
+          ? 'Username already exists'
+          : 'Email already exists',
+      );
+    }
+
+    // 2. Generate unique slug from company name
+    const baseSlug = dto.companyName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    let slug = baseSlug;
+    let attempt = 0;
+    while (await this.organizationModel.findOne({ slug })) {
+      attempt++;
+      slug = `${baseSlug}-${attempt}`;
+    }
+
+    // 3. Create Organization
+    const organization = await this.organizationModel.create({
+      name: dto.companyName,
+      slug,
+      contactEmail: dto.email,
+      plan: 'free',
+      status: 'active',
+    });
+    this.logger.log(`Created org ${organization._id} (slug: ${slug})`);
+
+    // 4. Create default Project linked to org
+    const project = await this.projectModel.create({
+      name: `${dto.companyName} - Default`,
+      description: `Default project for ${dto.companyName}`,
+      organizationId: organization._id,
+      isActive: true,
+      settings: {
+        language: 'en',
+        timezone: 'UTC',
+      },
+    });
+    this.logger.log(`Created project ${project._id} for org ${organization._id}`);
+
+    // 5. Create User as client_admin
+    const hashedPassword = await bcrypt.hash(dto.password, SALT_ROUNDS);
+    const user = new this.userModel({
+      username: dto.username,
+      email: dto.email,
+      fullName: dto.fullName,
+      password: hashedPassword,
+      role: ROLES.CLIENT_ADMIN,
+      organizationId: organization._id,
+      projectId: project._id,
+      isActive: true,
+    });
+    const savedUser = await user.save();
+    this.logger.log(
+      `Created user ${savedUser._id} (client_admin) for org ${organization._id}`,
+    );
+
+    // 6. Generate JWT with organization context
+    const payload: JwtPayload = {
+      sub: savedUser._id.toString(),
+      username: savedUser.username,
+      email: savedUser.email,
+      role: savedUser.role,
+      projectId: project._id.toString(),
+      organizationId: organization._id.toString(),
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    // Set HttpOnly cookie (same as login)
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+
+    const result = savedUser.toObject();
+    delete (result as any).password;
+
+    return {
+      accessToken,
+      user: result,
+    };
   }
 }

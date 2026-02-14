@@ -12,6 +12,10 @@ export class Credits {
   @Prop({ type: Types.ObjectId, ref: 'Instance', required: true, unique: true })
   instanceId: Types.ObjectId;
 
+  // Multi-tenant: links credits to a specific organization
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId?: Types.ObjectId;
+
   // Audit Credits (1 audit = 1 credit)
   @Prop({ default: 0 })
   auditCredits: number;
@@ -31,6 +35,11 @@ export class Credits {
 
   @Prop({ default: 0 })
   tokenCreditsUsed: number;
+
+  // Accumulated tokens towards next audit credit deduction
+  // When this reaches tokenToCreditRate (from Settings), 1 audit credit is deducted
+  @Prop({ default: 0 })
+  tokensTowardsNextCredit: number;
 
   // Instance Type
   @Prop({ enum: ['trial', 'standard', 'enterprise'], default: 'trial' })
@@ -56,3 +65,6 @@ export class Credits {
 }
 
 export const CreditsSchema = SchemaFactory.createForClass(Credits);
+
+// Indexes
+CreditsSchema.index({ organizationId: 1 }, { sparse: true });

@@ -581,6 +581,148 @@ export const contactApi = {
   getLeads: () => request<Lead[]>('/api/contact/leads'),
 };
 
+// Organization interfaces and API
+export interface Organization {
+  _id: string;
+  name: string;
+  slug: string;
+  companyName?: string;
+  contactEmail: string;
+  phone?: string;
+  instanceId?: string;
+  logo?: string;
+  brandColor?: string;
+  billingType: 'prepaid' | 'postpaid';
+  dodoCustomerId?: string;
+  plan: 'free' | 'starter' | 'pro' | 'enterprise';
+  status: 'active' | 'suspended' | 'cancelled' | 'trial';
+  isActive: boolean;
+  trialExpiresAt?: string;
+  limits?: {
+    maxUsers: number;
+    maxProjects: number;
+    maxStorage: string;
+  };
+  settings?: Record<string, any>;
+  notes?: string;
+  userCount?: number;
+  instance?: Instance;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export const organizationApi = {
+  list: (filters?: { status?: string; plan?: string; search?: string }) =>
+    request<Organization[]>('/api/admin/organizations', {
+      params: filters as any,
+    }),
+  listWithStats: () =>
+    request<Organization[]>('/api/admin/organizations/with-stats'),
+  getById: (id: string) =>
+    request<Organization>(`/api/admin/organizations/${id}`),
+  create: (data: Partial<Organization>) =>
+    request<Organization>('/api/admin/organizations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<Organization>) =>
+    request<Organization>(`/api/admin/organizations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<void>(`/api/admin/organizations/${id}`, { method: 'DELETE' }),
+  updateBranding: (id: string, data: { logo?: string; brandColor?: string }) =>
+    request<Organization>(`/api/admin/organizations/${id}/branding`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  linkInstance: (id: string, instanceId: string) =>
+    request<Organization>(`/api/admin/organizations/${id}/link-instance`, {
+      method: 'PUT',
+      body: JSON.stringify({ instanceId }),
+    }),
+};
+
+// Credit Plan interfaces and API
+export interface CreditPlan {
+  _id: string;
+  name: string;
+  description?: string;
+  creditType: 'audit' | 'token' | 'combo';
+  auditCredits: number;
+  tokenCredits: number;
+  priceUsd: number;
+  priceInr?: number;
+  dodoProductId?: string;
+  sortOrder: number;
+  isFeatured: boolean;
+  isPopular: boolean;
+  features: string[];
+  isActive: boolean;
+  validityDays?: number;
+  maxPurchasePerMonth?: number;
+  createdAt: string;
+}
+
+export const creditPlanApi = {
+  list: () => request<CreditPlan[]>('/api/admin/credit-plans'),
+  getById: (id: string) =>
+    request<CreditPlan>(`/api/admin/credit-plans/${id}`),
+  create: (data: Partial<CreditPlan>) =>
+    request<CreditPlan>('/api/admin/credit-plans', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<CreditPlan>) =>
+    request<CreditPlan>(`/api/admin/credit-plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<void>(`/api/admin/credit-plans/${id}`, { method: 'DELETE' }),
+  toggleActive: (id: string) =>
+    request<CreditPlan>(`/api/admin/credit-plans/${id}/toggle-active`, {
+      method: 'POST',
+    }),
+};
+
+// Payment interfaces and API
+export interface Payment {
+  _id: string;
+  organizationId: string | Organization;
+  instanceId?: string;
+  userId: string;
+  dodoPaymentId?: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'expired';
+  creditPlanId?: string | CreditPlan;
+  creditType: 'audit' | 'token' | 'combo';
+  auditCreditsGranted: number;
+  tokenCreditsGranted: number;
+  failureReason?: string;
+  refundReason?: string;
+  createdAt: string;
+}
+
+export const paymentApi = {
+  list: (filters?: {
+    limit?: number;
+    skip?: number;
+    status?: string;
+    organizationId?: string;
+  }) =>
+    request<{ payments: Payment[]; total: number }>('/api/admin/payments', {
+      params: filters as any,
+    }),
+  getById: (id: string) => request<Payment>(`/api/admin/payments/${id}`),
+  manualComplete: (id: string) =>
+    request<Payment>(`/api/admin/payments/${id}/complete`, {
+      method: 'POST',
+    }),
+};
+
 export default {
   auth: authApi,
   audit: auditApi,
@@ -611,4 +753,7 @@ export default {
   announcement: announcementApi,
   settings: settingsApi,
   health: healthApi,
+  organization: organizationApi,
+  creditPlan: creditPlanApi,
+  payment: paymentApi,
 };

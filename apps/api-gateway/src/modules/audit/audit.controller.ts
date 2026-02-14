@@ -30,7 +30,7 @@ import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('audits')
 export class AuditController {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(private readonly auditService: AuditService) { }
 
   /**
    * Create a new audit
@@ -63,6 +63,7 @@ export class AuditController {
     return this.auditService.create({
       ...processedDto,
       projectId: processedDto.projectId || user.projectId,
+      organizationId: user.organizationId,
     });
   }
 
@@ -82,6 +83,10 @@ export class AuditController {
     // Scope to user's project if not admin
     if (user.role !== ROLES.SUPER_ADMIN && user.role !== ROLES.CLIENT_ADMIN) {
       filters.projectId = user.projectId;
+    }
+    // Always scope by organization for multi-tenant isolation
+    if (user.organizationId) {
+      filters.organizationId = user.organizationId;
     }
     return this.auditService.findWithFilters(filters, page, limit);
   }
@@ -117,6 +122,7 @@ export class AuditController {
     return this.auditService.getStats(scopedProjectId, dateRange, {
       auditType,
       campaignName,
+      organizationId: user?.organizationId,
     });
   }
 
@@ -138,7 +144,7 @@ export class AuditController {
     // If client admin doesn't specify project, default to their own
     const scopedProjectId =
       (user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.CLIENT_ADMIN) &&
-      projectId
+        projectId
         ? projectId
         : user?.projectId;
 

@@ -2,14 +2,17 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { Loader2, CheckCircle2, ShieldCheck, Zap, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Navbar } from '@/components/Navbar';
 import { authApi } from '@/lib/api';
 import Link from 'next/link';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [formData, setFormData] = useState({
+    companyName: '',
+    fullName: '',
+    email: '',
     username: '',
     password: '',
   });
@@ -17,6 +20,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
+
+  // If registration is not enabled, redirect to login
+  const registrationEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_REGISTRATION === 'true';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -30,27 +37,57 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
-    if (!formData.username || !formData.password) {
-      setError('Credentials missing.');
+    if (
+      !formData.companyName ||
+      !formData.fullName ||
+      !formData.email ||
+      !formData.username ||
+      !formData.password
+    ) {
+      setError('All fields are required.');
       setIsLoading(false);
       return;
     }
 
     try {
-      const { accessToken } = await authApi.login(formData);
-
-      // Save token for client-side usage (components/hooks)
+      const { accessToken } = await authApi.register(formData);
       localStorage.setItem('authToken', accessToken);
-
       setIsSuccess(true);
       setTimeout(() => router.push('/dashboard'), 1000);
     } catch (err: any) {
-      setError(err.message || 'Authentication Failed');
-      setTimeout(() => setError(''), 3000);
+      setError(err.message || 'Registration Failed');
+      setTimeout(() => setError(''), 5000);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Gate: if not enabled, show a "disabled" message
+  if (!registrationEnabled) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center space-y-4">
+            <Building2 className="w-16 h-16 text-neutral-300 dark:text-white/20 mx-auto" />
+            <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">
+              Registration Unavailable
+            </h2>
+            <p className="text-muted-foreground max-w-md">
+              Self-service registration is not available on this instance.
+              Contact your administrator for access.
+            </p>
+            <Link
+              href="/login"
+              className="inline-block mt-4 text-sm text-emerald-500 hover:text-emerald-400 font-mono uppercase tracking-wider"
+            >
+              ← Back to Login
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-black selection:bg-primary/20 overflow-hidden flex flex-col">
@@ -59,34 +96,38 @@ export default function LoginPage() {
       <main className="flex-1 pt-32 pb-16 min-h-screen flex flex-col items-center justify-center relative z-10 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Content & Status */}
+            {/* Left: Content */}
             <div className="space-y-8 order-2 lg:order-1">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/20 bg-indigo-500/10 mb-6">
                   <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                   <span className="text-xs font-mono text-indigo-400 tracking-widest uppercase">
-                    System Online
+                    Get Started
                   </span>
                 </div>
                 <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-neutral-900 dark:text-white mb-6">
-                  Access <br />
+                  Create Your <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 dark:from-indigo-400 dark:via-purple-400 dark:to-rose-400">
-                    Control Panel.
+                    Organization.
                   </span>
                 </h1>
                 <p className="text-xl text-muted-foreground leading-relaxed max-w-md">
-                  Authenticate to manage audit parameters, view real-time intelligence, and configure AI agents.
+                  Set up your QA audit workspace in seconds. Start analyzing
+                  calls with AI-powered quality assurance.
                 </p>
               </div>
 
               <div className="space-y-4">
                 {[
-                  'Secure 256-bit encryption session',
-                  'Real-time audit dashboard access',
-                  'AI agent configuration & training',
-                  'Enterprise-grade role management',
+                  'Free tier with trial credits',
+                  'AI-powered call audit analysis',
+                  'Team management & role-based access',
+                  'Real-time analytics dashboard',
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 text-sm text-neutral-600 dark:text-gray-300">
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 text-sm text-neutral-600 dark:text-gray-300"
+                  >
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
                     <span>{item}</span>
                   </div>
@@ -94,7 +135,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Right: The Holographic Terminal (Login Form) */}
+            {/* Right: Registration Form */}
             <div className="relative w-full rounded-3xl bg-white dark:bg-black/40 border border-neutral-200 dark:border-white/10 flex flex-col overflow-hidden group backdrop-blur-xl shadow-xl dark:shadow-2xl order-1 lg:order-2">
               {/* Terminal Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-white/[0.02]">
@@ -106,28 +147,81 @@ export default function LoginPage() {
                   </div>
                   <div className="h-4 w-[1px] bg-neutral-200 dark:bg-white/10 mx-2" />
                   <span className="text-[10px] font-mono text-neutral-400 dark:text-white/40 tracking-widest uppercase">
-                    Secure Channel // Encrypted
+                    New Organization // Register
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-mono text-emerald-500 font-bold">LIVE</span>
+                  <span className="text-[10px] font-mono text-emerald-500 font-bold">
+                    OPEN
+                  </span>
                 </div>
               </div>
 
-              {/* Scanline & Grid Background */}
+              {/* Grid Background */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:32px_32px] opacity-20" />
               </div>
 
               {/* Form Content */}
               <div className="relative z-10 p-8 flex-1">
-                <form onSubmit={handleSubmit} className="space-y-8">
-                  <div className="space-y-6">
-                    {/* Username Field */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-5">
+                    {/* Company Name */}
                     <div className="group/input relative">
                       <label className="text-[10px] font-mono text-emerald-500/70 mb-1.5 block uppercase tracking-wider group-focus-within/input:text-emerald-400 transition-colors">
-                        Identity // Username
+                        Organization // Company Name
+                      </label>
+                      <input
+                        type="text"
+                        name="companyName"
+                        value={formData.companyName}
+                        onChange={handleChange}
+                        required
+                        className="w-full bg-neutral-50 dark:bg-black/40 border-b border-neutral-200 dark:border-white/10 rounded-t-lg px-4 py-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:bg-emerald-500/5 transition-all placeholder:text-neutral-400 dark:placeholder:text-white/20 font-mono"
+                        placeholder="Acme Corp"
+                      />
+                      <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-emerald-500 group-focus-within/input:w-full transition-all duration-500" />
+                    </div>
+
+                    {/* Full Name */}
+                    <div className="group/input relative">
+                      <label className="text-[10px] font-mono text-emerald-500/70 mb-1.5 block uppercase tracking-wider group-focus-within/input:text-emerald-400 transition-colors">
+                        Identity // Full Name
+                      </label>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={formData.fullName}
+                        onChange={handleChange}
+                        required
+                        className="w-full bg-neutral-50 dark:bg-black/40 border-b border-neutral-200 dark:border-white/10 rounded-t-lg px-4 py-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:bg-emerald-500/5 transition-all placeholder:text-neutral-400 dark:placeholder:text-white/20 font-mono"
+                        placeholder="John Doe"
+                      />
+                      <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-emerald-500 group-focus-within/input:w-full transition-all duration-500" />
+                    </div>
+
+                    {/* Email */}
+                    <div className="group/input relative">
+                      <label className="text-[10px] font-mono text-emerald-500/70 mb-1.5 block uppercase tracking-wider group-focus-within/input:text-emerald-400 transition-colors">
+                        Contact // Email
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="w-full bg-neutral-50 dark:bg-black/40 border-b border-neutral-200 dark:border-white/10 rounded-t-lg px-4 py-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:bg-emerald-500/5 transition-all placeholder:text-neutral-400 dark:placeholder:text-white/20 font-mono"
+                        placeholder="john@acme.com"
+                      />
+                      <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-emerald-500 group-focus-within/input:w-full transition-all duration-500" />
+                    </div>
+
+                    {/* Username */}
+                    <div className="group/input relative">
+                      <label className="text-[10px] font-mono text-emerald-500/70 mb-1.5 block uppercase tracking-wider group-focus-within/input:text-emerald-400 transition-colors">
+                        Handle // Username
                       </label>
                       <input
                         type="text"
@@ -136,12 +230,12 @@ export default function LoginPage() {
                         onChange={handleChange}
                         required
                         className="w-full bg-neutral-50 dark:bg-black/40 border-b border-neutral-200 dark:border-white/10 rounded-t-lg px-4 py-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:bg-emerald-500/5 transition-all placeholder:text-neutral-400 dark:placeholder:text-white/20 font-mono"
-                        placeholder="Enter verified ID..."
+                        placeholder="johndoe"
                       />
                       <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-emerald-500 group-focus-within/input:w-full transition-all duration-500" />
                     </div>
 
-                    {/* Password Field */}
+                    {/* Password */}
                     <div className="group/input relative">
                       <label className="text-[10px] font-mono text-emerald-500/70 mb-1.5 block uppercase tracking-wider group-focus-within/input:text-emerald-400 transition-colors">
                         Security // Password
@@ -152,6 +246,7 @@ export default function LoginPage() {
                         value={formData.password}
                         onChange={handleChange}
                         required
+                        minLength={6}
                         className="w-full bg-neutral-50 dark:bg-black/40 border-b border-neutral-200 dark:border-white/10 rounded-t-lg px-4 py-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:bg-emerald-500/5 transition-all placeholder:text-neutral-400 dark:placeholder:text-white/20 font-mono tracking-widest"
                         placeholder="••••••••••••"
                       />
@@ -174,48 +269,42 @@ export default function LoginPage() {
                   >
                     <div className="absolute inset-0 flex items-center justify-center gap-2 z-10">
                       <span>
-                        {isLoading ? 'Authenticating...' : isSuccess ? 'Access Granted' : 'Initiate Uplink'}
+                        {isLoading
+                          ? 'Creating Organization...'
+                          : isSuccess
+                            ? 'Organization Created'
+                            : 'Create Organization'}
                       </span>
                       {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                       {!isLoading && !isSuccess && (
                         <div className="w-2 h-2 border-t-2 border-r-2 border-emerald-400 transform rotate-45 group-hover/btn:translate-x-1 transition-transform" />
                       )}
-                      {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                      {isSuccess && (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      )}
                     </div>
 
-                    {/* Button Scan Effect */}
                     {!isLoading && !isSuccess && (
                       <div className="absolute inset-0 bg-emerald-500/20 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out" />
                     )}
                   </button>
 
-                  <div className="text-center space-y-3">
-                    <button
-                      type="button"
+                  <div className="text-center">
+                    <Link
+                      href="/login"
                       className="text-[10px] text-neutral-500 dark:text-white/40 font-mono uppercase tracking-widest hover:text-emerald-500 transition-colors"
                     >
-                      Recover Access Keys
-                    </button>
-
-                    {process.env.NEXT_PUBLIC_ENABLE_REGISTRATION === 'true' && (
-                      <div>
-                        <Link
-                          href="/register"
-                          className="text-[10px] text-indigo-500/70 font-mono uppercase tracking-widest hover:text-indigo-400 transition-colors"
-                        >
-                          New Organization? Create Account →
-                        </Link>
-                      </div>
-                    )}
+                      Already have an account? Login
+                    </Link>
                   </div>
                 </form>
 
-                <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-white/5 flex justify-center gap-4 text-[10px] text-neutral-400 dark:text-white/30 font-mono uppercase tracking-wider">
+                <div className="mt-6 pt-6 border-t border-neutral-200 dark:border-white/5 flex justify-center gap-4 text-[10px] text-neutral-400 dark:text-white/30 font-mono uppercase tracking-wider">
                   <span className="flex items-center gap-1.5">
                     <ShieldCheck className="w-3 h-3" /> E2E Encrypted
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Zap className="w-3 h-3" /> SSO Enabled
+                    <Zap className="w-3 h-3" /> Instant Setup
                   </span>
                 </div>
               </div>

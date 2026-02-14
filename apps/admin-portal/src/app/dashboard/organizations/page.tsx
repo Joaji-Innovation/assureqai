@@ -42,7 +42,7 @@ export default function OrganizationsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [viewingOrg, setViewingOrg] = useState<Organization | null>(null);
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
 
   // Form state
   const [form, setForm] = useState({

@@ -84,6 +84,20 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify(credentials),
     }),
+  register: (data: {
+    companyName: string;
+    fullName: string;
+    email: string;
+    username: string;
+    password: string;
+  }) =>
+    request<{ user: Partial<User>; accessToken: string }>(
+      '/api/users/register',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    ),
   logout: () => request('/api/users/logout', { method: 'POST' }),
   me: () => request<User>('/api/users/me'),
 };

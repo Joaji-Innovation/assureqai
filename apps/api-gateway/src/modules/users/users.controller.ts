@@ -14,6 +14,7 @@ import {
   Res,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -38,11 +39,15 @@ import {
   CurrentUser,
 } from '@assureqai/auth';
 import { ROLES, PERMISSIONS, JwtPayload, LIMITS } from '@assureqai/common';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
+  ) { }
 
   /**
    * Login endpoint - public
@@ -86,6 +91,12 @@ export class UsersController {
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    // Only enabled on Mode B (shared multi-tenant) deployments
+    if (this.configService.get('ENABLE_REGISTRATION') !== 'true') {
+      throw new ForbiddenException(
+        'Registration is disabled on this instance. Contact your administrator.',
+      );
+    }
     return this.usersService.register(dto, res);
   }
 

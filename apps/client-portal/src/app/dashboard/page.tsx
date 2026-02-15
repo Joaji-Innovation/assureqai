@@ -2680,6 +2680,42 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
         initial="hidden"
         animate="visible"
       >
+        {/* Empty State for New Tenants */}
+        {!isLoadingAudits && !isLoadingStats && savedAudits.length === 0 && (dashboardStats?.totalAudits === 0 || !dashboardStats) && (
+          <motion.div
+            variants={fadeInUp}
+            className="mb-2"
+          >
+            <GlassCard className="relative overflow-hidden border-primary/20">
+              <div className="flex flex-col md:flex-row items-center gap-6 p-6">
+                <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-8 w-8 text-primary" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-xl font-semibold mb-1">Welcome to AssureQAi! 🎉</h3>
+                  <p className="text-muted-foreground">
+                    Your dashboard is all set up. Run your first QA audit to start seeing insights, scores, and analytics here.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link href="/dashboard/qa-audit">
+                    <Button className="gap-2">
+                      <Bot className="h-4 w-4" />
+                      Run AI Audit
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/qa-audit/bulk">
+                    <Button variant="outline" className="gap-2">
+                      <FileStack className="h-4 w-4" />
+                      Bulk Audit
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+
         {/* 1. Overview Section */}
         {!isAgentView && (
           <motion.div
@@ -3689,10 +3725,10 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                             <TableCell className="text-right">
                               <span
                                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${c.score >= 80
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                    : c.score >= 70
-                                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : c.score >= 70
+                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                   }`}
                               >
                                 {c.score}%
@@ -3924,10 +3960,10 @@ const DashboardTabContent: React.FC<DashboardTabContentProps> = ({
                         <TableCell>
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${audit.overallScore > 90
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : audit.overallScore >= 85
-                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : audit.overallScore >= 85
+                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                               }`}
                           >
                             {audit.overallScore.toFixed(2)}%

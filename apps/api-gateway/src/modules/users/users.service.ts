@@ -286,12 +286,24 @@ export class UsersService {
   private async ensureUserHasProject(
     user: UserDocument,
   ): Promise<ProjectDocument> {
-    // First, check if there's already a project in the database we can use
-    // This handles the case where parameters/data were created before multi-project support
-    const existingProject = await this.projectModel
-      .findOne({ isActive: true })
-      .sort({ createdAt: 1 })
-      .exec();
+    // First, check if there's already a project in the user's organization
+    // This prevents cross-tenant project assignment
+    let existingProject: ProjectDocument | null = null;
+
+    if (user.organizationId) {
+      existingProject = await this.projectModel
+        .findOne({ isActive: true, organizationId: user.organizationId })
+        .sort({ createdAt: 1 })
+        .exec();
+    }
+
+    // Fallback: find any active project (legacy pre-multi-tenant)
+    if (!existingProject) {
+      existingProject = await this.projectModel
+        .findOne({ isActive: true })
+        .sort({ createdAt: 1 })
+        .exec();
+    }
 
     if (existingProject) {
       this.logger.log(

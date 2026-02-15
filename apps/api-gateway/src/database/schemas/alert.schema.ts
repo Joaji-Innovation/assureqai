@@ -25,6 +25,9 @@ export class Alert {
   projectId?: string;
 
   @Prop()
+  organizationId?: string;
+
+  @Prop()
   auditId?: string;
 
   @Prop()

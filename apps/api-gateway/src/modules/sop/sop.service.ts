@@ -23,6 +23,7 @@ export class SopService {
       content: data.file?.buffer?.toString('base64'),
       projectId: data.projectId,
       uploadedBy: data.uploadedBy,
+      organizationId: data.organizationId,
     });
     return sop.save();
   }
@@ -35,11 +36,14 @@ export class SopService {
     return sop;
   }
 
-  async findByProject(projectId?: string): Promise<Sop[]> {
+  async findByProject(projectId?: string, organizationId?: string): Promise<Sop[]> {
     // Include orphan SOPs (no projectId) for backward compatibility
-    const filter = projectId
+    const filter: any = projectId
       ? { $or: [{ projectId: new Types.ObjectId(projectId) }, { projectId: { $exists: false } }, { projectId: null }] }
       : {};
+    if (organizationId) {
+      filter.organizationId = new Types.ObjectId(organizationId);
+    }
     return this.sopModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 
@@ -82,6 +86,7 @@ export class SopService {
     projectId: string,
     uploadedBy?: string,
     customName?: string,
+    organizationId?: string,
   ): Promise<Sop> {
     const template = DEFAULT_SOP_TEMPLATES[templateId];
     if (!template) {
@@ -100,6 +105,7 @@ export class SopService {
       content: contentBase64,
       projectId: new Types.ObjectId(projectId),
       uploadedBy: uploadedBy ? new Types.ObjectId(uploadedBy) : undefined,
+      organizationId: organizationId ? new Types.ObjectId(organizationId) : undefined,
       isActive: true,
     });
 
@@ -109,7 +115,7 @@ export class SopService {
   /**
    * Seed default SOPs for a new project
    */
-  async seedDefaultSOPs(projectId: string, uploadedBy?: string): Promise<Sop[]> {
+  async seedDefaultSOPs(projectId: string, uploadedBy?: string, organizationId?: string): Promise<Sop[]> {
     const createdSOPs: Sop[] = [];
 
     for (const [templateId, template] of Object.entries(DEFAULT_SOP_TEMPLATES)) {
@@ -124,6 +130,7 @@ export class SopService {
         content: contentBase64,
         projectId: new Types.ObjectId(projectId),
         uploadedBy: uploadedBy ? new Types.ObjectId(uploadedBy) : undefined,
+        organizationId: organizationId ? new Types.ObjectId(organizationId) : undefined,
         isActive: true,
       });
 

@@ -27,7 +27,7 @@ export class AlertsService {
   constructor(
     @InjectModel(Alert.name) private alertModel: Model<AlertDocument>,
     private eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
   /**
    * Create a new alert and emit event for real-time notification
@@ -99,7 +99,7 @@ export class AlertsService {
         title: 'High Escalation Risk Detected',
         message: 'Customer showed high escalation risk during the call.',
         projectId,
-        metadata: { 
+        metadata: {
           escalationRisk: auditResult.sentiment.escalationRisk,
           predictedCSAT: auditResult.sentiment.predictedCSAT,
         },
@@ -120,9 +120,11 @@ export class AlertsService {
     page = 1,
     limit = 20,
     unreadOnly = false,
+    organizationId?: string,
   ): Promise<{ data: AlertDocument[]; total: number; page: number; totalPages: number }> {
     const query: any = {};
     if (projectId) query.projectId = projectId;
+    if (organizationId) query.organizationId = organizationId;
     if (unreadOnly) query.isRead = false;
 
     const total = await this.alertModel.countDocuments(query);
@@ -155,18 +157,20 @@ export class AlertsService {
   /**
    * Mark all alerts as read for a project
    */
-  async markAllAsRead(projectId?: string): Promise<void> {
+  async markAllAsRead(projectId?: string, organizationId?: string): Promise<void> {
     const query: any = { isRead: false };
     if (projectId) query.projectId = projectId;
+    if (organizationId) query.organizationId = organizationId;
     await this.alertModel.updateMany(query, { isRead: true });
   }
 
   /**
    * Get unread count
    */
-  async getUnreadCount(projectId?: string): Promise<number> {
+  async getUnreadCount(projectId?: string, organizationId?: string): Promise<number> {
     const query: any = { isRead: false };
     if (projectId) query.projectId = projectId;
+    if (organizationId) query.organizationId = organizationId;
     return this.alertModel.countDocuments(query);
   }
 
@@ -176,8 +180,8 @@ export class AlertsService {
   async acknowledgeAlert(alertId: string, userId: string): Promise<AlertDocument | null> {
     return this.alertModel.findByIdAndUpdate(
       alertId,
-      { 
-        isAcknowledged: true, 
+      {
+        isAcknowledged: true,
         acknowledgedBy: userId,
         acknowledgedAt: new Date(),
       },

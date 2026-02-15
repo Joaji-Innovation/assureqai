@@ -82,7 +82,7 @@ export class TicketService {
 
   constructor(
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
-  ) {}
+  ) { }
 
   /**
    * Create a new ticket
@@ -93,6 +93,7 @@ export class TicketService {
     userName: string,
     userRole: string,
     projectId?: string,
+    organizationId?: string,
   ): Promise<Ticket> {
     const ticket = new this.ticketModel({
       subject: dto.subject,
@@ -103,6 +104,7 @@ export class TicketService {
       createdBy: new Types.ObjectId(userId),
       createdByName: userName,
       projectId: projectId ? new Types.ObjectId(projectId) : undefined,
+      organizationId: organizationId ? new Types.ObjectId(organizationId) : undefined,
       attachments: dto.attachments || [],
       messages: [],
     });
@@ -125,8 +127,14 @@ export class TicketService {
       assignedTo?: string;
       search?: string;
     },
+    organizationId?: string,
   ): Promise<Ticket[]> {
     const query: any = {};
+
+    // Organization-level isolation
+    if (organizationId) {
+      query.organizationId = new Types.ObjectId(organizationId);
+    }
 
     // Role-based access: super_admin sees all, others see their own or assigned
     if (role !== ROLES.SUPER_ADMIN && role !== 'client_admin') {
@@ -305,7 +313,7 @@ export class TicketService {
   /**
    * Get ticket statistics
    */
-  async getStats(projectId?: string): Promise<{
+  async getStats(projectId?: string, organizationId?: string): Promise<{
     total: number;
     open: number;
     inProgress: number;
@@ -317,6 +325,9 @@ export class TicketService {
     const query: any = {};
     if (projectId) {
       query.projectId = new Types.ObjectId(projectId);
+    }
+    if (organizationId) {
+      query.organizationId = new Types.ObjectId(organizationId);
     }
 
     const [stats, priorityStats] = await Promise.all([

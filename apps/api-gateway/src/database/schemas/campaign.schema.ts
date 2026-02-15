@@ -41,6 +41,9 @@ export class Campaign {
   @Prop({ type: Types.ObjectId, ref: 'Project' })
   projectId?: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'QAParameter', required: true })
   qaParameterSetId: Types.ObjectId;
 

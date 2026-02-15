@@ -49,6 +49,7 @@ export class SopController {
       user.projectId,
       user.sub,
       dto?.name,
+      user.organizationId,
     );
   }
 
@@ -59,6 +60,7 @@ export class SopController {
     const sops = await this.sopService.seedDefaultSOPs(
       user.projectId,
       user.sub,
+      user.organizationId,
     );
     return {
       success: true,
@@ -81,6 +83,7 @@ export class SopController {
       file,
       projectId: user.projectId,
       uploadedBy: user.sub,
+      organizationId: user.organizationId,
     });
   }
 
@@ -89,7 +92,7 @@ export class SopController {
   async findAll(@CurrentUser() user: JwtPayload) {
     // Super admins see all data, others scoped to their project
     const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
-    return this.sopService.findByProject(projectId);
+    return this.sopService.findByProject(projectId, user.organizationId);
   }
 
   @Get(':id')

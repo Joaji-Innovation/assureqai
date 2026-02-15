@@ -177,7 +177,7 @@ export class UsersController {
     const scopedProjectId =
       user?.role === ROLES.SUPER_ADMIN ? projectId : user?.projectId;
 
-    return this.usersService.findAll(scopedProjectId, page, limit);
+    return this.usersService.findAll(scopedProjectId, page, limit, user?.organizationId);
   }
 
   /**

@@ -38,7 +38,7 @@ import * as fs from 'fs';
 export class CampaignController {
   private readonly logger = new Logger(CampaignController.name);
 
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(private readonly campaignService: CampaignService) { }
 
   /**
    * Bulk upload audio files for campaign
@@ -97,9 +97,9 @@ export class CampaignController {
 
       const audioUrl = process.env.NEXT_PUBLIC_API_URL
         ? new URL(
-            `/api/uploads/${filename}`,
-            process.env.NEXT_PUBLIC_API_URL,
-          ).toString()
+          `/api/uploads/${filename}`,
+          process.env.NEXT_PUBLIC_API_URL,
+        ).toString()
         : `/api/uploads/${filename}`;
 
       jobs.push({
@@ -166,9 +166,9 @@ export class CampaignController {
 
       const audioUrl = process.env.NEXT_PUBLIC_API_URL
         ? new URL(
-            `/api/uploads/${filename}`,
-            process.env.NEXT_PUBLIC_API_URL,
-          ).toString()
+          `/api/uploads/${filename}`,
+          process.env.NEXT_PUBLIC_API_URL,
+        ).toString()
         : `/api/uploads/${filename}`;
 
       // Add job
@@ -198,6 +198,7 @@ export class CampaignController {
       {
         ...dto,
         projectId: dto.projectId || user.projectId,
+        organizationId: user.organizationId,
       },
       user.sub,
     );
@@ -222,7 +223,7 @@ export class CampaignController {
         ? projectId
         : user?.projectId;
 
-    return this.campaignService.findAll(scopedProjectId, page, limit);
+    return this.campaignService.findAll(scopedProjectId, page, limit, user?.organizationId);
   }
 
   /**

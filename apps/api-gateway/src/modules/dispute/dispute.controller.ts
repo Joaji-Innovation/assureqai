@@ -19,7 +19,7 @@ import { PERMISSIONS, JwtPayload } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('disputes')
 export class DisputeController {
-  constructor(private readonly disputeService: DisputeService) {}
+  constructor(private readonly disputeService: DisputeService) { }
 
   @Post()
   @RequirePermissions(PERMISSIONS.SUBMIT_DISPUTE)
@@ -29,6 +29,7 @@ export class DisputeController {
       ...dto,
       agentUserId: user.sub,
       agentName: user.username || user.sub,
+      organizationId: user.organizationId,
     });
   }
 
@@ -38,15 +39,16 @@ export class DisputeController {
   async findAll(
     @Query('status') status?: string,
     @Query('agentUserId') agentUserId?: string,
+    @CurrentUser() user?: JwtPayload,
   ) {
-    return this.disputeService.findAll({ status, agentUserId });
+    return this.disputeService.findAll({ status, agentUserId }, user?.organizationId);
   }
 
   @Get('stats')
   @RequirePermissions(PERMISSIONS.VIEW_DISPUTES)
   @ApiOperation({ summary: 'Get dispute stats' })
-  async getStats() {
-    return this.disputeService.getStats();
+  async getStats(@CurrentUser() user?: JwtPayload) {
+    return this.disputeService.getStats(user?.organizationId);
   }
 
   @Get('my')

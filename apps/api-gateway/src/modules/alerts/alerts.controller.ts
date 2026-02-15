@@ -19,7 +19,7 @@ import { JwtPayload, PERMISSIONS, ROLES } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('alerts')
 export class AlertsController {
-  constructor(private readonly alertsService: AlertsService) {}
+  constructor(private readonly alertsService: AlertsService) { }
 
   /**
    * Get paginated alerts
@@ -35,7 +35,7 @@ export class AlertsController {
     @CurrentUser() user: JwtPayload,
   ) {
     const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
-    return this.alertsService.getAlerts(projectId, +page, +limit, String(unreadOnly) === 'true');
+    return this.alertsService.getAlerts(projectId, +page, +limit, String(unreadOnly) === 'true', user.organizationId);
   }
 
   /**
@@ -46,7 +46,7 @@ export class AlertsController {
   @ApiResponse({ status: 200, description: 'Unread count retrieved' })
   async getUnreadCount(@CurrentUser() user: JwtPayload) {
     const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
-    const count = await this.alertsService.getUnreadCount(projectId);
+    const count = await this.alertsService.getUnreadCount(projectId, user.organizationId);
     return { count };
   }
 
@@ -69,7 +69,7 @@ export class AlertsController {
   @ApiResponse({ status: 200, description: 'All alerts marked as read' })
   async markAllAsRead(@CurrentUser() user: JwtPayload) {
     const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
-    await this.alertsService.markAllAsRead(projectId);
+    await this.alertsService.markAllAsRead(projectId, user.organizationId);
     return { success: true };
   }
 

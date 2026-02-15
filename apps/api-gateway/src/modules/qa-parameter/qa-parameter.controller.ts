@@ -48,6 +48,7 @@ export class QaParameterController {
       user.projectId,
       user.sub,
       dto?.name,
+      user.organizationId,
     );
   }
 
@@ -58,6 +59,7 @@ export class QaParameterController {
     const params = await this.qaParameterService.seedDefaultParameters(
       user.projectId,
       user.sub,
+      user.organizationId,
     );
     return {
       success: true,
@@ -74,6 +76,7 @@ export class QaParameterController {
       ...dto,
       projectId: user.projectId,
       createdBy: user.sub,
+      organizationId: user.organizationId,
     });
   }
 
@@ -82,7 +85,7 @@ export class QaParameterController {
   async findAll(@CurrentUser() user: JwtPayload) {
     // Super admins see all data, others scoped to their project
     const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
-    return this.qaParameterService.findByProject(projectId);
+    return this.qaParameterService.findByProject(projectId, user.organizationId);
   }
 
   @Get(':id')

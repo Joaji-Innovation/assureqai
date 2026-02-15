@@ -20,7 +20,7 @@ import { PERMISSIONS, JwtPayload } from '@assureqai/common';
 @ApiBearerAuth()
 @Controller('calibrations')
 export class CalibrationController {
-  constructor(private readonly calibrationService: CalibrationService) {}
+  constructor(private readonly calibrationService: CalibrationService) { }
 
   @Post()
   @RequirePermissions(PERMISSIONS.MANAGE_CAMPAIGNS)
@@ -29,14 +29,15 @@ export class CalibrationController {
     return this.calibrationService.create({
       ...dto,
       createdBy: user.sub,
+      organizationId: user.organizationId,
     });
   }
 
   @Get()
   @RequirePermissions(PERMISSIONS.VIEW_CAMPAIGNS)
   @ApiOperation({ summary: 'Get all calibration sessions' })
-  async findAll(@Query('status') status?: string) {
-    return this.calibrationService.findAll(status);
+  async findAll(@Query('status') status?: string, @CurrentUser() user?: JwtPayload) {
+    return this.calibrationService.findAll(status, user?.organizationId);
   }
 
   @Get(':id')

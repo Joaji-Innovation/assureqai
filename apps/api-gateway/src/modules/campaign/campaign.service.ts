@@ -30,12 +30,12 @@ export class CampaignService {
     @InjectModel(Campaign.name) private campaignModel: Model<CampaignDocument>,
     @InjectModel(CallAudit.name) private auditModel: Model<CallAuditDocument>,
     private queueService: QueueService,
-  ) {}
+  ) { }
 
   /**
    * Create a new campaign and queue jobs
    */
-  async create(dto: CreateCampaignDto, userId: string): Promise<Campaign> {
+  async create(dto: CreateCampaignDto & { organizationId?: string }, userId: string): Promise<Campaign> {
     // Validate job count
     if (dto.jobs.length > LIMITS.MAX_BULK_ROWS) {
       throw new BadRequestException(
@@ -48,6 +48,7 @@ export class CampaignService {
       name: dto.name,
       description: dto.description,
       projectId: dto.projectId ? new Types.ObjectId(dto.projectId) : undefined,
+      organizationId: dto.organizationId ? new Types.ObjectId(dto.organizationId) : undefined,
       qaParameterSetId: new Types.ObjectId(dto.qaParameterSetId),
       createdBy: new Types.ObjectId(userId),
       status: 'pending',
@@ -119,10 +120,14 @@ export class CampaignService {
     projectId?: string,
     page = 1,
     limit = LIMITS.DEFAULT_PAGE_SIZE,
+    organizationId?: string,
   ): Promise<PaginatedResult<Campaign>> {
     const query: Record<string, any> = {};
     if (projectId) {
       query.projectId = new Types.ObjectId(projectId);
+    }
+    if (organizationId) {
+      query.organizationId = new Types.ObjectId(organizationId);
     }
 
     const skip = (page - 1) * limit;

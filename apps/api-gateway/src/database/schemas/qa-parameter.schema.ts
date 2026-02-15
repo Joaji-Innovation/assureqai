@@ -18,6 +18,9 @@ export class QAParameter {
   @Prop({ type: Types.ObjectId, ref: 'Project' })
   projectId?: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy?: Types.ObjectId;
 

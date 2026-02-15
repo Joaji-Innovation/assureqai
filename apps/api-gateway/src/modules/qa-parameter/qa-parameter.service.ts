@@ -26,12 +26,15 @@ export class QaParameterService {
     return param;
   }
 
-  async findByProject(projectId?: string): Promise<QAParameter[]> {
+  async findByProject(projectId?: string, organizationId?: string): Promise<QAParameter[]> {
     // If projectId provided, return parameters for that project OR orphan parameters (no projectId)
     // This ensures backward compatibility with data created before multi-project support
-    const filter = projectId
+    const filter: any = projectId
       ? { $or: [{ projectId: new Types.ObjectId(projectId) }, { projectId: { $exists: false } }, { projectId: null }] }
       : {};
+    if (organizationId) {
+      filter.organizationId = new Types.ObjectId(organizationId);
+    }
     return this.qaParameterModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 
@@ -74,6 +77,7 @@ export class QaParameterService {
     projectId: string,
     createdBy?: string,
     customName?: string,
+    organizationId?: string,
   ): Promise<QAParameter> {
     const template = DEFAULT_TEMPLATES[templateId];
     if (!template) {
@@ -85,6 +89,7 @@ export class QaParameterService {
       description: template.description,
       projectId: new Types.ObjectId(projectId),
       createdBy: createdBy ? new Types.ObjectId(createdBy) : undefined,
+      organizationId: organizationId ? new Types.ObjectId(organizationId) : undefined,
       isActive: true,
       isDefault: false,
       parameters: template.parameters,
@@ -97,7 +102,7 @@ export class QaParameterService {
    * Seed default parameters for a new project
    * Creates all default templates for the project
    */
-  async seedDefaultParameters(projectId: string, createdBy?: string): Promise<QAParameter[]> {
+  async seedDefaultParameters(projectId: string, createdBy?: string, organizationId?: string): Promise<QAParameter[]> {
     const createdParams: QAParameter[] = [];
 
     for (const [templateId, template] of Object.entries(DEFAULT_TEMPLATES)) {
@@ -106,6 +111,7 @@ export class QaParameterService {
         description: template.description,
         projectId: new Types.ObjectId(projectId),
         createdBy: createdBy ? new Types.ObjectId(createdBy) : undefined,
+        organizationId: organizationId ? new Types.ObjectId(organizationId) : undefined,
         isActive: true,
         isDefault: true,
         parameters: template.parameters,

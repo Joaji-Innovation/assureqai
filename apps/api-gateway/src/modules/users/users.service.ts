@@ -118,6 +118,17 @@ export class UsersService {
       user.projectId = project._id;
     }
 
+    // Self-heal: resolve organizationId from project if missing (legacy users)
+    if (!user.organizationId && user.projectId) {
+      const project = await this.projectModel.findById(user.projectId);
+      if (project?.organizationId) {
+        user.organizationId = project.organizationId;
+        this.logger.warn(
+          `Self-healed organizationId for user ${user.username} from project ${project._id}`,
+        );
+      }
+    }
+
     // Update last login
     user.lastLoginAt = new Date();
     await user.save();
@@ -177,10 +188,14 @@ export class UsersService {
     projectId?: string,
     page = 1,
     limit = LIMITS.DEFAULT_PAGE_SIZE,
+    organizationId?: string,
   ): Promise<PaginatedResult<User>> {
     const query: Record<string, any> = {};
     if (projectId) {
       query.projectId = new Types.ObjectId(projectId);
+    }
+    if (organizationId) {
+      query.organizationId = new Types.ObjectId(organizationId);
     }
 
     const skip = (page - 1) * limit;

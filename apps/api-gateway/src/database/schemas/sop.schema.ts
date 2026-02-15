@@ -29,6 +29,9 @@ export class Sop {
   @Prop({ type: Types.ObjectId, ref: 'Project' })
   projectId?: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   uploadedBy?: Types.ObjectId;
 

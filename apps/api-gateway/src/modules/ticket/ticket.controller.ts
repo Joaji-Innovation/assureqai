@@ -40,6 +40,7 @@ export class TicketController {
       user.username,
       user.role,
       user.projectId,
+      user.organizationId,
     );
   }
 
@@ -61,6 +62,7 @@ export class TicketController {
       user.role,
       user.projectId,
       { status, priority, assignedTo, search },
+      user.organizationId,
     );
   }
 
@@ -73,7 +75,7 @@ export class TicketController {
   @ApiResponse({ status: 200, description: 'Statistics retrieved' })
   async getStats(@CurrentUser() user: JwtPayload) {
     const projectId = user.role === ROLES.SUPER_ADMIN ? undefined : user.projectId;
-    return this.ticketService.getStats(projectId);
+    return this.ticketService.getStats(projectId, user.organizationId);
   }
 
   /**

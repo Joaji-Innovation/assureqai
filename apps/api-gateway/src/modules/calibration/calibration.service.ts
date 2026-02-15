@@ -10,7 +10,7 @@ import { Calibration, CalibrationDocument, EvaluatorScore } from '../../database
 export class CalibrationService {
   constructor(
     @InjectModel(Calibration.name) private calibrationModel: Model<CalibrationDocument>,
-  ) {}
+  ) { }
 
   async create(data: Partial<Calibration>): Promise<Calibration> {
     const calibration = new this.calibrationModel({
@@ -20,8 +20,9 @@ export class CalibrationService {
     return calibration.save();
   }
 
-  async findAll(status?: string): Promise<Calibration[]> {
-    const query = status ? { status } : {};
+  async findAll(status?: string, organizationId?: string): Promise<Calibration[]> {
+    const query: any = status ? { status } : {};
+    if (organizationId) query.organizationId = organizationId;
     return this.calibrationModel.find(query).sort({ createdAt: -1 }).exec();
   }
 
@@ -52,12 +53,12 @@ export class CalibrationService {
   }): Promise<Calibration> {
     const calibration = await this.calibrationModel.findById(id).exec();
     if (!calibration) throw new NotFoundException(`Calibration ${id} not found`);
-    
+
     // Check if evaluator already submitted
     const existingIndex = calibration.evaluatorScores.findIndex(
       s => s.evaluatorId === score.evaluatorId
     );
-    
+
     const newScore = {
       ...score,
       submittedAt: new Date(),
@@ -74,7 +75,7 @@ export class CalibrationService {
     const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
     let scoreVariance = 0;
     let consistencyRating = 100;
-    
+
     if (scores.length > 1) {
       scoreVariance = scores.reduce((sum, s) => sum + Math.pow(s - averageScore, 2), 0) / scores.length;
       consistencyRating = Math.max(0, Math.round(100 - Math.sqrt(scoreVariance) * 5));

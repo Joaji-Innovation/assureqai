@@ -68,6 +68,9 @@ export class Calibration {
 
   @Prop()
   consistencyRating?: number; // 0-100
+
+  @Prop()
+  organizationId?: string;
 }
 
 export const CalibrationSchema = SchemaFactory.createForClass(Calibration);

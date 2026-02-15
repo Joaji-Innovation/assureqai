@@ -148,7 +148,7 @@ export class AuditController {
         ? projectId
         : user?.projectId;
 
-    return this.auditService.getLeaderboard(scopedProjectId, numericLimit);
+    return this.auditService.getLeaderboard(scopedProjectId, numericLimit, user?.organizationId);
   }
 
   /**

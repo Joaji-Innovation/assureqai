@@ -10,7 +10,7 @@ import { Dispute, DisputeDocument } from '../../database/schemas/dispute.schema'
 export class DisputeService {
   constructor(
     @InjectModel(Dispute.name) private disputeModel: Model<DisputeDocument>,
-  ) {}
+  ) { }
 
   async create(data: {
     auditId: string;
@@ -29,13 +29,14 @@ export class DisputeService {
     return dispute.save();
   }
 
-  async findAll(filters?: { 
-    status?: string; 
+  async findAll(filters?: {
+    status?: string;
     agentUserId?: string;
-  }): Promise<Dispute[]> {
+  }, organizationId?: string): Promise<Dispute[]> {
     const query: any = {};
     if (filters?.status) query.status = filters.status;
     if (filters?.agentUserId) query.agentUserId = filters.agentUserId;
+    if (organizationId) query.organizationId = organizationId;
     return this.disputeModel
       .find(query)
       .sort({ createdAt: -1 })
@@ -96,17 +97,19 @@ export class DisputeService {
     return dispute;
   }
 
-  async getStats(): Promise<{
+  async getStats(organizationId?: string): Promise<{
     total: number;
     pending: number;
     resolved: number;
     rejected: number;
   }> {
+    const query: any = {};
+    if (organizationId) query.organizationId = organizationId;
     const [total, pending, resolved, rejected] = await Promise.all([
-      this.disputeModel.countDocuments(),
-      this.disputeModel.countDocuments({ status: 'pending' }),
-      this.disputeModel.countDocuments({ status: 'resolved' }),
-      this.disputeModel.countDocuments({ status: 'rejected' }),
+      this.disputeModel.countDocuments(query),
+      this.disputeModel.countDocuments({ ...query, status: 'pending' }),
+      this.disputeModel.countDocuments({ ...query, status: 'resolved' }),
+      this.disputeModel.countDocuments({ ...query, status: 'rejected' }),
     ]);
     return { total, pending, resolved, rejected };
   }

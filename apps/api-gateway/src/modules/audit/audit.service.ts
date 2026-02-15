@@ -991,10 +991,13 @@ export class AuditService {
   /**
    * Get agent performance leaderboard
    */
-  async getLeaderboard(projectId?: string, limit = 10) {
+  async getLeaderboard(projectId?: string, limit = 10, organizationId?: string) {
     const match: AuditFilter = {};
     if (projectId) {
       match.projectId = new Types.ObjectId(projectId);
+    }
+    if (organizationId) {
+      match.organizationId = new Types.ObjectId(organizationId);
     }
 
     return this.auditModel.aggregate([

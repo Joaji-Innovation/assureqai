@@ -43,6 +43,9 @@ export class Dispute {
 
   @Prop()
   adjustedScore?: number;
+
+  @Prop()
+  organizationId?: string;
 }
 
 export const DisputeSchema = SchemaFactory.createForClass(Dispute);
